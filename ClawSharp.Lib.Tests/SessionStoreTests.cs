@@ -38,6 +38,22 @@ public sealed class SessionStoreTests : IDisposable
         Assert.True(messages[0].SequenceNo < messages[1].SequenceNo);
     }
 
+    [Fact]
+    public async Task SqliteStores_HonorLegacySessionDatabasePathConfiguration()
+    {
+        var legacyPath = Path.Combine(_root, "legacy-state.db");
+        var options = new ClawOptions
+        {
+            Runtime = new RuntimeOptions { WorkspaceRoot = _root },
+            Sessions = new SessionOptions { DatabasePath = legacyPath }
+        };
+
+        var sessionStore = new SqliteSessionStore(options);
+        await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
+
+        Assert.True(File.Exists(legacyPath));
+    }
+
     private ClawOptions CreateOptions() => new()
     {
         Runtime = new RuntimeOptions { WorkspaceRoot = _root },

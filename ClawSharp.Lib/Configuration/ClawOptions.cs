@@ -44,6 +44,11 @@ public sealed class ClawOptions
     public SessionOptions Sessions { get; set; } = new();
 
     /// <summary>
+    /// 数据库存储配置。
+    /// </summary>
+    public DatabaseOptions Databases { get; set; } = new();
+
+    /// <summary>
     /// 历史事件记录配置。
     /// </summary>
     public HistoryOptions History { get; set; } = new();
@@ -208,6 +213,7 @@ public sealed class SessionOptions
 {
     /// <summary>
     /// SQLite 数据库路径。相对路径默认落到 workspace 下的 <c>.clawsharp/clawsharp.db</c>。
+    /// 兼容旧配置，优先级低于 <see cref="DatabaseOptions.Sqlite"/>。
     /// </summary>
     public string DatabasePath { get; set; } = ".clawsharp/clawsharp.db";
 
@@ -215,6 +221,49 @@ public sealed class SessionOptions
     /// 单个 session 可保留的最大历史条数。当前默认值为 1000。
     /// </summary>
     public int MaxHistoryEntries { get; set; } = 1_000;
+}
+
+/// <summary>
+/// 数据库存储配置。
+/// </summary>
+public sealed class DatabaseOptions
+{
+    /// <summary>
+    /// SQLite 主存储配置。
+    /// </summary>
+    public SqliteDatabaseOptions Sqlite { get; set; } = new();
+
+    /// <summary>
+    /// DuckDB 分析存储配置。
+    /// </summary>
+    public DuckDbDatabaseOptions DuckDb { get; set; } = new();
+}
+
+/// <summary>
+/// SQLite 主存储配置。
+/// </summary>
+public sealed class SqliteDatabaseOptions
+{
+    /// <summary>
+    /// 主数据库路径。相对路径默认落到 workspace 下的 <c>.clawsharp/clawsharp.db</c>。
+    /// </summary>
+    public string DatabasePath { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DuckDB 分析存储配置。
+/// </summary>
+public sealed class DuckDbDatabaseOptions
+{
+    /// <summary>
+    /// 是否启用 DuckDB 分析层。
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// 分析数据库路径。相对路径默认落到 workspace 下的 <c>.clawsharp/analytics.duckdb</c>。
+    /// </summary>
+    public string DatabasePath { get; set; } = ".clawsharp/analytics.duckdb";
 }
 
 /// <summary>

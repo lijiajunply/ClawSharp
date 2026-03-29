@@ -76,10 +76,26 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVectorStore, InMemoryVectorStore>();
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();
         services.AddSingleton<IMemoryIndex, MemoryIndex>();
+        services.AddSingleton<ClawSqliteDbContextFactory>();
+        services.AddSingleton<DuckDbConnectionFactory>();
+        services.AddSingleton<ISessionRecordRepository, EfSessionRecordRepository>();
+        services.AddSingleton<IPromptMessageRepository, EfPromptMessageRepository>();
+        services.AddSingleton<ISessionEventRepository, EfSessionEventRepository>();
+        services.AddSingleton<IDuckDbAnalyticsProjector, DuckDbAnalyticsProjector>();
         services.AddSingleton<ISessionSerializer, JsonSessionSerializer>();
-        services.AddSingleton<ISessionStore, SqliteSessionStore>();
-        services.AddSingleton<IPromptHistoryStore, SqlitePromptHistoryStore>();
-        services.AddSingleton<ISessionEventStore, SqliteSessionEventStore>();
+        services.AddSingleton<ISessionStore>(serviceProvider =>
+            new SqliteSessionStore(serviceProvider.GetRequiredService<ISessionRecordRepository>()));
+        services.AddSingleton<IPromptHistoryStore>(serviceProvider =>
+            new SqlitePromptHistoryStore(serviceProvider.GetRequiredService<IPromptMessageRepository>()));
+        services.AddSingleton<ISessionEventStore>(serviceProvider =>
+            new SqliteSessionEventStore(serviceProvider.GetRequiredService<ISessionEventRepository>()));
+        services.AddSingleton<ISessionAnalyticsService>(serviceProvider =>
+            options.Databases.DuckDb.Enabled
+                ? new DuckDbSessionAnalyticsService(
+                    options,
+                    serviceProvider.GetRequiredService<IDuckDbAnalyticsProjector>(),
+                    serviceProvider.GetRequiredService<DuckDbConnectionFactory>())
+                : new NullSessionAnalyticsService());
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<IProviderHttpClientFactory, DefaultProviderHttpClientFactory>();
         services.AddSingleton<IModelProvider, StubModelProvider>();
