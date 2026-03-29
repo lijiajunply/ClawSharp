@@ -105,9 +105,9 @@ public sealed class HistoryOptions
 
 public sealed class ProviderOptions
 {
-    public string DefaultProvider { get; set; } = "stub";
+    public string DefaultProvider { get; set; } = "openai";
 
-    public string DefaultModel { get; set; } = "stub-model";
+    public string DefaultModel { get; set; } = string.Empty;
 
     public int TimeoutSeconds { get; set; } = 60;
 
@@ -120,9 +120,21 @@ public sealed class ModelProviderOptions
 
     public string Type { get; set; } = "stub";
 
+    public string BaseUrl { get; set; } = string.Empty;
+
     public string? ApiKey { get; set; }
 
-    public string DefaultModel { get; set; } = "stub-model";
+    public string DefaultModel { get; set; } = string.Empty;
+
+    public string? Organization { get; set; }
+
+    public string? Project { get; set; }
+
+    public string? RequestPath { get; set; }
+
+    public bool SupportsResponses { get; set; }
+
+    public bool SupportsChatCompletions { get; set; }
 }
 
 public sealed class WorkerOptions

@@ -19,7 +19,14 @@ public sealed record WorkerEvent(string EventType, JsonElement Payload);
 
 public sealed record WorkerInitializeRequest(string SessionId, string AgentId, string TraceId);
 
-public sealed record WorkerTurnRequest(string SessionId, string TurnId, string TraceId, IReadOnlyList<ModelMessage> Messages, IReadOnlyList<ModelToolSchema> Tools, string Model, string ProviderName, string? SystemPrompt);
+public sealed record WorkerTurnRequest(
+    string SessionId,
+    string TurnId,
+    string TraceId,
+    ResolvedModelTarget Target,
+    IReadOnlyList<ModelMessage> Messages,
+    IReadOnlyList<ModelToolSchema> Tools,
+    string? SystemPrompt);
 
 public sealed record WorkerToolRequest(string ToolCallId, string ToolName, string ArgumentsJson);
 
@@ -53,14 +60,14 @@ public interface IAgentWorkerLauncher
 public sealed class DefaultAgentWorkerLauncher(
     ClawOptions options,
     IAgentWorkerClient workerClient,
-    IModelProviderResolver providerResolver) : IAgentWorkerLauncher
+    IModelProviderRegistry providerRegistry) : IAgentWorkerLauncher
 {
     public async Task<IAgentWorkerSession> LaunchAsync(AgentLaunchPlan plan, CancellationToken cancellationToken = default)
     {
         var command = options.Worker.Command ?? options.Runtime.AgentWorkerCommand;
         if (string.IsNullOrWhiteSpace(command))
         {
-            var provider = providerResolver.Resolve(plan.Agent);
+            var provider = providerRegistry.Get(plan.ProviderTarget.ProviderType);
             return new LoopbackAgentWorkerSession(plan, provider);
         }
 
@@ -109,8 +116,7 @@ public sealed class LoopbackAgentWorkerSession : IAgentWorkerSession
         while (!_runCancellation.IsCancellationRequested)
         {
             var modelRequest = new ModelRequest(
-                request.ProviderName,
-                request.Model,
+                request.Target,
                 request.SessionId,
                 request.TraceId,
                 messages,

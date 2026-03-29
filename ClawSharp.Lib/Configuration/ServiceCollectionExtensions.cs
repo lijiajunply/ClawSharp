@@ -54,7 +54,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPromptHistoryStore, SqlitePromptHistoryStore>();
         services.AddSingleton<ISessionEventStore, SqliteSessionEventStore>();
         services.AddSingleton<ISessionManager, SessionManager>();
+        services.AddSingleton<IProviderHttpClientFactory, DefaultProviderHttpClientFactory>();
         services.AddSingleton<IModelProvider, StubModelProvider>();
+        services.AddSingleton<IModelProvider, OpenAiResponsesModelProvider>();
+        services.AddSingleton<IModelProvider, OpenAiCompatibleChatModelProvider>();
         services.AddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
         services.AddSingleton<IModelProviderResolver, ModelProviderResolver>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();

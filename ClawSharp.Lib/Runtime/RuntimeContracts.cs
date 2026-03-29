@@ -19,7 +19,7 @@ public sealed record AgentLaunchPlan(
     IReadOnlyList<SkillDefinition> Skills,
     IReadOnlyList<ToolDefinition> Tools,
     IReadOnlyList<McpServerDefinition> McpServers,
-    ModelProviderMetadata Provider,
+    ResolvedModelTarget ProviderTarget,
     IReadOnlyList<PromptMessage> History);
 
 public sealed record RunTurnResult(SessionId SessionId, TurnId TurnId, string AssistantMessage, SessionStatus Status, int ToolCallCount);
@@ -130,7 +130,7 @@ public sealed class ClawRuntime(
             .ToArray();
         var mcpServers = agent.McpServers.Select(serverCatalog.Get).ToArray();
 
-        return new AgentLaunchPlan(session, agent, skills, tools, mcpServers, provider.Metadata, history);
+        return new AgentLaunchPlan(session, agent, skills, tools, mcpServers, provider.Target, history);
     }
 
     public async Task<IAgentWorkerSession> LaunchAgentProcessAsync(AgentLaunchPlan plan, CancellationToken cancellationToken = default)
@@ -184,10 +184,9 @@ public sealed class ClawRuntime(
             sessionId.Value,
             lastUser.TurnId.Value,
             Guid.NewGuid().ToString("N"),
+            plan.ProviderTarget,
             modelMessages,
             toolSchemas,
-            plan.Agent.Model,
-            plan.Provider.Name,
             plan.Agent.SystemPrompt);
 
         var assistant = new List<string>();
