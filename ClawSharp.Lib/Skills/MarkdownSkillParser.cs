@@ -5,6 +5,9 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace ClawSharp.Lib.Skills;
 
+/// <summary>
+/// 将带 YAML frontmatter 的 skill Markdown 文本解析为 <see cref="SkillDefinition"/>。
+/// </summary>
 public sealed class MarkdownSkillParser
 {
     private readonly IDeserializer _deserializer = new DeserializerBuilder()
@@ -12,6 +15,12 @@ public sealed class MarkdownSkillParser
         .IgnoreUnmatchedProperties()
         .Build();
 
+    /// <summary>
+    /// 解析单个 skill Markdown 文本。
+    /// </summary>
+    /// <param name="markdown">完整的 Markdown 内容，必须包含 frontmatter。</param>
+    /// <returns>解析并校验后的 <see cref="SkillDefinition"/>。</returns>
+    /// <exception cref="ValidationException">当 frontmatter 缺失、格式错误或必需字段为空时抛出。</exception>
     public SkillDefinition Parse(string markdown)
     {
         var (frontMatter, body) = MarkdownFrontMatter.Parse(markdown);

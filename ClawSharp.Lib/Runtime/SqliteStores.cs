@@ -60,10 +60,17 @@ CREATE TABLE IF NOT EXISTS session_events (
     }
 }
 
+/// <summary>
+/// 基于 SQLite 的 session 记录存储实现。
+/// </summary>
 public sealed class SqliteSessionStore : ISessionStore
 {
     private readonly SqliteConnectionFactory _factory;
 
+    /// <summary>
+    /// 创建一个 SQLite session store，并确保所需表结构存在。
+    /// </summary>
+    /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqliteSessionStore(ClawSharp.Lib.Configuration.ClawOptions options)
     {
         var databasePath = Path.IsPathRooted(options.Sessions.DatabasePath)
@@ -74,6 +81,7 @@ public sealed class SqliteSessionStore : ISessionStore
         SqliteSchema.Ensure(connection);
     }
 
+    /// <inheritdoc />
     public Task CreateAsync(SessionRecord session, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -92,6 +100,7 @@ VALUES($session_id, $agent_id, $workspace_root, $status, $started_at, $ended_at)
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<SessionRecord?> GetAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -117,6 +126,7 @@ FROM sessions WHERE session_id = $session_id LIMIT 1;
         return Task.FromResult<SessionRecord?>(result);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SessionRecord>> ListActiveAsync(CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -146,6 +156,7 @@ ORDER BY started_at DESC;
         return Task.FromResult<IReadOnlyList<SessionRecord>>(results);
     }
 
+    /// <inheritdoc />
     public Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt = null, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -163,10 +174,17 @@ WHERE session_id = $session_id;
     }
 }
 
+/// <summary>
+/// 基于 SQLite 的 prompt 历史存储实现。
+/// </summary>
 public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
 {
     private readonly SqliteConnectionFactory _factory;
 
+    /// <summary>
+    /// 创建一个 SQLite prompt 历史 store，并确保所需表结构存在。
+    /// </summary>
+    /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqlitePromptHistoryStore(ClawSharp.Lib.Configuration.ClawOptions options)
     {
         var databasePath = Path.IsPathRooted(options.Sessions.DatabasePath)
@@ -177,6 +195,7 @@ public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
         SqliteSchema.Ensure(connection);
     }
 
+    /// <inheritdoc />
     public Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, string? name = null, string? toolCallId = null, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -201,6 +220,7 @@ VALUES($message_id, $session_id, $turn_id, $role, $content, $name, $tool_call_id
         return Task.FromResult(message);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -239,10 +259,17 @@ FROM messages WHERE session_id = $session_id ORDER BY sequence_no ASC;
     }
 }
 
+/// <summary>
+/// 基于 SQLite 的 session 事件存储实现。
+/// </summary>
 public sealed class SqliteSessionEventStore : ISessionEventStore
 {
     private readonly SqliteConnectionFactory _factory;
 
+    /// <summary>
+    /// 创建一个 SQLite session event store，并确保所需表结构存在。
+    /// </summary>
+    /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqliteSessionEventStore(ClawSharp.Lib.Configuration.ClawOptions options)
     {
         var databasePath = Path.IsPathRooted(options.Sessions.DatabasePath)
@@ -253,6 +280,7 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
         SqliteSchema.Ensure(connection);
     }
 
+    /// <inheritdoc />
     public Task<SessionEvent> AppendAsync(SessionId sessionId, TurnId turnId, string eventType, System.Text.Json.JsonElement payload, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -275,6 +303,7 @@ VALUES($event_id, $session_id, $turn_id, $event_type, $payload, $sequence_no, $c
         return Task.FromResult(sessionEvent);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
         using var connection = _factory.Open();
@@ -311,8 +340,13 @@ FROM session_events WHERE session_id = $session_id ORDER BY sequence_no ASC;
     }
 }
 
+/// <summary>
+/// 默认的 session 生命周期管理器。
+/// </summary>
+/// <param name="sessions">底层 session store。</param>
 public sealed class SessionManager(ISessionStore sessions) : ISessionManager
 {
+    /// <inheritdoc />
     public async Task<RuntimeSession> StartAsync(string agentId, string workspaceRoot, CancellationToken cancellationToken = default)
     {
         var record = new SessionRecord(SessionId.New(), agentId, workspaceRoot, SessionStatus.Created, DateTimeOffset.UtcNow);
@@ -320,6 +354,7 @@ public sealed class SessionManager(ISessionStore sessions) : ISessionManager
         return new RuntimeSession(record, null, null);
     }
 
+    /// <inheritdoc />
     public async Task<RuntimeSession> GetAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
         var record = await sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false)
@@ -327,9 +362,11 @@ public sealed class SessionManager(ISessionStore sessions) : ISessionManager
         return new RuntimeSession(record, null, null);
     }
 
+    /// <inheritdoc />
     public Task CancelAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>
         sessions.UpdateStatusAsync(sessionId, SessionStatus.Cancelled, DateTimeOffset.UtcNow, cancellationToken);
 
+    /// <inheritdoc />
     public Task CompleteAsync(SessionId sessionId, SessionStatus status, CancellationToken cancellationToken = default) =>
         sessions.UpdateStatusAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken);
 }

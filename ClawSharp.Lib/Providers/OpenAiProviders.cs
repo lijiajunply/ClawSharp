@@ -7,13 +7,25 @@ using ClawSharp.Lib.Configuration;
 
 namespace ClawSharp.Lib.Providers;
 
+/// <summary>
+/// 根据 provider 目标创建 HTTP 客户端的抽象。
+/// </summary>
 public interface IProviderHttpClientFactory
 {
+    /// <summary>
+    /// 为指定 provider 目标创建一个 HTTP 客户端。
+    /// </summary>
+    /// <param name="target">已解析的 provider 目标。</param>
+    /// <returns>配置好基础地址的 <see cref="HttpClient"/>。</returns>
     HttpClient CreateClient(ResolvedModelTarget target);
 }
 
+/// <summary>
+/// 默认的 HTTP 客户端工厂。
+/// </summary>
 public sealed class DefaultProviderHttpClientFactory : IProviderHttpClientFactory
 {
+    /// <inheritdoc />
     public HttpClient CreateClient(ResolvedModelTarget target)
     {
         return new HttpClient
@@ -327,10 +339,15 @@ internal static class ProviderHttpHelpers
     }
 }
 
+/// <summary>
+/// 基于 OpenAI Responses API 的 provider 实现。
+/// </summary>
 public sealed class OpenAiResponsesModelProvider(ClawOptions options, IProviderHttpClientFactory httpClientFactory) : IModelProvider
 {
+    /// <inheritdoc />
     public ModelProviderMetadata Metadata { get; } = new("openai-responses", "OpenAI Responses", true, true);
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<ModelResponseChunk> StreamAsync(
         ModelRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -357,6 +374,7 @@ public sealed class OpenAiResponsesModelProvider(ClawOptions options, IProviderH
         var argumentBuffers = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
         var toolNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        // Responses API 会把文本增量和工具调用参数拆成多种 SSE 事件，这里负责把它们重新组装成统一的 chunk 流。
         await foreach (var document in ProviderHttpHelpers.ReadSseDocumentsAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
         {
             var root = document.RootElement;
@@ -455,10 +473,15 @@ public sealed class OpenAiResponsesModelProvider(ClawOptions options, IProviderH
     }
 }
 
+/// <summary>
+/// 兼容 OpenAI Chat Completions 协议的 provider 实现。
+/// </summary>
 public sealed class OpenAiCompatibleChatModelProvider(ClawOptions options, IProviderHttpClientFactory httpClientFactory) : IModelProvider
 {
+    /// <inheritdoc />
     public ModelProviderMetadata Metadata { get; } = new("openai-chat-compatible", "OpenAI-compatible Chat", true, true);
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<ModelResponseChunk> StreamAsync(
         ModelRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -493,6 +516,7 @@ public sealed class OpenAiCompatibleChatModelProvider(ClawOptions options, IProv
 
         var toolCallBuilders = new Dictionary<int, (string? Id, string? Name, StringBuilder Arguments)>();
 
+        // 兼容 chat/completions 的流式格式需要按 tool_call index 合并 arguments 片段。
         await foreach (var document in ProviderHttpHelpers.ReadSseDocumentsAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
         {
             var root = document.RootElement;
