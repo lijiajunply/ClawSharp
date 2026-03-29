@@ -215,6 +215,13 @@ public interface IClawRuntime
     /// <param name="sessionId">session 标识。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     Task CancelSessionAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 删除指定 session 的所有历史消息与事件。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task DeleteSessionDataAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -512,6 +519,13 @@ public sealed class ClawRuntime(
         }
 
         await kernel.Sessions.CancelAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteSessionDataAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    {
+        await kernel.History.DeleteBySessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        await kernel.Events.DeleteBySessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<WorkerToolResult> HandleToolRequestAsync(

@@ -437,6 +437,13 @@ public interface IPromptHistoryStore
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>按顺序排列的消息列表。</returns>
     Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 删除指定 session 的所有历史消息。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -462,6 +469,13 @@ public interface ISessionEventStore
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>按顺序排列的事件列表。</returns>
     Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 删除指定 session 的所有事件。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

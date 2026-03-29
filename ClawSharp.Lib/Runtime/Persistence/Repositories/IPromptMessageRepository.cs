@@ -11,4 +11,6 @@ internal interface IPromptMessageRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }

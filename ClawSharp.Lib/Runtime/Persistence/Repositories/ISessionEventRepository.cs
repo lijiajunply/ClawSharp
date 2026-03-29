@@ -6,4 +6,6 @@ internal interface ISessionEventRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }

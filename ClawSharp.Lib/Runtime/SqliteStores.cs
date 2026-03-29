@@ -76,6 +76,10 @@ public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
     /// <inheritdoc />
     public Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>
         _repository.ListAsync(sessionId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>
+        _repository.DeleteBySessionAsync(sessionId, cancellationToken);
 }
 
 /// <summary>
@@ -106,6 +110,10 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
     /// <inheritdoc />
     public Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>
         _repository.ListAsync(sessionId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>
+        _repository.DeleteBySessionAsync(sessionId, cancellationToken);
 }
 
 /// <summary>

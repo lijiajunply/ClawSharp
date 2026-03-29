@@ -40,4 +40,13 @@ internal sealed class EfPromptMessageRepository(IDbContextFactory<ClawDbContext>
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var messages = await context.Messages.Where(x => x.SessionId == sessionId.Value).ToListAsync(cancellationToken).ConfigureAwait(false);
+        context.Messages.RemoveRange(messages);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

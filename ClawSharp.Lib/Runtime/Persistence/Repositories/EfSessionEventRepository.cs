@@ -32,4 +32,13 @@ internal sealed class EfSessionEventRepository(IDbContextFactory<ClawDbContext> 
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task DeleteBySessionAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var events = await context.SessionEvents.Where(x => x.SessionId == sessionId.Value).ToListAsync(cancellationToken).ConfigureAwait(false);
+        context.SessionEvents.RemoveRange(events);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }
