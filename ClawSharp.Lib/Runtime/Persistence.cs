@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using ClawSharp.Lib.Configuration;
 using DuckDB.NET.Data;
 using Microsoft.EntityFrameworkCore;
@@ -74,94 +76,118 @@ internal sealed class ClawDbContext(DbContextOptions<ClawDbContext> options) : D
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var sessions = modelBuilder.Entity<SessionEntity>();
-        sessions.ToTable("sessions");
-        sessions.HasKey(x => x.SessionId);
-        sessions.Property(x => x.SessionId).HasColumnName("session_id");
-        sessions.Property(x => x.AgentId).HasColumnName("agent_id").IsRequired();
-        sessions.Property(x => x.WorkspaceRoot).HasColumnName("workspace_root").IsRequired();
-        sessions.Property(x => x.Status).HasColumnName("status");
-        sessions.Property(x => x.StartedAt).HasColumnName("started_at").IsRequired();
-        sessions.Property(x => x.EndedAt).HasColumnName("ended_at");
-
         var messages = modelBuilder.Entity<MessageEntity>();
-        messages.ToTable("messages");
-        messages.HasKey(x => x.MessageId);
-        messages.Property(x => x.MessageId).HasColumnName("message_id");
-        messages.Property(x => x.SessionId).HasColumnName("session_id").IsRequired();
-        messages.Property(x => x.TurnId).HasColumnName("turn_id").IsRequired();
-        messages.Property(x => x.Role).HasColumnName("role");
-        messages.Property(x => x.Content).HasColumnName("content").IsRequired();
-        messages.Property(x => x.Name).HasColumnName("name");
-        messages.Property(x => x.ToolCallId).HasColumnName("tool_call_id");
-        messages.Property(x => x.SequenceNo).HasColumnName("sequence_no");
-        messages.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
         messages.HasIndex(x => new { x.SessionId, x.SequenceNo });
 
         var events = modelBuilder.Entity<SessionEventEntity>();
-        events.ToTable("session_events");
-        events.HasKey(x => x.EventId);
-        events.Property(x => x.EventId).HasColumnName("event_id");
-        events.Property(x => x.SessionId).HasColumnName("session_id").IsRequired();
-        events.Property(x => x.TurnId).HasColumnName("turn_id").IsRequired();
-        events.Property(x => x.EventType).HasColumnName("event_type").IsRequired();
-        events.Property(x => x.PayloadJson).HasColumnName("payload").IsRequired();
-        events.Property(x => x.SequenceNo).HasColumnName("sequence_no");
-        events.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
         events.HasIndex(x => new { x.SessionId, x.SequenceNo });
     }
 }
 
+[Table("sessions")]
 internal sealed class SessionEntity
 {
+    [Key]
+    [Column("session_id")]
+    [Required]
+    [MaxLength(128)]
     public required string SessionId { get; init; }
 
+    [Column("agent_id")]
+    [Required]
+    [MaxLength(128)]
     public required string AgentId { get; init; }
 
+    [Column("workspace_root")]
+    [Required]
+    [MaxLength(1024)]
     public required string WorkspaceRoot { get; init; }
 
+    [Column("status")]
     public SessionStatus Status { get; set; }
 
+    [Column("started_at")]
     public DateTimeOffset StartedAt { get; set; }
 
+    [Column("ended_at")]
     public DateTimeOffset? EndedAt { get; set; }
 }
 
+[Table("messages")]
 internal sealed class MessageEntity
 {
+    [Key]
+    [Column("message_id")]
+    [Required]
+    [MaxLength(128)]
     public required string MessageId { get; init; }
 
+    [Column("session_id")]
+    [Required]
+    [MaxLength(128)]
     public required string SessionId { get; init; }
 
+    [Column("turn_id")]
+    [Required]
+    [MaxLength(128)]
     public required string TurnId { get; init; }
-
+    
+    [Column("role")]
     public PromptMessageRole Role { get; init; }
 
+    [Column("content")]
+    [Required]
+    [MaxLength(1000_0000)]
     public required string Content { get; init; }
 
+    [Column("name")]
+    [MaxLength(128)]
     public string? Name { get; init; }
 
+    [Column("tool_call_id")]
+    [MaxLength(128)]
     public string? ToolCallId { get; init; }
-
+    
+    [Column("sequence_no")]
     public int SequenceNo { get; init; }
 
+    [Column("created_at")]
     public DateTimeOffset CreatedAt { get; init; }
 }
 
+[Table("session_events")]
 internal sealed class SessionEventEntity
 {
+    [Key]
+    [Column("event_id")]
+    [Required]
+    [MaxLength(128)]
     public required string EventId { get; init; }
 
+    [Column("session_id")]
+    [Required]
+    [MaxLength(128)]
     public required string SessionId { get; init; }
 
+    [Column("turn_id")]
+    [Required]
+    [MaxLength(128)]
     public required string TurnId { get; init; }
 
+    [Column("event_type")]
+    [Required]
+    [MaxLength(128)]
     public required string EventType { get; init; }
 
+    [Column("payload")]
+    [Required]
+    [MaxLength(1000_0000)]
     public required string PayloadJson { get; init; }
 
+    [Column("sequence_no")]
     public int SequenceNo { get; init; }
 
+    [Column("created_at")]
     public DateTimeOffset CreatedAt { get; init; }
 }
 
