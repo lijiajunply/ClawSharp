@@ -2,6 +2,7 @@ using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Memory;
 using ClawSharp.Lib.Mcp;
 using ClawSharp.Lib.Providers;
+using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
@@ -60,9 +61,19 @@ public static class ServiceCollectionExtensions
         var configuration = builder.Configuration ?? ClawConfigurationLoader.Build(builder.BasePath, builder.Overrides);
         var options = configuration.Get<ClawOptions>() ?? new ClawOptions();
 
+        if (string.IsNullOrWhiteSpace(configuration["Runtime:WorkspaceRoot"]))
+        {
+            options.Runtime.WorkspaceRoot = builder.BasePath;
+        }
+
         if (!Path.IsPathRooted(options.Runtime.WorkspaceRoot))
         {
             options.Runtime.WorkspaceRoot = Path.GetFullPath(Path.Combine(builder.BasePath, options.Runtime.WorkspaceRoot));
+        }
+
+        if (!Path.IsPathRooted(options.Projects.TemplatesPath))
+        {
+            options.Projects.TemplatesPath = Path.GetFullPath(Path.Combine(options.Runtime.WorkspaceRoot, options.Projects.TemplatesPath));
         }
 
         services.AddSingleton<IConfiguration>(configuration);
@@ -103,6 +114,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IModelProvider, OpenAiCompatibleChatModelProvider>();
         services.AddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
         services.AddSingleton<IModelProviderResolver, ModelProviderResolver>();
+        services.AddSingleton<MarkdownProjectTemplateParser>();
+        services.AddSingleton<IProjectTemplateStore, FileSystemProjectTemplateStore>();
+        services.AddSingleton<IProjectScaffolder, ProjectScaffolder>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
         services.AddSingleton<IMcpClientManager, McpClientManager>();
         services.AddSingleton<IAgentWorkerClient, StdioJsonRpcAgentWorkerClient>();

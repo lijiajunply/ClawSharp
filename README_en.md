@@ -122,10 +122,15 @@ workspace/
       SKILL.md
       assets/
       scripts/
+  project-templates/
+    <template-id>/
+      template.md
+      ...
 ```
 
 Agent files are Markdown with YAML frontmatter. The body can hold longer instructions or notes.  
 Skill files follow the same general pattern.
+The project template directory powers the `ClawSharp.Lib.Projects` scaffolding API; template metadata lives in `template.md`, and every other file is generated into the new project using its relative path.
 
 ## Configuration
 
@@ -143,6 +148,7 @@ Important sections:
 
 - `Runtime`
 - `Agents`
+- `Projects`
 - `Tools`
 - `Mcp`
 - `Memory`
@@ -222,6 +228,60 @@ await runtime.AppendUserMessageAsync(session.Record.SessionId, "Hello");
 var result = await runtime.RunTurnAsync(session.Record.SessionId);
 var history = await runtime.GetHistoryAsync(session.Record.SessionId);
 ```
+
+To use the project scaffolding service, resolve `IProjectScaffolder` from DI:
+
+```csharp
+using ClawSharp.Lib.Projects;
+
+var scaffolder = provider.GetRequiredService<IProjectScaffolder>();
+
+var createResult = await scaffolder.CreateProjectAsync(
+    new CreateProjectRequest(
+        "paper",
+        "My Research Project",
+        "projects/my-research",
+        new Dictionary<string, string>
+        {
+            ["author"] = "Lucky Fish",
+            ["project_summary"] = "Used to organize research notes, writing plans, and experiment logs."
+        }));
+```
+
+The default template path is `workspace/project-templates`.  
+Each project type gets its own folder, for example:
+
+```text
+workspace/
+  project-templates/
+    paper/
+      template.md
+      docs/
+        outline.md
+      references/
+        bibliography.md
+```
+
+`template.md` uses YAML frontmatter for metadata, and its Markdown body is appended to the generated `README.md`:
+
+```md
+---
+id: paper
+name: Paper Project
+description: A template for organizing paper writing and research materials.
+version: v1
+directories:
+  - docs
+  - references
+variables:
+  author: Unknown Author
+---
+## Research Context
+Capture the main question, assumptions, and references here.
+```
+
+Both template file names and file contents support simple variable interpolation such as `{{project_name}}`, `{{project_type}}`, `{{created_at}}`, and any custom variables provided by the caller.  
+Every generated project always gets a unified `README.md`, even if the template does not declare one directly.
 
 ## Testing
 

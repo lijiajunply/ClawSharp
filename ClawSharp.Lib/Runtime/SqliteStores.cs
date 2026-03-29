@@ -11,7 +11,7 @@ public sealed class SqliteSessionStore : ISessionStore
     /// 创建一个 SQLite session store，并确保所需表结构存在。
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
-    public SqliteSessionStore(ClawSharp.Lib.Configuration.ClawOptions options)
+    public SqliteSessionStore(Configuration.ClawOptions options)
         : this(new EfSessionRecordRepository(new ClawSqliteDbContextFactory(options)))
     {
     }
@@ -49,7 +49,7 @@ public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
     /// 创建一个 SQLite prompt 历史 store，并确保所需表结构存在。
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
-    public SqlitePromptHistoryStore(ClawSharp.Lib.Configuration.ClawOptions options)
+    public SqlitePromptHistoryStore(Configuration.ClawOptions options)
         : this(new EfPromptMessageRepository(new ClawSqliteDbContextFactory(options)))
     {
     }
@@ -79,7 +79,7 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
     /// 创建一个 SQLite session event store，并确保所需表结构存在。
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
-    public SqliteSessionEventStore(ClawSharp.Lib.Configuration.ClawOptions options)
+    public SqliteSessionEventStore(Configuration.ClawOptions options)
         : this(new EfSessionEventRepository(new ClawSqliteDbContextFactory(options)))
     {
     }

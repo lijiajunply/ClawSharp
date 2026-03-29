@@ -158,7 +158,7 @@ internal sealed class DuckDbSessionAnalyticsService(
 
         await projector.RebuildAsync(cancellationToken).ConfigureAwait(false);
 
-        using var connection = duckDbFactory.Open();
+        await using var connection = duckDbFactory.Open();
         var totalSessions = ExecuteScalarInt(connection, "SELECT COUNT(*) FROM sessions;");
         var activeSessions = ExecuteScalarInt(connection, $"SELECT COUNT(*) FROM sessions WHERE status IN ({(int)SessionStatus.Created}, {(int)SessionStatus.Running}, {(int)SessionStatus.WaitingForApproval});");
 

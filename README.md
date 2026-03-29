@@ -123,10 +123,15 @@ workspace/
       SKILL.md
       assets/
       scripts/
+  project-templates/
+    <template-id>/
+      template.md
+      ...
 ```
 
 Agent 文件使用带 YAML frontmatter 的 Markdown。正文部分可以承载更长的说明、规则或示例。  
 Skill 文件采用相同的基本模式。
+项目模板目录用于 `ClawSharp.Lib.Projects` 的新建项目脚手架能力；模板元数据位于 `template.md`，其余文件会按相对路径生成到新项目中。
 
 ## 配置
 
@@ -144,6 +149,7 @@ Skill 文件采用相同的基本模式。
 
 - `Runtime`
 - `Agents`
+- `Projects`
 - `Tools`
 - `Mcp`
 - `Memory`
@@ -223,6 +229,60 @@ await runtime.AppendUserMessageAsync(session.Record.SessionId, "Hello");
 var result = await runtime.RunTurnAsync(session.Record.SessionId);
 var history = await runtime.GetHistoryAsync(session.Record.SessionId);
 ```
+
+如果要使用项目脚手架服务，可以直接从 DI 获取 `IProjectScaffolder`：
+
+```csharp
+using ClawSharp.Lib.Projects;
+
+var scaffolder = provider.GetRequiredService<IProjectScaffolder>();
+
+var createResult = await scaffolder.CreateProjectAsync(
+    new CreateProjectRequest(
+        "paper",
+        "My Research Project",
+        "projects/my-research",
+        new Dictionary<string, string>
+        {
+            ["author"] = "Lucky Fish",
+            ["project_summary"] = "用于整理研究资料、写作计划与实验记录。"
+        }));
+```
+
+默认模板目录是 `workspace/project-templates`。  
+每种模板一个目录，例如：
+
+```text
+workspace/
+  project-templates/
+    paper/
+      template.md
+      docs/
+        outline.md
+      references/
+        bibliography.md
+```
+
+其中 `template.md` 使用 YAML frontmatter 描述模板元数据，正文会追加到统一生成的 `README.md` 中：
+
+```md
+---
+id: paper
+name: Paper Project
+description: 用于组织论文写作和资料整理的项目模板。
+version: v1
+directories:
+  - docs
+  - references
+variables:
+  author: Unknown Author
+---
+## 研究背景
+记录研究问题、关键假设和参考资料。
+```
+
+模板文件名与文件内容都支持简单变量替换，例如 `{{project_name}}`、`{{project_type}}`、`{{created_at}}` 以及调用方传入的自定义变量。  
+无论模板是否声明，最终项目都会生成带统一骨架的 `README.md`，用于说明这是什么项目。
 
 ## 测试
 

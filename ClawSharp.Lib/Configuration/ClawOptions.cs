@@ -1,4 +1,5 @@
 using ClawSharp.Lib.Mcp;
+using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Tools;
 
 namespace ClawSharp.Lib.Configuration;
@@ -62,6 +63,11 @@ public sealed class ClawOptions
     /// 外部 worker 进程配置。
     /// </summary>
     public WorkerOptions Worker { get; set; } = new();
+
+    /// <summary>
+    /// 项目模板与脚手架配置。
+    /// </summary>
+    public ProjectOptions Projects { get; set; } = new();
 
     /// <summary>
     /// workspace 级默认权限策略；会在运行时与 agent 权限取交集。
@@ -403,4 +409,15 @@ public sealed class WorkerOptions
     /// worker 日志级别提示，默认值为 <c>Information</c>。
     /// </summary>
     public string LogLevel { get; set; } = "Information";
+}
+
+/// <summary>
+/// 项目模板与脚手架配置。
+/// </summary>
+public sealed class ProjectOptions
+{
+    /// <summary>
+    /// 项目模板目录。相对路径默认解析到 workspace 根目录下。
+    /// </summary>
+    public string TemplatesPath { get; set; } = "workspace/project-templates";
 }

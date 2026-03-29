@@ -16,7 +16,8 @@ internal static class DatabasePathResolver
         return ResolvePath(options, configuredPath);
     }
 
-    public static string ResolveDuckDbPath(ClawOptions options) => ResolvePath(options, options.Databases.DuckDb.DatabasePath);
+    public static string ResolveDuckDbPath(ClawOptions options) =>
+        ResolvePath(options, options.Databases.DuckDb.DatabasePath);
 
     private static string ResolvePath(ClawOptions options, string configuredPath)
     {
@@ -49,14 +50,9 @@ internal sealed class ClawSqliteDbContextFactory
     public ClawDbContext CreateDbContext() => new(_options);
 }
 
-internal sealed class DuckDbConnectionFactory
+internal sealed class DuckDbConnectionFactory(ClawOptions options)
 {
-    public DuckDbConnectionFactory(ClawOptions options)
-    {
-        DatabasePath = DatabasePathResolver.ResolveDuckDbPath(options);
-    }
-
-    public string DatabasePath { get; }
+    private string DatabasePath { get; } = DatabasePathResolver.ResolveDuckDbPath(options);
 
     public DuckDBConnection Open()
     {
@@ -103,14 +99,11 @@ internal sealed class SessionEntity
     [MaxLength(1024)]
     public required string WorkspaceRoot { get; init; }
 
-    [Column("status")]
-    public SessionStatus Status { get; set; }
+    [Column("status")] public SessionStatus Status { get; set; }
 
-    [Column("started_at")]
-    public DateTimeOffset StartedAt { get; set; }
+    [Column("started_at")] public DateTimeOffset StartedAt { get; set; }
 
-    [Column("ended_at")]
-    public DateTimeOffset? EndedAt { get; set; }
+    [Column("ended_at")] public DateTimeOffset? EndedAt { get; set; }
 }
 
 [Table("messages")]
@@ -131,28 +124,23 @@ internal sealed class MessageEntity
     [Required]
     [MaxLength(128)]
     public required string TurnId { get; init; }
-    
-    [Column("role")]
-    public PromptMessageRole Role { get; init; }
+
+    [Column("role")] public PromptMessageRole Role { get; init; }
 
     [Column("content")]
     [Required]
     [MaxLength(1000_0000)]
     public required string Content { get; init; }
 
-    [Column("name")]
-    [MaxLength(128)]
-    public string? Name { get; init; }
+    [Column("name")] [MaxLength(128)] public string? Name { get; init; }
 
     [Column("tool_call_id")]
     [MaxLength(128)]
     public string? ToolCallId { get; init; }
-    
-    [Column("sequence_no")]
-    public int SequenceNo { get; init; }
 
-    [Column("created_at")]
-    public DateTimeOffset CreatedAt { get; init; }
+    [Column("sequence_no")] public int SequenceNo { get; init; }
+
+    [Column("created_at")] public DateTimeOffset CreatedAt { get; init; }
 }
 
 [Table("session_events")]
@@ -184,11 +172,9 @@ internal sealed class SessionEventEntity
     [MaxLength(1000_0000)]
     public required string PayloadJson { get; init; }
 
-    [Column("sequence_no")]
-    public int SequenceNo { get; init; }
+    [Column("sequence_no")] public int SequenceNo { get; init; }
 
-    [Column("created_at")]
-    public DateTimeOffset CreatedAt { get; init; }
+    [Column("created_at")] public DateTimeOffset CreatedAt { get; init; }
 }
 
 internal static class RuntimeEntityMapper
@@ -204,7 +190,8 @@ internal static class RuntimeEntityMapper
     };
 
     public static SessionRecord ToRecord(SessionEntity entity) =>
-        new(new SessionId(entity.SessionId), entity.AgentId, entity.WorkspaceRoot, entity.Status, entity.StartedAt, entity.EndedAt);
+        new(new SessionId(entity.SessionId), entity.AgentId, entity.WorkspaceRoot, entity.Status, entity.StartedAt,
+            entity.EndedAt);
 
     public static MessageEntity ToEntity(PromptMessage message) => new()
     {
@@ -267,19 +254,22 @@ internal interface ISessionRecordRepository
 
     Task<IReadOnlyList<SessionRecord>> ListActiveAsync(CancellationToken cancellationToken = default);
 
-    Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt, CancellationToken cancellationToken = default);
+    Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt,
+        CancellationToken cancellationToken = default);
 }
 
 internal interface IPromptMessageRepository
 {
-    Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, string? name, string? toolCallId, CancellationToken cancellationToken = default);
+    Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content,
+        string? name, string? toolCallId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }
 
 internal interface ISessionEventRepository
 {
-    Task<SessionEvent> AppendAsync(SessionId sessionId, TurnId turnId, string eventType, System.Text.Json.JsonElement payload, CancellationToken cancellationToken = default);
+    Task<SessionEvent> AppendAsync(SessionId sessionId, TurnId turnId, string eventType,
+        System.Text.Json.JsonElement payload, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 }
@@ -306,17 +296,20 @@ internal sealed class EfSessionRecordRepository(ClawSqliteDbContextFactory facto
     {
         await using var context = factory.CreateDbContext();
         var results = await context.Sessions.AsNoTracking()
-            .Where(x => x.Status == SessionStatus.Created || x.Status == SessionStatus.Running || x.Status == SessionStatus.WaitingForApproval)
+            .Where(x => x.Status == SessionStatus.Created || x.Status == SessionStatus.Running ||
+                        x.Status == SessionStatus.WaitingForApproval)
             .Select(x => RuntimeEntityMapper.ToRecord(x))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         return results.OrderByDescending(x => x.StartedAt).ToList();
     }
 
-    public async Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt, CancellationToken cancellationToken = default)
+    public async Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt,
+        CancellationToken cancellationToken = default)
     {
         await using var context = factory.CreateDbContext();
-        var entity = await context.Sessions.SingleAsync(x => x.SessionId == sessionId.Value, cancellationToken).ConfigureAwait(false);
+        var entity = await context.Sessions.SingleAsync(x => x.SessionId == sessionId.Value, cancellationToken)
+            .ConfigureAwait(false);
         context.Entry(entity).Property(x => x.Status).CurrentValue = status;
         context.Entry(entity).Property(x => x.EndedAt).CurrentValue = endedAt;
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -325,7 +318,8 @@ internal sealed class EfSessionRecordRepository(ClawSqliteDbContextFactory facto
 
 internal sealed class EfPromptMessageRepository(ClawSqliteDbContextFactory factory) : IPromptMessageRepository
 {
-    public async Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, string? name, string? toolCallId, CancellationToken cancellationToken = default)
+    public async Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role,
+        string content, string? name, string? toolCallId, CancellationToken cancellationToken = default)
     {
         await using var context = factory.CreateDbContext();
         var sequenceNo = await context.Messages
@@ -334,13 +328,15 @@ internal sealed class EfPromptMessageRepository(ClawSqliteDbContextFactory facto
             .MaxAsync(cancellationToken)
             .ConfigureAwait(false) ?? 0;
 
-        var message = new PromptMessage(MessageId.New(), sessionId, turnId, role, content, sequenceNo + 1, DateTimeOffset.UtcNow, name, toolCallId);
+        var message = new PromptMessage(MessageId.New(), sessionId, turnId, role, content, sequenceNo + 1,
+            DateTimeOffset.UtcNow, name, toolCallId);
         context.Messages.Add(RuntimeEntityMapper.ToEntity(message));
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return message;
     }
 
-    public async Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId,
+        CancellationToken cancellationToken = default)
     {
         await using var context = factory.CreateDbContext();
         return await context.Messages.AsNoTracking()
@@ -354,7 +350,8 @@ internal sealed class EfPromptMessageRepository(ClawSqliteDbContextFactory facto
 
 internal sealed class EfSessionEventRepository(ClawSqliteDbContextFactory factory) : ISessionEventRepository
 {
-    public async Task<SessionEvent> AppendAsync(SessionId sessionId, TurnId turnId, string eventType, System.Text.Json.JsonElement payload, CancellationToken cancellationToken = default)
+    public async Task<SessionEvent> AppendAsync(SessionId sessionId, TurnId turnId, string eventType,
+        System.Text.Json.JsonElement payload, CancellationToken cancellationToken = default)
     {
         await using var context = factory.CreateDbContext();
         var sequenceNo = await context.SessionEvents
@@ -363,13 +360,15 @@ internal sealed class EfSessionEventRepository(ClawSqliteDbContextFactory factor
             .MaxAsync(cancellationToken)
             .ConfigureAwait(false) ?? 0;
 
-        var sessionEvent = new SessionEvent(EventId.New(), sessionId, turnId, eventType, payload, sequenceNo + 1, DateTimeOffset.UtcNow);
+        var sessionEvent = new SessionEvent(EventId.New(), sessionId, turnId, eventType, payload, sequenceNo + 1,
+            DateTimeOffset.UtcNow);
         context.SessionEvents.Add(RuntimeEntityMapper.ToEntity(sessionEvent));
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return sessionEvent;
     }
 
-    public async Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SessionEvent>> ListAsync(SessionId sessionId,
+        CancellationToken cancellationToken = default)
     {
         await using var context = factory.CreateDbContext();
         return await context.SessionEvents.AsNoTracking()
