@@ -369,10 +369,36 @@ public sealed class ClawRuntime(
             var finalAssistant = string.Concat(assistant);
             if (!string.IsNullOrWhiteSpace(finalAssistant))
             {
-                await kernel.History.AppendAsync(sessionId, lastUser.TurnId, PromptMessageRole.Assistant, finalAssistant, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await kernel.History.AppendBlocksAsync(
+                        sessionId,
+                        lastUser.TurnId,
+                        PromptMessageRole.Assistant,
+                        [new ModelTextBlock(finalAssistant)],
+                        cancellationToken)
+                    .ConfigureAwait(false);
             }
 
-            await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "TurnCompleted", serializer.SerializeToElement(new { content = finalAssistant, toolCalls }), cancellationToken).ConfigureAwait(false);
+            await kernel.Events.AppendAsync(
+                    sessionId,
+                    lastUser.TurnId,
+                    "TurnCompleted",
+                    serializer.SerializeToElement(new
+                    {
+                        content = finalAssistant,
+                        toolCalls,
+                        blocks = string.IsNullOrWhiteSpace(finalAssistant)
+                            ? Array.Empty<object>()
+                            : new[]
+                            {
+                                new
+                                {
+                                    type = "text",
+                                    text = finalAssistant
+                                }
+                            }
+                    }),
+                    cancellationToken)
+                .ConfigureAwait(false);
             await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Completed, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
             return new RunTurnResult(sessionId, lastUser.TurnId, finalAssistant, SessionStatus.Completed, toolCalls);
         }
@@ -447,14 +473,12 @@ public sealed class ClawRuntime(
 
         if (kernel.Options.History.RecordToolPayloads)
         {
-            await kernel.History.AppendAsync(
+            await kernel.History.AppendBlocksAsync(
                     plan.Session.Record.SessionId,
                     userMessage.TurnId,
                     PromptMessageRole.Tool,
-                    result.Payload.GetRawText(),
-                    name: toolRequest.ToolName,
-                    toolCallId: toolRequest.ToolCallId,
-                    cancellationToken: cancellationToken)
+                    [new ModelToolResultBlock(toolRequest.ToolCallId, result.Payload.GetRawText(), toolRequest.ToolName)],
+                    cancellationToken)
                 .ConfigureAwait(false);
         }
 

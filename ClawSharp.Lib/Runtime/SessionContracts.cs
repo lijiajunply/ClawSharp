@@ -246,7 +246,13 @@ public sealed record SessionEvent(
     string EventType,
     JsonElement Payload,
     int SequenceNo,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt)
+{
+    /// <summary>
+    /// 从事件 payload 中提取可直接回放的结构化内容块。
+    /// </summary>
+    public IReadOnlyList<ModelContentBlock> Blocks => SessionReplayPayloadReader.ReadBlocks(EventType, Payload);
+}
 
 /// <summary>
 /// 统一描述 prompt 历史中的消息项或事件项。
@@ -257,7 +263,13 @@ public sealed record SessionEvent(
 public sealed record PromptHistoryEntry(
     int SequenceNo,
     PromptMessage? Message = null,
-    SessionEvent? Event = null);
+    SessionEvent? Event = null)
+{
+    /// <summary>
+    /// 统一返回本条历史记录可直接回放的结构化内容块。
+    /// </summary>
+    public IReadOnlyList<ModelContentBlock> ReplayBlocks => Message?.Blocks ?? Event?.Blocks ?? [];
+}
 
 /// <summary>
 /// 在字符串与 <see cref="JsonElement"/> 之间序列化 session 相关 payload 的抽象。
@@ -287,6 +299,59 @@ public interface ISessionSerializer
     /// <param name="json">JSON 文本。</param>
     /// <returns>反序列化后的对象；失败时可能返回 <see langword="null"/>。</returns>
     T? Deserialize<T>(string json);
+}
+
+internal static class SessionReplayPayloadReader
+{
+    public static IReadOnlyList<ModelContentBlock> ReadBlocks(string eventType, JsonElement payload)
+    {
+        if (payload.ValueKind == JsonValueKind.Object &&
+            payload.TryGetProperty("blocks", out var blocksElement) &&
+            blocksElement.ValueKind == JsonValueKind.Array)
+        {
+            return ReadBlocksArray(blocksElement);
+        }
+
+        return eventType switch
+        {
+            "MessageDelta" when payload.ValueKind == JsonValueKind.Object && payload.TryGetProperty("delta", out var deltaElement)
+                => [new ModelTextBlock(deltaElement.GetString() ?? string.Empty)],
+            _ => []
+        };
+    }
+
+    private static IReadOnlyList<ModelContentBlock> ReadBlocksArray(JsonElement blocksElement)
+    {
+        var blocks = new List<ModelContentBlock>();
+        foreach (var element in blocksElement.EnumerateArray())
+        {
+            if (!element.TryGetProperty("type", out var typeElement) || typeElement.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            ModelContentBlock? block = typeElement.GetString() switch
+            {
+                "text" => new ModelTextBlock(element.TryGetProperty("text", out var textElement) ? textElement.GetString() ?? string.Empty : string.Empty),
+                "tool_use" => new ModelToolUseBlock(
+                    element.TryGetProperty("id", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty,
+                    element.TryGetProperty("name", out var nameElement) ? nameElement.GetString() ?? string.Empty : string.Empty,
+                    element.TryGetProperty("arguments", out var argumentsElement) ? argumentsElement.GetString() ?? "{}" : "{}"),
+                "tool_result" => new ModelToolResultBlock(
+                    element.TryGetProperty("tool_call_id", out var toolCallIdElement) ? toolCallIdElement.GetString() ?? string.Empty : string.Empty,
+                    element.TryGetProperty("content", out var contentElement) ? contentElement.GetString() ?? string.Empty : string.Empty,
+                    element.TryGetProperty("tool_name", out var toolNameElement) ? toolNameElement.GetString() : null),
+                _ => null
+            };
+
+            if (block is not null)
+            {
+                blocks.Add(block);
+            }
+        }
+
+        return blocks;
+    }
 }
 
 /// <summary>

@@ -166,6 +166,56 @@ data: {"type":"message_stop"}
         Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
     }
 
+    [Fact]
+    public async Task Runtime_GetHistory_ReturnsBlocksAwareReplayEntries()
+    {
+        var runtime = CreateAnthropicRuntime(
+            [
+                """
+data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system.info","input":{}}}
+
+data: {"type":"content_block_stop","index":0}
+
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"input_tokens":3,"output_tokens":1}}
+
+data: {"type":"message_stop"}
+
+""",
+                """
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Claude handled tool"}}
+
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":4,"output_tokens":2}}
+
+data: {"type":"message_stop"}
+
+"""
+            ],
+            out _,
+            out _);
+
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "run tool");
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        var history = await runtime.GetHistoryAsync(session.Record.SessionId);
+
+        Assert.Contains(history, entry =>
+            entry.Message?.Role == PromptMessageRole.Tool &&
+            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system.info"));
+
+        Assert.Contains(history, entry =>
+            entry.Event?.EventType == "ToolCallRequested" &&
+            entry.ReplayBlocks.OfType<ModelToolUseBlock>().Any(block => block.Name == "system.info"));
+
+        Assert.Contains(history, entry =>
+            entry.Event?.EventType == "ToolCallCompleted" &&
+            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system.info"));
+
+        Assert.Contains(history, entry =>
+            entry.Event?.EventType == "TurnCompleted" &&
+            entry.ReplayBlocks.OfType<ModelTextBlock>().Any(block => block.Text == "Claude handled tool"));
+    }
+
     private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
     {
         var options = new ClawOptions

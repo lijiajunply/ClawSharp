@@ -241,7 +241,18 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
                 if (!string.IsNullOrEmpty(chunk.TextDelta))
                 {
                     assistantBuffer.Append(chunk.TextDelta);
-                    yield return new WorkerEvent("worker.message.delta", JsonSerializer.SerializeToElement(new { delta = chunk.TextDelta }));
+                    yield return new WorkerEvent("worker.message.delta", JsonSerializer.SerializeToElement(new
+                    {
+                        delta = chunk.TextDelta,
+                        blocks = new[]
+                        {
+                            new
+                            {
+                                type = "text",
+                                text = chunk.TextDelta
+                            }
+                        }
+                    }));
                 }
 
                 if (chunk.ToolCall is not null)
@@ -255,13 +266,39 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
 
                     // 为需要原生 tool_use 上下文的 provider 保留 assistant -> tool_use 这一跳。
                     messages.Add(ModelMessage.AssistantToolUse(chunk.ToolCall.Id, chunk.ToolCall.Name, chunk.ToolCall.ArgumentsJson));
-                    yield return new WorkerEvent("worker.tool.requested", JsonSerializer.SerializeToElement(chunk.ToolCall));
+                    yield return new WorkerEvent("worker.tool.requested", JsonSerializer.SerializeToElement(new
+                    {
+                        id = chunk.ToolCall.Id,
+                        name = chunk.ToolCall.Name,
+                        argumentsJson = chunk.ToolCall.ArgumentsJson,
+                        blocks = new[]
+                        {
+                            new
+                            {
+                                type = "tool_use",
+                                id = chunk.ToolCall.Id,
+                                name = chunk.ToolCall.Name,
+                                arguments = chunk.ToolCall.ArgumentsJson
+                            }
+                        }
+                    }));
                     var toolResult = await onToolRequest(new WorkerToolRequest(chunk.ToolCall.Id, chunk.ToolCall.Name, chunk.ToolCall.ArgumentsJson)).ConfigureAwait(false);
                     yield return new WorkerEvent("worker.tool.completed", JsonSerializer.SerializeToElement(new
                     {
                         toolCallId = toolResult.ToolCallId,
+                        toolName = chunk.ToolCall.Name,
                         status = toolResult.Result.Status.ToString(),
-                        payload = toolResult.Result.Payload
+                        payload = toolResult.Result.Payload,
+                        blocks = new[]
+                        {
+                            new
+                            {
+                                type = "tool_result",
+                                tool_call_id = toolResult.ToolCallId,
+                                tool_name = chunk.ToolCall.Name,
+                                content = toolResult.Result.Payload.GetRawText()
+                            }
+                        }
                     }));
 
                     // 将工具结果回灌为后续模型消息，允许 provider 继续推理。
