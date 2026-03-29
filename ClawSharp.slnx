@@ -1,6 +1,5 @@
 <Solution>
   <Project Path="ClawSharp.CLI/ClawSharp.CLI.csproj" />
-  <Project Path="ClawSharp.Desktop/ClawSharp.Desktop.csproj" />
   <Project Path="ClawSharp.Lib.Tests/ClawSharp.Lib.Tests.csproj" />
   <Project Path="ClawSharp.Lib\ClawSharp.Lib.csproj" />
 </Solution>
