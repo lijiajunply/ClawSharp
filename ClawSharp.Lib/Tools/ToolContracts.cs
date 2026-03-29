@@ -123,21 +123,37 @@ public sealed record ToolExecutionContext(
     string WorkspaceRoot,
     string AgentId,
     string SessionId,
+    string? TurnId,
+    string? MessageId,
     ToolPermissionSet Permissions,
     string TraceId,
     CancellationToken CancellationToken);
 
+public enum ToolInvocationStatus
+{
+    Success,
+    Denied,
+    ApprovalRequired,
+    Failed
+}
+
 public sealed record ToolInvocationResult(
     string ToolName,
-    bool ApprovalRequired,
-    string? DeniedReason,
-    JsonElement Payload)
+    ToolInvocationStatus Status,
+    JsonElement Payload,
+    string? Error = null)
 {
     public static ToolInvocationResult Denied(string toolName, string reason) =>
-        new(toolName, false, reason, JsonSerializer.SerializeToElement(new { error = reason }));
+        new(toolName, ToolInvocationStatus.Denied, JsonSerializer.SerializeToElement(new { error = reason }), reason);
 
     public static ToolInvocationResult RequiresApproval(string toolName, JsonElement payload) =>
-        new(toolName, true, null, payload);
+        new(toolName, ToolInvocationStatus.ApprovalRequired, payload);
+
+    public static ToolInvocationResult Success(string toolName, JsonElement payload) =>
+        new(toolName, ToolInvocationStatus.Success, payload);
+
+    public static ToolInvocationResult Failure(string toolName, string error) =>
+        new(toolName, ToolInvocationStatus.Failed, JsonSerializer.SerializeToElement(new { error }), error);
 }
 
 public interface IToolDefinition
@@ -316,8 +332,7 @@ public sealed class ShellRunTool : IToolExecutor
 
         return new ToolInvocationResult(
             Definition.Name,
-            false,
-            null,
+            ToolInvocationStatus.Success,
             ToolSecurity.Json(new
             {
                 exitCode = process.ExitCode,
@@ -342,7 +357,7 @@ public sealed class FileReadTool : IToolExecutor
 
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(context.WorkspaceRoot, path));
         var content = await File.ReadAllTextAsync(fullPath, context.CancellationToken).ConfigureAwait(false);
-        return new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(new { path = fullPath, content }));
+        return ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, content }));
     }
 }
 
@@ -368,7 +383,7 @@ public sealed class FileWriteTool : IToolExecutor
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(context.WorkspaceRoot, path));
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await File.WriteAllTextAsync(fullPath, content, context.CancellationToken).ConfigureAwait(false);
-        return new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(new { path = fullPath, bytes = Encoding.UTF8.GetByteCount(content) }));
+        return ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, bytes = Encoding.UTF8.GetByteCount(content) }));
     }
 }
 
@@ -391,7 +406,7 @@ public sealed class FileListTool : IToolExecutor
             .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        return Task.FromResult(new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(new { path = fullPath, entries })));
+        return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, entries })));
     }
 }
 
@@ -401,10 +416,8 @@ public sealed class SystemInfoTool : IToolExecutor
 
     public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
     {
-        return Task.FromResult(new ToolInvocationResult(
+        return Task.FromResult(ToolInvocationResult.Success(
             Definition.Name,
-            false,
-            null,
             ToolSecurity.Json(new
             {
                 os = Environment.OSVersion.ToString(),
@@ -427,7 +440,7 @@ public sealed class SystemProcessesTool : IToolExecutor
             .Select(x => new { x.Id, x.ProcessName })
             .ToArray();
 
-        return Task.FromResult(new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(processes)));
+        return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(processes)));
     }
 }
 
@@ -457,7 +470,7 @@ public sealed class SearchTextTool : IToolExecutor
             }
         }
 
-        return new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(results));
+        return ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(results));
     }
 }
 
@@ -477,6 +490,6 @@ public sealed class SearchFilesTool : IToolExecutor
 
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(context.WorkspaceRoot, path));
         var files = Directory.EnumerateFiles(fullPath, pattern, SearchOption.AllDirectories).ToArray();
-        return Task.FromResult(new ToolInvocationResult(Definition.Name, false, null, ToolSecurity.Json(files)));
+        return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(files)));
     }
 }

@@ -98,8 +98,7 @@ internal static class MarkdownFrontMatter
         }
 
         var lines = new List<string>();
-        string? line;
-        while ((line = reader.ReadLine()) is not null)
+        while (reader.ReadLine() is { } line)
         {
             if (line == "---")
             {

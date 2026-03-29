@@ -45,7 +45,7 @@ public sealed class ToolSecurityTests : IDisposable
 
         var tool = new FileReadTool();
         var result = await tool.ExecuteAsync(TestHelpers.CreateContext(_workspace, merged), TestHelpers.Json(new { path = "docs/note.txt" }));
-        Assert.Null(result.DeniedReason);
+        Assert.Equal(ToolInvocationStatus.Success, result.Status);
     }
 
     [Fact]
@@ -66,7 +66,8 @@ public sealed class ToolSecurityTests : IDisposable
             TestHelpers.CreateContext(_workspace, permissions),
             TestHelpers.Json(new { path = "denied/out.txt", content = "test" }));
 
-        Assert.Equal("Write path denied.", result.DeniedReason);
+        Assert.Equal(ToolInvocationStatus.Denied, result.Status);
+        Assert.Equal("Write path denied.", result.Error);
     }
 
     public void Dispose()

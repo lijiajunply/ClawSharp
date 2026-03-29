@@ -1,6 +1,7 @@
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Memory;
 using ClawSharp.Lib.Mcp;
+using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
@@ -48,9 +49,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVectorStore, InMemoryVectorStore>();
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();
         services.AddSingleton<IMemoryIndex, MemoryIndex>();
+        services.AddSingleton<ISessionSerializer, JsonSessionSerializer>();
+        services.AddSingleton<ISessionStore, SqliteSessionStore>();
+        services.AddSingleton<IPromptHistoryStore, SqlitePromptHistoryStore>();
+        services.AddSingleton<ISessionEventStore, SqliteSessionEventStore>();
+        services.AddSingleton<ISessionManager, SessionManager>();
+        services.AddSingleton<IModelProvider, StubModelProvider>();
+        services.AddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
+        services.AddSingleton<IModelProviderResolver, ModelProviderResolver>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
         services.AddSingleton<IMcpClientManager, McpClientManager>();
-        services.AddSingleton<IAgentProcessLauncher, LocalAgentProcessLauncher>();
+        services.AddSingleton<IAgentWorkerClient, StdioJsonRpcAgentWorkerClient>();
+        services.AddSingleton<IAgentWorkerLauncher, DefaultAgentWorkerLauncher>();
         services.AddSingleton<IClawKernel, ClawKernel>();
         services.AddSingleton<IClawRuntime, ClawRuntime>();
 

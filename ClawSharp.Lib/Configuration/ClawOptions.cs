@@ -17,12 +17,22 @@ public sealed class ClawOptions
 
     public EmbeddingOptions Embedding { get; set; } = new();
 
+    public SessionOptions Sessions { get; set; } = new();
+
+    public HistoryOptions History { get; set; } = new();
+
+    public ProviderOptions Providers { get; set; } = new();
+
+    public WorkerOptions Worker { get; set; } = new();
+
     public WorkspacePolicy WorkspacePolicy { get; set; } = WorkspacePolicy.CreateDefault();
 }
 
 public sealed class RuntimeOptions
 {
     public string WorkspaceRoot { get; set; } = Directory.GetCurrentDirectory();
+
+    public string DataPath { get; set; } = ".clawsharp";
 
     public string? AgentWorkerCommand { get; set; }
 
@@ -75,4 +85,57 @@ public sealed class EmbeddingOptions
     public string Provider { get; set; } = "simple";
 
     public int Dimensions { get; set; } = 16;
+}
+
+public sealed class SessionOptions
+{
+    public string DatabasePath { get; set; } = ".clawsharp/clawsharp.db";
+
+    public int MaxHistoryEntries { get; set; } = 1_000;
+}
+
+public sealed class HistoryOptions
+{
+    public bool RecordToolPayloads { get; set; } = true;
+
+    public bool RecordMessageDeltas { get; set; } = true;
+
+    public int MaxPayloadLength { get; set; } = 32_768;
+}
+
+public sealed class ProviderOptions
+{
+    public string DefaultProvider { get; set; } = "stub";
+
+    public string DefaultModel { get; set; } = "stub-model";
+
+    public int TimeoutSeconds { get; set; } = 60;
+
+    public List<ModelProviderOptions> Models { get; set; } = [];
+}
+
+public sealed class ModelProviderOptions
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Type { get; set; } = "stub";
+
+    public string? ApiKey { get; set; }
+
+    public string DefaultModel { get; set; } = "stub-model";
+}
+
+public sealed class WorkerOptions
+{
+    public string? Command { get; set; }
+
+    public string Arguments { get; set; } = string.Empty;
+
+    public int StartupTimeoutSeconds { get; set; } = 10;
+
+    public int RpcTimeoutSeconds { get; set; } = 60;
+
+    public bool AutoRestart { get; set; }
+
+    public string LogLevel { get; set; } = "Information";
 }

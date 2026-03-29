@@ -14,6 +14,8 @@ internal static class TestHelpers
             workspaceRoot,
             "agent.test",
             "session.test",
+            "turn.test",
+            "message.test",
             permissions ?? new ToolPermissionSet(
                 ToolCapability.ShellExecute | ToolCapability.FileRead | ToolCapability.FileWrite | ToolCapability.SystemInspect,
                 [],
