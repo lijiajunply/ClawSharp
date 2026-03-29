@@ -9,5 +9,7 @@ permissions:
   capabilities:
     - shell.execute
     - system.inspect
+    - file_read
+    - file_write
 ---
 This is the Planner agent. It helps users organize their thoughts and tasks.

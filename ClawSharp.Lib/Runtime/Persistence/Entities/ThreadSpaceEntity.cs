@@ -4,7 +4,7 @@ internal sealed class ThreadSpaceEntity
 {
     public required string ThreadSpaceId { get; init; }
 
-    public required string Name { get; init; }
+    public required string Name { get; set; }
 
     public required string BoundFolderPath { get; set; }
 
@@ -12,5 +12,5 @@ internal sealed class ThreadSpaceEntity
 
     public DateTimeOffset CreatedAt { get; init; }
 
-    public DateTimeOffset? ArchivedAt { get; init; }
+    public DateTimeOffset? ArchivedAt { get; set; }
 }

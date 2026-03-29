@@ -11,4 +11,8 @@ internal interface IThreadSpaceRepository
     Task<ThreadSpaceRecord?> GetByBoundFolderPathAsync(string boundFolderPath, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived, CancellationToken cancellationToken = default);
+
+    Task UpdateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default);
+
+    Task ArchiveAsync(ThreadSpaceId threadSpaceId, DateTimeOffset archivedAt, CancellationToken cancellationToken = default);
 }

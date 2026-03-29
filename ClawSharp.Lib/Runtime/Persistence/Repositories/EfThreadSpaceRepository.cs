@@ -59,4 +59,31 @@ internal sealed class EfThreadSpaceRepository(IDbContextFactory<ClawDbContext> d
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task UpdateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var entity = await context.ThreadSpaces.SingleOrDefaultAsync(x => x.ThreadSpaceId == threadSpace.ThreadSpaceId.Value, cancellationToken).ConfigureAwait(false);
+        if (entity is not null)
+        {
+            entity.Name = threadSpace.Name;
+            entity.BoundFolderPath = threadSpace.BoundFolderPath;
+            entity.IsInit = threadSpace.IsInit;
+            entity.ArchivedAt = threadSpace.ArchivedAt;
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async Task ArchiveAsync(ThreadSpaceId threadSpaceId, DateTimeOffset archivedAt, CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var entity = await context.ThreadSpaces.SingleOrDefaultAsync(x => x.ThreadSpaceId == threadSpaceId.Value, cancellationToken).ConfigureAwait(false);
+        if (entity is not null)
+        {
+            entity.ArchivedAt = archivedAt;
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
 }

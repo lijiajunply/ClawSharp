@@ -187,6 +187,14 @@ public sealed class SqliteThreadSpaceStore : IThreadSpaceStore
     /// <inheritdoc />
     public Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived = false, CancellationToken cancellationToken = default) =>
         _repository.ListAsync(includeArchived, cancellationToken);
+
+    /// <inheritdoc />
+    public Task UpdateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default) =>
+        _repository.UpdateAsync(threadSpace, cancellationToken);
+
+    /// <inheritdoc />
+    public Task ArchiveAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default) =>
+        _repository.ArchiveAsync(threadSpaceId, DateTimeOffset.UtcNow, cancellationToken);
 }
 
 /// <summary>
@@ -275,6 +283,60 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
     {
         await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
         return await threadSpaces.ListAsync(includeArchived, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord> UpdateAsync(ThreadSpaceId threadSpaceId, string? newName = null, string? newBoundFolderPath = null, CancellationToken cancellationToken = default)
+    {
+        var existing = await GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
+        if (existing.IsInit)
+        {
+            throw new InvalidOperationException("Reserved 'init' ThreadSpace cannot be updated.");
+        }
+
+        var name = existing.Name;
+        if (!string.IsNullOrWhiteSpace(newName))
+        {
+            name = newName.Trim();
+            if (string.Equals(name, InitName, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("ThreadSpace name 'init' is reserved.");
+            }
+
+            var other = await threadSpaces.GetByNameAsync(name, cancellationToken).ConfigureAwait(false);
+            if (other is not null && other.ThreadSpaceId != threadSpaceId)
+            {
+                throw new InvalidOperationException($"ThreadSpace with name '{name}' already exists.");
+            }
+        }
+
+        var path = existing.BoundFolderPath;
+        if (!string.IsNullOrWhiteSpace(newBoundFolderPath))
+        {
+            path = NormalizeAndValidateBoundFolderPath(newBoundFolderPath);
+            var other = await threadSpaces.GetByBoundFolderPathAsync(path, cancellationToken).ConfigureAwait(false);
+            if (other is not null && other.ThreadSpaceId != threadSpaceId)
+            {
+                throw new InvalidOperationException($"ThreadSpace for path '{path}' already exists.");
+            }
+            Directory.CreateDirectory(path);
+        }
+
+        var updated = existing with { Name = name, BoundFolderPath = path };
+        await threadSpaces.UpdateAsync(updated, cancellationToken).ConfigureAwait(false);
+        return updated;
+    }
+
+    /// <inheritdoc />
+    public async Task ArchiveAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default)
+    {
+        var existing = await GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
+        if (existing.IsInit)
+        {
+            throw new InvalidOperationException("Reserved 'init' ThreadSpace cannot be archived.");
+        }
+
+        await threadSpaces.ArchiveAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -9,6 +9,6 @@ public static class ThemeConfig
     public static Color ErrorColor => Color.Red;
     public static Color InfoColor => Color.Grey;
 
-    public static string UserPrefix => $"[bold {UserColor.ToMarkup()}]User >[/]";
+    public static string GetUserPrefix(string threadSpaceName) => $"[bold grey][[{threadSpaceName.EscapeMarkup()}]] [/][bold {UserColor.ToMarkup()}]User >[/]";
     public static string AgentPrefix => $"[bold {AgentColor.ToMarkup()}]Agent >[/]";
 }

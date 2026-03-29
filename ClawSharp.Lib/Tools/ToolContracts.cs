@@ -736,3 +736,75 @@ public sealed class SearchFilesTool : IToolExecutor
         return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(files)));
     }
 }
+
+/// <summary>
+/// 以树状结构递归列出目录下文件系统条目的工具。
+/// </summary>
+public sealed class FileTreeTool : IToolExecutor
+{
+    /// <inheritdoc />
+    public ToolDefinition Definition { get; } = new(
+        "file_tree", 
+        "List files and directories as a tree structure recursively.", 
+        ToolSecurity.Json(new { 
+            type = "object", 
+            properties = new { 
+                path = new { type = "string" },
+                depth = new { type = "integer", @default = 3 }
+            } 
+        }), 
+        null, 
+        ToolCapability.FileRead);
+
+    /// <inheritdoc />
+    public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
+    {
+        var path = arguments.TryGetProperty("path", out var pathElement) ? pathElement.GetString() ?? "." : ".";
+        var depth = arguments.TryGetProperty("depth", out var depthElement) ? depthElement.GetInt32() : 3;
+        
+        var check = ToolSecurity.EnsurePathAllowed(context.WorkspaceRoot, path, context.Permissions.AllowedReadRoots, write: false);
+        if (!check.IsSuccess)
+        {
+            return Task.FromResult(ToolSecurity.CreateApprovalOrDenied(Definition, context, check.Error!, new { path }));
+        }
+
+        var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(context.WorkspaceRoot, path));
+        if (!Directory.Exists(fullPath))
+        {
+            return Task.FromResult(ToolInvocationResult.Failure(Definition.Name, "Directory not found."));
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine(Path.GetFileName(fullPath) + "/");
+        BuildTree(new DirectoryInfo(fullPath), "", true, sb, 0, depth);
+
+        return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, tree = sb.ToString() })));
+    }
+
+    private static void BuildTree(DirectoryInfo dir, string indent, bool last, StringBuilder sb, int currentDepth, int maxDepth)
+    {
+        if (currentDepth >= maxDepth) return;
+
+        var entries = dir.GetFileSystemInfos()
+            .Where(x => !x.Name.StartsWith('.'))
+            .OrderBy(x => x is DirectoryInfo ? 0 : 1)
+            .ThenBy(x => x.Name)
+            .ToArray();
+
+        for (int i = 0; i < entries.Length; i++)
+        {
+            var entry = entries[i];
+            bool isLast = i == entries.Length - 1;
+            sb.Append(indent);
+            sb.Append(isLast ? "└── " : "├── ");
+            sb.Append(entry.Name);
+            if (entry is DirectoryInfo) sb.Append("/");
+            sb.AppendLine();
+
+            if (entry is DirectoryInfo subDir)
+            {
+                BuildTree(subDir, indent + (isLast ? "    " : "│   "), isLast, sb, currentDepth + 1, maxDepth);
+            }
+        }
+    }
+}

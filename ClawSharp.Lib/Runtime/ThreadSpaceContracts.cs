@@ -76,6 +76,16 @@ public interface IThreadSpaceStore
     /// 列出 ThreadSpace。
     /// </summary>
     Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新已有的 ThreadSpace。
+    /// </summary>
+    Task UpdateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 将 ThreadSpace 归档（软删除）。
+    /// </summary>
+    Task ArchiveAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -117,6 +127,16 @@ public interface IThreadSpaceManager
     /// 列出 ThreadSpace。
     /// </summary>
     Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新 ThreadSpace 信息。
+    /// </summary>
+    Task<ThreadSpaceRecord> UpdateAsync(ThreadSpaceId threadSpaceId, string? newName = null, string? newBoundFolderPath = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 将 ThreadSpace 归档。
+    /// </summary>
+    Task ArchiveAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 列出某个 ThreadSpace 下的 session。

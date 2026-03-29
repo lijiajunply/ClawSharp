@@ -143,6 +143,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolExecutor, SystemProcessesTool>();
         services.AddSingleton<IToolExecutor, SearchTextTool>();
         services.AddSingleton<IToolExecutor, SearchFilesTool>();
+        services.AddSingleton<IToolExecutor, FileTreeTool>();
 
         return services;
     }
