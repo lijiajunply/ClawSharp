@@ -126,6 +126,46 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
         Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
     }
 
+    [Fact]
+    public async Task Runtime_WithAnthropicProvider_HandlesNativeToolTurn()
+    {
+        var runtime = CreateAnthropicRuntime(
+            [
+                """
+data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system.info","input":{}}}
+
+data: {"type":"content_block_stop","index":0}
+
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"input_tokens":3,"output_tokens":1}}
+
+data: {"type":"message_stop"}
+
+""",
+                """
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Claude handled tool"}}
+
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":4,"output_tokens":2}}
+
+data: {"type":"message_stop"}
+
+"""
+            ],
+            out var historyStore,
+            out var eventStore);
+
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "run tool");
+
+        var result = await runtime.RunTurnAsync(session.Record.SessionId);
+        var messages = await historyStore.ListAsync(session.Record.SessionId);
+        var events = await eventStore.ListAsync(session.Record.SessionId);
+
+        Assert.Equal(1, result.ToolCallCount);
+        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system.info");
+        Assert.Contains(messages, message => message.Role == PromptMessageRole.Assistant && message.Content == "Claude handled tool");
+        Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
+    }
+
     private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
     {
         var options = new ClawOptions
@@ -171,6 +211,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
             "planner",
             "Planner",
             "desc",
+            "",
             "stub-model",
             "You are helpful",
             ["system.info", "shell.run"],
@@ -249,6 +290,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
             "planner",
             "Planner",
             "desc",
+            "",
             "gpt-runtime",
             "You are helpful",
             ["system.info"],
@@ -265,6 +307,89 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
             Content = new StringContent(payloadQueue.Count > 0 ? payloadQueue.Dequeue() : ssePayloads[^1], Encoding.UTF8, "text/event-stream")
         });
         var provider = new OpenAiResponsesModelProvider(options, new ProviderTestsProxyFactory(handler));
+        var registry = new ModelProviderRegistry([provider, new StubModelProvider()]);
+        var resolver = new ModelProviderResolver(options, registry);
+        var kernel = new ClawKernel(
+            options,
+            new FakeAgentRegistry(agent),
+            new FakeSkillRegistry(),
+            new ToolRegistry([new SystemInfoTool()]),
+            new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
+            new McpClientManager(new McpServerCatalog(options)),
+            sessionManager,
+            historyStore,
+            eventStore,
+            resolver);
+
+        return new ClawRuntime(
+            kernel,
+            new McpServerCatalog(options),
+            sessionStore,
+            new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
+            new JsonSessionSerializer());
+    }
+
+    private ClawRuntime CreateAnthropicRuntime(IReadOnlyList<string> ssePayloads, out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
+    {
+        var options = new ClawOptions
+        {
+            Runtime = new RuntimeOptions { WorkspaceRoot = _root },
+            Sessions = new SessionOptions { DatabasePath = Path.Combine(_root, $"runtime-anthropic-{Guid.NewGuid():N}.db") },
+            Providers = new ProviderOptions
+            {
+                DefaultProvider = "claude",
+                Models =
+                [
+                    new ModelProviderOptions
+                    {
+                        Name = "claude",
+                        Type = "anthropic-messages",
+                        BaseUrl = "https://api.anthropic.com",
+                        ApiKey = "key",
+                        DefaultModel = "claude-sonnet"
+                    }
+                ]
+            },
+            WorkspacePolicy = new WorkspacePolicy
+            {
+                Permissions = new ToolPermissionSet(
+                    ToolCapability.SystemInspect,
+                    [],
+                    [],
+                    [],
+                    false,
+                    false,
+                    10,
+                    2048)
+            }
+        };
+
+        var sessionStore = new SqliteSessionStore(options);
+        historyStore = new SqlitePromptHistoryStore(options);
+        eventStore = new SqliteSessionEventStore(options);
+        var sessionManager = new SessionManager(sessionStore);
+
+        var agent = new AgentDefinition(
+            "planner",
+            "Planner",
+            "desc",
+            "",
+            "claude-sonnet",
+            "You are helpful",
+            ["system.info"],
+            [],
+            "workspace",
+            [],
+            new ToolPermissionSet(ToolCapability.SystemInspect, [], [], [], false, false, 10, 1024),
+            "v1",
+            "");
+
+        var payloadQueue = new Queue<string>(ssePayloads);
+        var handler = new ProviderTestsProxyHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(payloadQueue.Count > 0 ? payloadQueue.Dequeue() : ssePayloads[^1], Encoding.UTF8, "text/event-stream")
+        });
+        var provider = new AnthropicMessagesModelProvider(options, new ProviderTestsProxyFactory(handler));
         var registry = new ModelProviderRegistry([provider, new StubModelProvider()]);
         var resolver = new ModelProviderResolver(options, registry);
         var kernel = new ClawKernel(

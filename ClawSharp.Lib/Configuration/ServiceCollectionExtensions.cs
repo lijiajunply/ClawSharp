@@ -110,8 +110,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISessionManager, SessionManager>();
         services.AddSingleton<IProviderHttpClientFactory, DefaultProviderHttpClientFactory>();
         services.AddSingleton<IModelProvider, StubModelProvider>();
+        services.AddSingleton<IModelProvider, AnthropicMessagesModelProvider>();
         services.AddSingleton<IModelProvider, OpenAiResponsesModelProvider>();
         services.AddSingleton<IModelProvider, OpenAiCompatibleChatModelProvider>();
+        services.AddSingleton<IModelProvider, GeminiCompatibleChatModelProvider>();
         services.AddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
         services.AddSingleton<IModelProviderResolver, ModelProviderResolver>();
         services.AddSingleton<MarkdownProjectTemplateParser>();

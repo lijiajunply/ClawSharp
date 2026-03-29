@@ -469,19 +469,34 @@ public sealed class ClawRuntime(
             modelMessages.Add(new ModelMessage(ModelMessageRole.System, agent.SystemPrompt));
         }
 
-        modelMessages.AddRange(messages.Select(message => new ModelMessage(
-            message.Role switch
-            {
-                PromptMessageRole.System => ModelMessageRole.System,
-                PromptMessageRole.User => ModelMessageRole.User,
-                PromptMessageRole.Assistant => ModelMessageRole.Assistant,
-                PromptMessageRole.Tool => ModelMessageRole.Tool,
-                _ => ModelMessageRole.User
-            },
-            message.Content,
-            message.Name,
-            message.ToolCallId)));
+        modelMessages.AddRange(messages.Select(ToModelMessage));
 
         return modelMessages;
+    }
+
+    private static ModelMessage ToModelMessage(PromptMessage message)
+    {
+        var role = message.Role switch
+        {
+            PromptMessageRole.System => ModelMessageRole.System,
+            PromptMessageRole.User => ModelMessageRole.User,
+            PromptMessageRole.Assistant => ModelMessageRole.Assistant,
+            PromptMessageRole.Tool => ModelMessageRole.Tool,
+            _ => ModelMessageRole.User
+        };
+
+        if (role == ModelMessageRole.Tool && !string.IsNullOrWhiteSpace(message.ToolCallId))
+        {
+            return ModelMessage.ToolResult(message.ToolCallId, message.Content, message.Name);
+        }
+
+        if (role == ModelMessageRole.Assistant &&
+            !string.IsNullOrWhiteSpace(message.ToolCallId) &&
+            !string.IsNullOrWhiteSpace(message.Name))
+        {
+            return ModelMessage.AssistantToolUse(message.ToolCallId, message.Name, message.Content);
+        }
+
+        return new ModelMessage(role, message.Content);
     }
 }

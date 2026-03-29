@@ -75,7 +75,7 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
   - Vector store 抽象
   - 本地默认实现
 - `Providers`
-  - 模型 provider 抽象
+  - 支持 structured content blocks 的模型 provider 抽象
   - OpenAI Responses API 支持
   - OpenAI-compatible Chat Completions 支持
 - `Runtime`
@@ -87,7 +87,7 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
 
 ## Provider 支持
 
-ClawSharp 当前支持三种 provider 模式：
+ClawSharp 当前支持五种 provider 模式：
 
 1. `stub`
    用于测试和显式离线模式。
@@ -101,12 +101,21 @@ ClawSharp 当前支持三种 provider 模式：
 3. `openai-chat-compatible`
    用于支持暴露 OpenAI 风格 `chat/completions` API 的兼容服务。
 
+4. `gemini-openai-compatible`
+   用于接入 Gemini 的 OpenAI-compatible endpoint，默认请求路径为 `chat/completions`。
+
+5. `anthropic-messages`
+   用于接入 Claude 的 Anthropic Messages API。
+   当前版本支持流式文本输出，以及 Claude 原生 `tool_use` / `tool_result` 工具回环。
+
 Provider resolver 实现在 [`ModelProviderResolver`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L174)。
 
 具体 provider 实现在：
 
 - [`OpenAiResponsesModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs#L330)
 - [`OpenAiCompatibleChatModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs#L458)
+- [`GeminiCompatibleChatModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs)
+- [`AnthropicMessagesModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/AnthropicProviders.cs)
 - [`StubModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L235)
 
 ## Agent 与 Skill 目录约定
@@ -132,6 +141,8 @@ workspace/
 Agent 文件使用带 YAML frontmatter 的 Markdown。正文部分可以承载更长的说明、规则或示例。  
 Skill 文件采用相同的基本模式。
 项目模板目录用于 `ClawSharp.Lib.Projects` 的新建项目脚手架能力；模板元数据位于 `template.md`，其余文件会按相对路径生成到新项目中。
+
+Agent frontmatter 现在支持可选的 `provider` 字段，用来为单个 agent 指定模型厂商；未填写时会回退到 `Providers:DefaultProvider`。`model` 也可以留空，此时优先使用该 provider 的 `DefaultModel`。
 
 ## 配置
 
@@ -187,6 +198,19 @@ Skill 文件采用相同的基本模式。
         "BaseUrl": "https://your-compatible-endpoint.example",
         "DefaultModel": "your-model",
         "SupportsChatCompletions": true
+      },
+      {
+        "Name": "gemini",
+        "Type": "gemini-openai-compatible",
+        "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "DefaultModel": "gemini-2.5-flash",
+        "SupportsChatCompletions": true
+      },
+      {
+        "Name": "claude",
+        "Type": "anthropic-messages",
+        "BaseUrl": "https://api.anthropic.com",
+        "DefaultModel": "claude-sonnet-4-20250514"
       }
     ]
   }
@@ -198,6 +222,23 @@ Skill 文件采用相同的基本模式。
 ```dotenv
 Providers__Models__0__ApiKey=your_openai_api_key
 Providers__Models__1__ApiKey=your_compatible_api_key
+Providers__Models__2__ApiKey=your_gemini_api_key
+Providers__Models__3__ApiKey=your_anthropic_api_key
+```
+
+### `agent.md` frontmatter 示例
+
+```yaml
+---
+id: planner
+name: Planner
+description: Multi-provider planner
+provider: claude
+model: ""
+system_prompt: You are a careful planner.
+memory_scope: workspace
+version: v1
+---
 ```
 
 ## 如何使用
@@ -327,7 +368,6 @@ ClawSharp 目前还不是：
 - 在 `IClawRuntime` 之上加第一版 CLI
 - 增加 `.env.example` 与更完整的示例配置
 - 继续增强 provider 支持，包括重试、错误处理和更多 wire shape
-- 为 agent 定义增加 provider 级别选择
 - 深化 MCP 集成，让 MCP tools/resources 更直接参与 prompt 组装
 - 把 memory 扩展成可选的 retrieval pipeline
 

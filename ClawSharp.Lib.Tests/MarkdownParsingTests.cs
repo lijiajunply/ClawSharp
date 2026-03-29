@@ -14,6 +14,7 @@ public sealed class MarkdownParsingTests
 id: planner
 name: Planner
 description: Plans work
+provider: claude
 model: gpt-5
 system_prompt: You are a planner
 tools:
@@ -35,6 +36,7 @@ Agent body.
         var result = parser.Parse(markdown);
 
         Assert.Equal("planner", result.Id);
+        Assert.Equal("claude", result.Provider);
         Assert.Equal("Agent body.", result.Body);
         Assert.Contains("file.read", result.Tools);
     }

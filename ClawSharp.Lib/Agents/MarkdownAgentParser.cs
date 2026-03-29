@@ -31,6 +31,7 @@ public sealed class MarkdownAgentParser
             dto.Id ?? string.Empty,
             dto.Name ?? string.Empty,
             dto.Description ?? string.Empty,
+            dto.Provider ?? string.Empty,
             dto.Model ?? string.Empty,
             dto.SystemPrompt ?? string.Empty,
             dto.Tools ?? [],
@@ -50,6 +51,7 @@ public sealed class MarkdownAgentParser
         public string? Id { get; init; }
         public string? Name { get; init; }
         public string? Description { get; init; }
+        public string? Provider { get; init; }
         public string? Model { get; init; }
         public string? SystemPrompt { get; init; }
         public List<string>? Tools { get; init; }

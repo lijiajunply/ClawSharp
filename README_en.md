@@ -75,7 +75,7 @@ The library is organized around a few major subsystems:
   - Vector store abstraction
   - Local default implementation
 - `Providers`
-  - Model provider abstraction
+  - Model provider abstraction with structured content blocks
   - OpenAI Responses API support
   - OpenAI-compatible Chat Completions support
 - `Runtime`
@@ -87,7 +87,7 @@ The library is organized around a few major subsystems:
 
 ## Provider Support
 
-ClawSharp currently supports three provider modes:
+ClawSharp currently supports five provider modes:
 
 1. `stub`
    Used for tests and explicit offline mode.
@@ -101,11 +101,20 @@ ClawSharp currently supports three provider modes:
 3. `openai-chat-compatible`
    A compatibility path for services that expose an OpenAI-style `chat/completions` API.
 
+4. `gemini-openai-compatible`
+   For Gemini's OpenAI-compatible endpoint, with `chat/completions` as the default path.
+
+5. `anthropic-messages`
+   For Claude via Anthropic's Messages API.
+   The current implementation supports both streaming text and Claude-native `tool_use` / `tool_result` loops.
+
 The provider resolver is implemented in [`ModelProviderResolver`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L174).  
 The concrete provider implementations live in:
 
 - [`OpenAiResponsesModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs#L330)
 - [`OpenAiCompatibleChatModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs#L458)
+- [`GeminiCompatibleChatModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/OpenAiProviders.cs)
+- [`AnthropicMessagesModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/AnthropicProviders.cs)
 - [`StubModelProvider`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L235)
 
 ## Agent and Skill Layout
@@ -131,6 +140,8 @@ workspace/
 Agent files are Markdown with YAML frontmatter. The body can hold longer instructions or notes.  
 Skill files follow the same general pattern.
 The project template directory powers the `ClawSharp.Lib.Projects` scaffolding API; template metadata lives in `template.md`, and every other file is generated into the new project using its relative path.
+
+Agent frontmatter now supports an optional `provider` field so each agent can target a specific model vendor. If omitted, runtime falls back to `Providers:DefaultProvider`. `model` can also be left empty, in which case the selected provider's `DefaultModel` is used first.
 
 ## Configuration
 
@@ -186,6 +197,19 @@ Important sections:
         "BaseUrl": "https://your-compatible-endpoint.example",
         "DefaultModel": "your-model",
         "SupportsChatCompletions": true
+      },
+      {
+        "Name": "gemini",
+        "Type": "gemini-openai-compatible",
+        "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "DefaultModel": "gemini-2.5-flash",
+        "SupportsChatCompletions": true
+      },
+      {
+        "Name": "claude",
+        "Type": "anthropic-messages",
+        "BaseUrl": "https://api.anthropic.com",
+        "DefaultModel": "claude-sonnet-4-20250514"
       }
     ]
   }
@@ -197,6 +221,23 @@ Important sections:
 ```dotenv
 Providers__Models__0__ApiKey=your_openai_api_key
 Providers__Models__1__ApiKey=your_compatible_api_key
+Providers__Models__2__ApiKey=your_gemini_api_key
+Providers__Models__3__ApiKey=your_anthropic_api_key
+```
+
+### Example `agent.md` frontmatter
+
+```yaml
+---
+id: planner
+name: Planner
+description: Multi-provider planner
+provider: claude
+model: ""
+system_prompt: You are a careful planner.
+memory_scope: workspace
+version: v1
+---
 ```
 
 ## Using the Library
@@ -326,7 +367,6 @@ The most natural next steps are:
 - add a first CLI on top of `IClawRuntime`
 - add `.env.example` and richer sample configs
 - improve provider support with retries, richer error handling, and more wire-shape coverage
-- add provider selection at the agent definition level
 - deepen MCP integration so MCP tools/resources participate more directly in prompt assembly
 - expand memory integration into optional retrieval pipelines
 

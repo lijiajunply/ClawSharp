@@ -11,8 +11,8 @@ public sealed class RegistryTests
     {
         var store = new FakeAgentStore(
         [
-            new AgentDefinition("dup", "One", "Desc", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", ""),
-            new AgentDefinition("dup", "Two", "Desc", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", "")
+            new AgentDefinition("dup", "One", "Desc", "", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", ""),
+            new AgentDefinition("dup", "Two", "Desc", "", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", "")
         ]);
 
         var registry = new AgentRegistry(store);

@@ -60,7 +60,7 @@ public sealed class ProviderTests
         };
 
         var resolver = new ModelProviderResolver(options, new ModelProviderRegistry([new StubModelProvider(), new OpenAiResponsesModelProvider(options, new FakeHttpClientFactory())]));
-        var agent = new AgentDefinition("planner", "Planner", "desc", "gpt-agent", "prompt", [], [], "workspace", [], ToolPermissionSet.Empty, "v1", "");
+        var agent = new AgentDefinition("planner", "Planner", "desc", "", "gpt-agent", "prompt", [], [], "workspace", [], ToolPermissionSet.Empty, "v1", "");
 
         var resolved = resolver.Resolve(agent);
         Assert.Equal("openai", resolved.Target.ProviderName);
@@ -232,6 +232,209 @@ data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"
         Assert.Contains("ApiKey", ex.Message);
     }
 
+    [Fact]
+    public void ProviderResolver_UsesAgentProviderOverrideAndProviderDefaultModel()
+    {
+        var options = new ClawOptions
+        {
+            Providers = new ProviderOptions
+            {
+                DefaultProvider = "openai",
+                Models =
+                [
+                    new ModelProviderOptions
+                    {
+                        Name = "openai",
+                        Type = "openai-responses",
+                        BaseUrl = "https://api.openai.com",
+                        ApiKey = "key",
+                        DefaultModel = "gpt-default",
+                        SupportsResponses = true
+                    },
+                    new ModelProviderOptions
+                    {
+                        Name = "claude",
+                        Type = "anthropic-messages",
+                        BaseUrl = "https://api.anthropic.com",
+                        ApiKey = "anthropic-key",
+                        DefaultModel = "claude-sonnet",
+                        SupportsResponses = false
+                    }
+                ]
+            }
+        };
+
+        var resolver = new ModelProviderResolver(options, new ModelProviderRegistry(
+        [
+            new StubModelProvider(),
+            new OpenAiResponsesModelProvider(options, new FakeHttpClientFactory()),
+            new AnthropicMessagesModelProvider(options, new FakeHttpClientFactory())
+        ]));
+
+        var agent = new AgentDefinition("planner", "Planner", "desc", "claude", "", "prompt", [], [], "workspace", [], ToolPermissionSet.Empty, "v1", "");
+
+        var resolved = resolver.Resolve(agent);
+
+        Assert.Equal("claude", resolved.Target.ProviderName);
+        Assert.Equal("anthropic-messages", resolved.Target.ProviderType);
+        Assert.Equal("claude-sonnet", resolved.Target.Model);
+    }
+
+    [Fact]
+    public async Task AnthropicProvider_BuildsRequestAndParsesStream()
+    {
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            var stream = """
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hello "}}
+
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Claude"}}
+
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":9,"output_tokens":2}}
+
+data: {"type":"message_stop"}
+
+""";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(stream, Encoding.UTF8, "text/event-stream")
+            };
+        });
+
+        var options = new ClawOptions
+        {
+            Providers = new ProviderOptions
+            {
+                Models =
+                [
+                    new ModelProviderOptions
+                    {
+                        Name = "claude",
+                        Type = "anthropic-messages",
+                        BaseUrl = "https://api.anthropic.com",
+                        ApiKey = "anthropic-key",
+                        DefaultModel = "claude-sonnet"
+                    }
+                ]
+            }
+        };
+
+        var provider = new AnthropicMessagesModelProvider(options, new FakeHttpClientFactory(handler));
+        var request = new ModelRequest(
+            new ResolvedModelTarget("claude", "anthropic-messages", "https://api.anthropic.com", "claude-sonnet"),
+            "session-1",
+            "trace-1",
+            [new ModelMessage(ModelMessageRole.User, "hello")],
+            [],
+            "Be helpful");
+
+        var chunks = await CollectChunks(provider.StreamAsync(request));
+        var sentBody = await handler.Requests.Single().Content!.ReadAsStringAsync();
+        var sentRequest = handler.Requests.Single();
+
+        Assert.Contains("/v1/messages", sentRequest.RequestUri!.ToString());
+        Assert.Equal("anthropic-key", sentRequest.Headers.GetValues("x-api-key").Single());
+        Assert.Equal("2023-06-01", sentRequest.Headers.GetValues("anthropic-version").Single());
+        Assert.Contains("\"system\":\"Be helpful\"", sentBody);
+        Assert.Contains(chunks, chunk => chunk.TextDelta == "Hello ");
+        Assert.Contains(chunks, chunk => chunk.StopReason == ModelStopReason.Completed);
+    }
+
+    [Fact]
+    public async Task AnthropicProvider_ParsesNativeToolUse()
+    {
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            var stream = """
+data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system.info","input":{}}}
+
+data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"verbose\":true"}}
+
+data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"}"}}
+
+data: {"type":"content_block_stop","index":0}
+
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use"},"usage":{"input_tokens":7,"output_tokens":3}}
+
+data: {"type":"message_stop"}
+
+""";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(stream, Encoding.UTF8, "text/event-stream")
+            };
+        });
+
+        var options = new ClawOptions
+        {
+            Providers = new ProviderOptions
+            {
+                Models =
+                [
+                    new ModelProviderOptions
+                    {
+                        Name = "claude",
+                        Type = "anthropic-messages",
+                        BaseUrl = "https://api.anthropic.com",
+                        ApiKey = "anthropic-key",
+                        DefaultModel = "claude-sonnet"
+                    }
+                ]
+            }
+        };
+
+        var provider = new AnthropicMessagesModelProvider(options, new FakeHttpClientFactory(handler));
+        var request = new ModelRequest(
+            new ResolvedModelTarget("claude", "anthropic-messages", "https://api.anthropic.com", "claude-sonnet"),
+            "session-1",
+            "trace-1",
+            [new ModelMessage(ModelMessageRole.User, "run tool")],
+            [new ModelToolSchema("system.info", "Get info", """{"type":"object","properties":{"verbose":{"type":"boolean"}}}""")]);
+
+        var chunks = await CollectChunks(provider.StreamAsync(request));
+        var toolCall = chunks.Single(chunk => chunk.ToolCall is not null).ToolCall!;
+        var sentBody = await handler.Requests.Single().Content!.ReadAsStringAsync();
+
+        Assert.Equal("system.info", toolCall.Name);
+        Assert.Equal("toolu_1", toolCall.Id);
+        Assert.Equal("{\"verbose\":true}", toolCall.ArgumentsJson);
+        Assert.Contains("\"tools\"", sentBody);
+        Assert.Contains("\"input_schema\"", sentBody);
+        Assert.Contains(chunks, chunk => chunk.StopReason == ModelStopReason.ToolCall);
+    }
+
+    [Fact]
+    public async Task GeminiCompatibleProvider_UsesGeminiDefaultPath()
+    {
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            var stream = """
+data: {"choices":[{"delta":{"content":"Hi Gemini"},"finish_reason":"stop"}],"usage":{"prompt_tokens":2,"completion_tokens":2,"total_tokens":4}}
+
+""";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(stream, Encoding.UTF8, "text/event-stream")
+            };
+        });
+
+        var options = BuildRemoteOptions("gemini", "gemini-openai-compatible", "https://generativelanguage.googleapis.com/v1beta/openai");
+        var provider = new GeminiCompatibleChatModelProvider(options, new FakeHttpClientFactory(handler));
+        var request = new ModelRequest(
+            new ResolvedModelTarget("gemini", "gemini-openai-compatible", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash", SupportsChatCompletions: true),
+            "session-1",
+            "trace-1",
+            [new ModelMessage(ModelMessageRole.User, "hello")],
+            []);
+
+        var chunks = await CollectChunks(provider.StreamAsync(request));
+
+        Assert.Contains("/chat/completions", handler.Requests.Single().RequestUri!.ToString());
+        Assert.DoesNotContain("/v1/chat/completions", handler.Requests.Single().RequestUri!.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(chunks, chunk => chunk.TextDelta == "Hi Gemini");
+        Assert.Contains(chunks, chunk => chunk.StopReason == ModelStopReason.Completed);
+    }
+
     private static async Task<List<ModelResponseChunk>> CollectChunks(IAsyncEnumerable<ModelResponseChunk> stream)
     {
         var chunks = new List<ModelResponseChunk>();
@@ -243,7 +446,7 @@ data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"
         return chunks;
     }
 
-    private static ClawOptions BuildRemoteOptions(string name, string type) => new()
+    private static ClawOptions BuildRemoteOptions(string name, string type, string? baseUrl = null) => new()
     {
         Providers = new ProviderOptions
         {
@@ -253,11 +456,11 @@ data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"}"
                 {
                     Name = name,
                     Type = type,
-                    BaseUrl = type == "openai-chat-compatible" ? "https://compat.example" : "https://api.openai.com",
+                    BaseUrl = baseUrl ?? (type == "openai-chat-compatible" ? "https://compat.example" : "https://api.openai.com"),
                     ApiKey = "key",
-                    DefaultModel = "gpt-test",
+                    DefaultModel = type == "gemini-openai-compatible" ? "gemini-2.5-flash" : "gpt-test",
                     SupportsResponses = type == "openai-responses",
-                    SupportsChatCompletions = type == "openai-chat-compatible"
+                    SupportsChatCompletions = type is "openai-chat-compatible" or "gemini-openai-compatible"
                 }
             ]
         }

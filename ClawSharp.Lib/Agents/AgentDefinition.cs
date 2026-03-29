@@ -9,7 +9,8 @@ namespace ClawSharp.Lib.Agents;
 /// <param name="Id">agent 唯一标识。</param>
 /// <param name="Name">agent 显示名称。</param>
 /// <param name="Description">agent 功能摘要。</param>
-/// <param name="Model">agent 指定的模型名；为空时由 provider 默认值补足。</param>
+/// <param name="Provider">agent 指定的 provider 配置名；为空时回退到全局默认 provider。</param>
+/// <param name="Model">agent 指定的模型名；为空时由 provider 默认值或全局默认模型补足。</param>
 /// <param name="SystemPrompt">发送给模型的系统提示词。</param>
 /// <param name="Tools">允许 agent 使用的工具名列表；为空表示不额外收窄授权工具。</param>
 /// <param name="Skills">运行时需要装配的 skill 标识列表。</param>
@@ -22,6 +23,7 @@ public sealed record AgentDefinition(
     string Id,
     string Name,
     string Description,
+    string Provider,
     string Model,
     string SystemPrompt,
     IReadOnlyList<string> Tools,
@@ -41,7 +43,6 @@ public sealed record AgentDefinition(
         if (string.IsNullOrWhiteSpace(Id) ||
             string.IsNullOrWhiteSpace(Name) ||
             string.IsNullOrWhiteSpace(Description) ||
-            string.IsNullOrWhiteSpace(Model) ||
             string.IsNullOrWhiteSpace(SystemPrompt) ||
             string.IsNullOrWhiteSpace(MemoryScope) ||
             string.IsNullOrWhiteSpace(Version))

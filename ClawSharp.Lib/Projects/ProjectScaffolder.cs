@@ -11,7 +11,8 @@ public sealed class ProjectScaffolder(
     ClawOptions options) : IProjectScaffolder
 {
     /// <inheritdoc />
-    public Task<IReadOnlyList<ProjectTemplateDefinition>> ListTemplatesAsync(CancellationToken cancellationToken = default) =>
+    public Task<IReadOnlyList<ProjectTemplateDefinition>> ListTemplatesAsync(
+        CancellationToken cancellationToken = default) =>
         templateStore.LoadAllAsync(cancellationToken);
 
     /// <inheritdoc />
@@ -22,10 +23,12 @@ public sealed class ProjectScaffolder(
         request.Validate();
 
         var templates = await templateStore.LoadAllAsync(cancellationToken).ConfigureAwait(false);
-        var template = templates.SingleOrDefault(x => string.Equals(x.Id, request.ProjectType, StringComparison.OrdinalIgnoreCase));
+        var template = templates.SingleOrDefault(x =>
+            string.Equals(x.Id, request.ProjectType, StringComparison.OrdinalIgnoreCase));
         if (template is null)
         {
-            return OperationResult<CreateProjectResult>.Failure($"Project template '{request.ProjectType}' was not found.");
+            return OperationResult<CreateProjectResult>.Failure(
+                $"Project template '{request.ProjectType}' was not found.");
         }
 
         try
@@ -33,7 +36,8 @@ public sealed class ProjectScaffolder(
             var projectRoot = ResolveProjectRoot(request.TargetPath, options.Runtime.WorkspaceRoot);
             if (request.OverwriteMode == OverwriteMode.RejectIfExists && Directory.Exists(projectRoot))
             {
-                return OperationResult<CreateProjectResult>.Failure($"Project directory '{projectRoot}' already exists.");
+                return OperationResult<CreateProjectResult>.Failure(
+                    $"Project directory '{projectRoot}' already exists.");
             }
 
             var variables = BuildVariables(request, template);
@@ -81,8 +85,10 @@ public sealed class ProjectScaffolder(
                     template.Id,
                     request.ProjectName,
                     projectRoot,
-                    createdDirectories.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
-                    createdFiles.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray()));
+                    createdDirectories.Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray(),
+                    createdFiles.Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray()));
         }
         catch (ValidationException ex)
         {
@@ -90,7 +96,8 @@ public sealed class ProjectScaffolder(
         }
     }
 
-    private static IReadOnlyDictionary<string, string> BuildVariables(CreateProjectRequest request, ProjectTemplateDefinition template)
+    private static IReadOnlyDictionary<string, string> BuildVariables(CreateProjectRequest request,
+        ProjectTemplateDefinition template)
     {
         var variables = new Dictionary<string, string>(template.DefaultVariables, StringComparer.OrdinalIgnoreCase)
         {
@@ -138,7 +145,8 @@ public sealed class ProjectScaffolder(
 
     private static string ResolveProjectRoot(string targetPath, string workspaceRoot)
     {
-        var fullPath = Path.GetFullPath(Path.IsPathRooted(targetPath) ? targetPath : Path.Combine(workspaceRoot, targetPath));
+        var fullPath =
+            Path.GetFullPath(Path.IsPathRooted(targetPath) ? targetPath : Path.Combine(workspaceRoot, targetPath));
         return fullPath;
     }
 
@@ -148,12 +156,9 @@ public sealed class ProjectScaffolder(
         var fullPath = Path.GetFullPath(Path.Combine(projectRoot, relativePath));
         var normalizedRoot = EnsureTrailingSeparator(Path.GetFullPath(projectRoot));
         var normalizedPath = Path.GetFullPath(fullPath);
-        if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ValidationException($"Rendered template path '{relativePath}' escapes project root.");
-        }
-
-        return normalizedPath;
+        return !normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+            ? throw new ValidationException($"Rendered template path '{relativePath}' escapes project root.")
+            : normalizedPath;
     }
 
     private static string EnsureTrailingSeparator(string path)

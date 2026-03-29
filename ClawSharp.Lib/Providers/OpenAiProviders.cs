@@ -133,32 +133,50 @@ internal static class OpenAiRequestMapper
 
     private static JsonNode ToResponsesInput(ModelMessage message)
     {
-        return message.Role switch
+        if (message.ToolResultBlock is { } toolResult)
         {
-            ModelMessageRole.Tool => new JsonObject
+            return new JsonObject
             {
                 ["type"] = "function_call_output",
-                ["call_id"] = message.ToolCallId ?? string.Empty,
-                ["output"] = message.Content
-            },
-            _ => new JsonObject
+                ["call_id"] = toolResult.ToolCallId,
+                ["output"] = toolResult.Content
+            };
+        }
+
+        var contentItems = new JsonArray();
+        foreach (var block in message.Blocks)
+        {
+            switch (block)
             {
-                ["role"] = message.Role switch
-                {
-                    ModelMessageRole.System => "system",
-                    ModelMessageRole.User => "user",
-                    ModelMessageRole.Assistant => "assistant",
-                    _ => "user"
-                },
-                ["content"] = new JsonArray
-                {
-                    new JsonObject
+                case ModelTextBlock textBlock:
+                    contentItems.Add(new JsonObject
                     {
                         ["type"] = "input_text",
-                        ["text"] = message.Content
-                    }
-                }
+                        ["text"] = textBlock.Text
+                    });
+                    break;
+                case ModelToolUseBlock toolUseBlock:
+                    contentItems.Add(new JsonObject
+                    {
+                        ["type"] = "function_call",
+                        ["call_id"] = toolUseBlock.Id,
+                        ["name"] = toolUseBlock.Name,
+                        ["arguments"] = toolUseBlock.ArgumentsJson
+                    });
+                    break;
             }
+        }
+
+        return new JsonObject
+        {
+            ["role"] = message.Role switch
+            {
+                ModelMessageRole.System => "system",
+                ModelMessageRole.User => "user",
+                ModelMessageRole.Assistant => "assistant",
+                _ => "user"
+            },
+            ["content"] = contentItems
         };
     }
 
@@ -189,6 +207,23 @@ internal static class OpenAiRequestMapper
 
     private static JsonNode ToCompatibleMessage(ModelMessage message)
     {
+        if (message.ToolResultBlock is { } toolResultBlock)
+        {
+            var toolNode = new JsonObject
+            {
+                ["role"] = "tool",
+                ["content"] = toolResultBlock.Content,
+                ["tool_call_id"] = toolResultBlock.ToolCallId
+            };
+
+            if (!string.IsNullOrWhiteSpace(toolResultBlock.ToolName))
+            {
+                toolNode["name"] = toolResultBlock.ToolName;
+            }
+
+            return toolNode;
+        }
+
         var role = message.Role switch
         {
             ModelMessageRole.System => "system",
@@ -200,18 +235,32 @@ internal static class OpenAiRequestMapper
 
         var node = new JsonObject
         {
-            ["role"] = role,
-            ["content"] = message.Content
+            ["role"] = role
         };
 
-        if (!string.IsNullOrWhiteSpace(message.ToolCallId))
+        var textContent = message.TextContent;
+        if (!string.IsNullOrWhiteSpace(textContent) || role is "user" or "system")
         {
-            node["tool_call_id"] = message.ToolCallId;
+            node["content"] = textContent;
+        }
+        else
+        {
+            node["content"] = string.Empty;
         }
 
-        if (!string.IsNullOrWhiteSpace(message.Name))
+        var toolUses = message.Blocks.OfType<ModelToolUseBlock>().ToArray();
+        if (toolUses.Length > 0)
         {
-            node["name"] = message.Name;
+            node["tool_calls"] = new JsonArray(toolUses.Select(toolUse => (JsonNode)new JsonObject
+            {
+                ["id"] = toolUse.Id,
+                ["type"] = "function",
+                ["function"] = new JsonObject
+                {
+                    ["name"] = toolUse.Name,
+                    ["arguments"] = toolUse.ArgumentsJson
+                }
+            }).ToArray());
         }
 
         return node;
@@ -336,6 +385,146 @@ internal static class ProviderHttpHelpers
                 yield return JsonDocument.Parse(payload);
             }
         }
+    }
+}
+
+internal static class CompatibleChatStreamReader
+{
+    public static async IAsyncEnumerable<ModelResponseChunk> StreamAsync(
+        ClawOptions options,
+        IProviderHttpClientFactory httpClientFactory,
+        ModelRequest request,
+        string providerType,
+        string defaultPath,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(request.Target.ProviderType, providerType, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ModelProviderException($"Provider target type '{request.Target.ProviderType}' is not supported by '{providerType}'.", request.Target.ProviderName);
+        }
+
+        var providerOptions = options.Providers.Models.FirstOrDefault(model => string.Equals(model.Name, request.Target.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (providerOptions is null)
+        {
+            throw new ModelProviderException($"Provider configuration '{request.Target.ProviderName}' was not found.", request.Target.ProviderName);
+        }
+
+        if (string.IsNullOrWhiteSpace(providerOptions.BaseUrl))
+        {
+            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing BaseUrl.", request.Target.ProviderName);
+        }
+
+        if (string.IsNullOrWhiteSpace(providerOptions.ApiKey))
+        {
+            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing ApiKey.", request.Target.ProviderName);
+        }
+
+        var client = httpClientFactory.CreateClient(request.Target);
+        var payload = OpenAiRequestMapper.CreateCompatibleChatPayload(request);
+        var path = string.IsNullOrWhiteSpace(request.Target.RequestPath) ? defaultPath : request.Target.RequestPath!;
+        using var httpRequest = ProviderHttpHelpers.CreateRequest(HttpMethod.Post, request.Target, path, payload, providerOptions.ApiKey);
+        using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        await ProviderHttpHelpers.EnsureSuccessAsync(response, request.Target.ProviderName, cancellationToken).ConfigureAwait(false);
+
+        var toolCallBuilders = new Dictionary<int, (string? Id, string? Name, StringBuilder Arguments)>();
+
+        await foreach (var document in ProviderHttpHelpers.ReadSseDocumentsAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
+        {
+            var root = document.RootElement;
+            if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
+            {
+                if (root.TryGetProperty("usage", out _))
+                {
+                    yield return new ModelResponseChunk(Usage: ReadChatUsage(root), StopReason: null);
+                }
+
+                continue;
+            }
+
+            var choice = choices[0];
+            if (choice.TryGetProperty("delta", out var delta))
+            {
+                if (delta.TryGetProperty("content", out var contentElement))
+                {
+                    var content = contentElement.GetString();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        yield return new ModelResponseChunk(TextDelta: content);
+                    }
+                }
+
+                if (delta.TryGetProperty("tool_calls", out var toolCalls))
+                {
+                    foreach (var toolCallElement in toolCalls.EnumerateArray())
+                    {
+                        var index = toolCallElement.TryGetProperty("index", out var indexElement) ? indexElement.GetInt32() : 0;
+                        if (!toolCallBuilders.TryGetValue(index, out var state))
+                        {
+                            state = (null, null, new StringBuilder());
+                            toolCallBuilders[index] = state;
+                        }
+
+                        if (toolCallElement.TryGetProperty("id", out var idElement) && idElement.ValueKind == JsonValueKind.String)
+                        {
+                            state.Id = idElement.GetString();
+                        }
+
+                        if (toolCallElement.TryGetProperty("function", out var function))
+                        {
+                            if (function.TryGetProperty("name", out var nameElement) && nameElement.ValueKind == JsonValueKind.String)
+                            {
+                                state.Name = nameElement.GetString();
+                            }
+
+                            if (function.TryGetProperty("arguments", out var argumentsElement) && argumentsElement.ValueKind == JsonValueKind.String)
+                            {
+                                state.Arguments.Append(argumentsElement.GetString());
+                            }
+                        }
+
+                        toolCallBuilders[index] = state;
+                    }
+                }
+            }
+
+            if (choice.TryGetProperty("finish_reason", out var finishReasonElement) && finishReasonElement.ValueKind == JsonValueKind.String)
+            {
+                var finishReason = finishReasonElement.GetString();
+                if (string.Equals(finishReason, "tool_calls", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var state in toolCallBuilders.OrderBy(pair => pair.Key).Select(pair => pair.Value))
+                    {
+                        yield return new ModelResponseChunk(ToolCall: new ModelToolCall(state.Id ?? Guid.NewGuid().ToString("N"), state.Name ?? string.Empty, state.Arguments.ToString()));
+                    }
+
+                    yield return new ModelResponseChunk(Usage: ReadChatUsage(root), StopReason: ModelStopReason.ToolCall);
+                }
+                else
+                {
+                    yield return new ModelResponseChunk(
+                        Usage: ReadChatUsage(root),
+                        StopReason: finishReason switch
+                        {
+                            "length" => ModelStopReason.Length,
+                            "stop" => ModelStopReason.Completed,
+                            _ => ModelStopReason.Completed
+                        });
+                }
+            }
+        }
+    }
+
+    public static ModelUsage? ReadChatUsage(JsonElement element)
+    {
+        if (!element.TryGetProperty("usage", out var usage))
+        {
+            return null;
+        }
+
+        var input = usage.TryGetProperty("prompt_tokens", out var promptTokens) ? promptTokens.GetInt32() : 0;
+        var output = usage.TryGetProperty("completion_tokens", out var completionTokens) ? completionTokens.GetInt32() : 0;
+        var total = usage.TryGetProperty("total_tokens", out var totalTokens) ? totalTokens.GetInt32() : input + output;
+        return new ModelUsage(input, output, total);
     }
 }
 
@@ -486,133 +675,42 @@ public sealed class OpenAiCompatibleChatModelProvider(ClawOptions options, IProv
         ModelRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (!string.Equals(request.Target.ProviderType, Metadata.Name, StringComparison.OrdinalIgnoreCase))
+        await foreach (var chunk in CompatibleChatStreamReader.StreamAsync(
+                           options,
+                           httpClientFactory,
+                           request,
+                           Metadata.Name,
+                           "v1/chat/completions",
+                           cancellationToken).ConfigureAwait(false))
         {
-            throw new ModelProviderException($"Provider target type '{request.Target.ProviderType}' is not supported by '{Metadata.Name}'.", request.Target.ProviderName);
-        }
-
-        var providerOptions = options.Providers.Models.FirstOrDefault(model => string.Equals(model.Name, request.Target.ProviderName, StringComparison.OrdinalIgnoreCase));
-        if (providerOptions is null)
-        {
-            throw new ModelProviderException($"Provider configuration '{request.Target.ProviderName}' was not found.", request.Target.ProviderName);
-        }
-
-        if (string.IsNullOrWhiteSpace(providerOptions.BaseUrl))
-        {
-            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing BaseUrl.", request.Target.ProviderName);
-        }
-
-        if (string.IsNullOrWhiteSpace(providerOptions.ApiKey))
-        {
-            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing ApiKey.", request.Target.ProviderName);
-        }
-
-        var client = httpClientFactory.CreateClient(request.Target);
-        var payload = OpenAiRequestMapper.CreateCompatibleChatPayload(request);
-        var path = string.IsNullOrWhiteSpace(request.Target.RequestPath) ? "v1/chat/completions" : request.Target.RequestPath!;
-        using var httpRequest = ProviderHttpHelpers.CreateRequest(HttpMethod.Post, request.Target, path, payload, providerOptions.ApiKey);
-        using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        await ProviderHttpHelpers.EnsureSuccessAsync(response, request.Target.ProviderName, cancellationToken).ConfigureAwait(false);
-
-        var toolCallBuilders = new Dictionary<int, (string? Id, string? Name, StringBuilder Arguments)>();
-
-        // 兼容 chat/completions 的流式格式需要按 tool_call index 合并 arguments 片段。
-        await foreach (var document in ProviderHttpHelpers.ReadSseDocumentsAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
-        {
-            var root = document.RootElement;
-            if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
-            {
-                if (root.TryGetProperty("usage", out _))
-                {
-                    yield return new ModelResponseChunk(Usage: ReadChatUsage(root), StopReason: null);
-                }
-
-                continue;
-            }
-
-            var choice = choices[0];
-            if (choice.TryGetProperty("delta", out var delta))
-            {
-                if (delta.TryGetProperty("content", out var contentElement))
-                {
-                    var content = contentElement.GetString();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        yield return new ModelResponseChunk(TextDelta: content);
-                    }
-                }
-
-                if (delta.TryGetProperty("tool_calls", out var toolCalls))
-                {
-                    foreach (var toolCallElement in toolCalls.EnumerateArray())
-                    {
-                        var index = toolCallElement.TryGetProperty("index", out var indexElement) ? indexElement.GetInt32() : 0;
-                        if (!toolCallBuilders.TryGetValue(index, out var state))
-                        {
-                            state = (null, null, new StringBuilder());
-                            toolCallBuilders[index] = state;
-                        }
-
-                        if (toolCallElement.TryGetProperty("id", out var idElement) && idElement.ValueKind == JsonValueKind.String)
-                        {
-                            state.Id = idElement.GetString();
-                        }
-
-                        if (toolCallElement.TryGetProperty("function", out var function))
-                        {
-                            if (function.TryGetProperty("name", out var nameElement) && nameElement.ValueKind == JsonValueKind.String)
-                            {
-                                state.Name = nameElement.GetString();
-                            }
-
-                            if (function.TryGetProperty("arguments", out var argumentsElement) && argumentsElement.ValueKind == JsonValueKind.String)
-                            {
-                                state.Arguments.Append(argumentsElement.GetString());
-                            }
-                        }
-
-                        toolCallBuilders[index] = state;
-                    }
-                }
-            }
-
-            if (choice.TryGetProperty("finish_reason", out var finishReasonElement) && finishReasonElement.ValueKind == JsonValueKind.String)
-            {
-                var finishReason = finishReasonElement.GetString();
-                if (string.Equals(finishReason, "tool_calls", StringComparison.OrdinalIgnoreCase))
-                {
-                    foreach (var state in toolCallBuilders.OrderBy(pair => pair.Key).Select(pair => pair.Value))
-                    {
-                        yield return new ModelResponseChunk(ToolCall: new ModelToolCall(state.Id ?? Guid.NewGuid().ToString("N"), state.Name ?? string.Empty, state.Arguments.ToString()));
-                    }
-
-                    yield return new ModelResponseChunk(Usage: ReadChatUsage(root), StopReason: ModelStopReason.ToolCall);
-                }
-                else
-                {
-                    yield return new ModelResponseChunk(
-                        Usage: ReadChatUsage(root),
-                        StopReason: finishReason switch
-                        {
-                            "length" => ModelStopReason.Length,
-                            "stop" => ModelStopReason.Completed,
-                            _ => ModelStopReason.Completed
-                        });
-                }
-            }
+            yield return chunk;
         }
     }
+}
 
-    private static ModelUsage? ReadChatUsage(JsonElement element)
+/// <summary>
+/// 面向 Gemini OpenAI-compatible endpoint 的 provider 实现。
+/// 复用通用的 chat/completions 映射，但使用 Gemini 默认路径。
+/// </summary>
+public sealed class GeminiCompatibleChatModelProvider(ClawOptions options, IProviderHttpClientFactory httpClientFactory) : IModelProvider
+{
+    /// <inheritdoc />
+    public ModelProviderMetadata Metadata { get; } = new("gemini-openai-compatible", "Gemini OpenAI-Compatible", true, true);
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<ModelResponseChunk> StreamAsync(
+        ModelRequest request,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (!element.TryGetProperty("usage", out var usage))
+        await foreach (var chunk in CompatibleChatStreamReader.StreamAsync(
+                           options,
+                           httpClientFactory,
+                           request,
+                           Metadata.Name,
+                           "chat/completions",
+                           cancellationToken).ConfigureAwait(false))
         {
-            return null;
+            yield return chunk;
         }
-
-        var input = usage.TryGetProperty("prompt_tokens", out var promptTokens) ? promptTokens.GetInt32() : 0;
-        var output = usage.TryGetProperty("completion_tokens", out var completionTokens) ? completionTokens.GetInt32() : 0;
-        var total = usage.TryGetProperty("total_tokens", out var totalTokens) ? totalTokens.GetInt32() : input + output;
-        return new ModelUsage(input, output, total);
     }
 }

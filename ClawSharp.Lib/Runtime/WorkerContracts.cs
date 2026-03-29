@@ -223,6 +223,7 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
     {
         _runCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var messages = request.Messages.ToList();
+        var assistantBuffer = new StringBuilder();
 
         while (!_runCancellation.IsCancellationRequested)
         {
@@ -239,12 +240,21 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
             {
                 if (!string.IsNullOrEmpty(chunk.TextDelta))
                 {
+                    assistantBuffer.Append(chunk.TextDelta);
                     yield return new WorkerEvent("worker.message.delta", JsonSerializer.SerializeToElement(new { delta = chunk.TextDelta }));
                 }
 
                 if (chunk.ToolCall is not null)
                 {
                     hasToolCall = true;
+                    if (assistantBuffer.Length > 0)
+                    {
+                        messages.Add(new ModelMessage(ModelMessageRole.Assistant, assistantBuffer.ToString()));
+                        assistantBuffer.Clear();
+                    }
+
+                    // 为需要原生 tool_use 上下文的 provider 保留 assistant -> tool_use 这一跳。
+                    messages.Add(ModelMessage.AssistantToolUse(chunk.ToolCall.Id, chunk.ToolCall.Name, chunk.ToolCall.ArgumentsJson));
                     yield return new WorkerEvent("worker.tool.requested", JsonSerializer.SerializeToElement(chunk.ToolCall));
                     var toolResult = await onToolRequest(new WorkerToolRequest(chunk.ToolCall.Id, chunk.ToolCall.Name, chunk.ToolCall.ArgumentsJson)).ConfigureAwait(false);
                     yield return new WorkerEvent("worker.tool.completed", JsonSerializer.SerializeToElement(new
@@ -255,7 +265,7 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
                     }));
 
                     // 将工具结果回灌为后续模型消息，允许 provider 继续推理。
-                    messages.Add(new ModelMessage(ModelMessageRole.Tool, toolResult.Result.Payload.GetRawText(), chunk.ToolCall.Name, chunk.ToolCall.Id));
+                    messages.Add(ModelMessage.ToolResult(chunk.ToolCall.Id, toolResult.Result.Payload.GetRawText(), chunk.ToolCall.Name));
                 }
 
                 if (chunk.StopReason is not null)
@@ -266,6 +276,12 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
 
             if (!hasToolCall)
             {
+                if (assistantBuffer.Length > 0)
+                {
+                    messages.Add(new ModelMessage(ModelMessageRole.Assistant, assistantBuffer.ToString()));
+                    assistantBuffer.Clear();
+                }
+
                 yield break;
             }
         }

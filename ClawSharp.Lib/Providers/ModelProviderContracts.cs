@@ -130,17 +130,74 @@ public sealed record ModelToolCall(string Id, string Name, string ArgumentsJson)
 public sealed record ModelUsage(int InputTokens, int OutputTokens, int TotalTokens);
 
 /// <summary>
+/// 发送给模型的一段结构化内容块。
+/// </summary>
+public abstract record ModelContentBlock;
+
+/// <summary>
+/// 纯文本内容块。
+/// </summary>
+/// <param name="Text">文本内容。</param>
+public sealed record ModelTextBlock(string Text) : ModelContentBlock;
+
+/// <summary>
+/// assistant 发起的工具调用内容块。
+/// </summary>
+/// <param name="Id">tool call 标识。</param>
+/// <param name="Name">工具名。</param>
+/// <param name="ArgumentsJson">工具参数 JSON。</param>
+public sealed record ModelToolUseBlock(string Id, string Name, string ArgumentsJson) : ModelContentBlock;
+
+/// <summary>
+/// 工具执行结果内容块。
+/// </summary>
+/// <param name="ToolCallId">对应的 tool call 标识。</param>
+/// <param name="Content">工具结果内容。</param>
+/// <param name="ToolName">可选工具名。</param>
+public sealed record ModelToolResultBlock(string ToolCallId, string Content, string? ToolName = null) : ModelContentBlock;
+
+/// <summary>
 /// 发送给模型的一条消息。
 /// </summary>
 /// <param name="Role">消息角色。</param>
-/// <param name="Content">消息内容。</param>
-/// <param name="Name">可选名称，例如工具名。</param>
-/// <param name="ToolCallId">可选 tool call 标识。</param>
-public sealed record ModelMessage(
-    ModelMessageRole Role,
-    string Content,
-    string? Name = null,
-    string? ToolCallId = null);
+/// <param name="Blocks">结构化内容块列表。</param>
+public sealed record ModelMessage(ModelMessageRole Role, IReadOnlyList<ModelContentBlock> Blocks)
+{
+    /// <summary>
+    /// 用单段文本创建消息。
+    /// </summary>
+    public ModelMessage(ModelMessageRole role, string content)
+        : this(role, [new ModelTextBlock(content)])
+    {
+    }
+
+    /// <summary>
+    /// 创建 assistant 工具调用消息。
+    /// </summary>
+    public static ModelMessage AssistantToolUse(string id, string name, string argumentsJson) =>
+        new(ModelMessageRole.Assistant, [new ModelToolUseBlock(id, name, argumentsJson)]);
+
+    /// <summary>
+    /// 创建工具结果消息。
+    /// </summary>
+    public static ModelMessage ToolResult(string toolCallId, string content, string? toolName = null) =>
+        new(ModelMessageRole.Tool, [new ModelToolResultBlock(toolCallId, content, toolName)]);
+
+    /// <summary>
+    /// 返回消息中的所有文本块拼接结果。
+    /// </summary>
+    public string TextContent => string.Concat(Blocks.OfType<ModelTextBlock>().Select(block => block.Text));
+
+    /// <summary>
+    /// 返回消息中的第一个工具调用块。
+    /// </summary>
+    public ModelToolUseBlock? ToolUse => Blocks.OfType<ModelToolUseBlock>().FirstOrDefault();
+
+    /// <summary>
+    /// 返回消息中的第一个工具结果块。
+    /// </summary>
+    public ModelToolResultBlock? ToolResultBlock => Blocks.OfType<ModelToolResultBlock>().FirstOrDefault();
+}
 
 /// <summary>
 /// 发送给 provider 的完整请求。
@@ -359,7 +416,9 @@ public sealed class ModelProviderResolver(ClawOptions options, IModelProviderReg
     /// <inheritdoc />
     public ResolvedModelProvider Resolve(AgentDefinition agent)
     {
-        var configuredProvider = options.Providers.DefaultProvider;
+        var configuredProvider = string.IsNullOrWhiteSpace(agent.Provider)
+            ? options.Providers.DefaultProvider
+            : agent.Provider;
         var providerConfig = options.Providers.Models.FirstOrDefault(model => string.Equals(model.Name, configuredProvider, StringComparison.OrdinalIgnoreCase))
                              ?? CreateFallback(configuredProvider, options);
 
@@ -436,16 +495,17 @@ public sealed class StubModelProvider : IModelProvider
 
         if (lastMessage?.Role == ModelMessageRole.Tool)
         {
-            yield return new ModelResponseChunk(TextDelta: $"Tool result received: {lastMessage.Content}");
+            var toolResult = lastMessage.ToolResultBlock?.Content ?? lastMessage.TextContent;
+            yield return new ModelResponseChunk(TextDelta: $"Tool result received: {toolResult}");
             yield return new ModelResponseChunk(Usage: new ModelUsage(request.Messages.Count, 4, request.Messages.Count + 4), StopReason: ModelStopReason.Completed);
             yield break;
         }
 
         if (lastUser is not null &&
-            lastUser.Content.StartsWith("tool:", StringComparison.OrdinalIgnoreCase) &&
+            lastUser.TextContent.StartsWith("tool:", StringComparison.OrdinalIgnoreCase) &&
             request.Tools.Count > 0)
         {
-            var remainder = lastUser.Content["tool:".Length..];
+            var remainder = lastUser.TextContent["tool:".Length..];
             var parts = remainder.Split(':', 2);
             var toolName = parts[0].Trim();
             var argumentsJson = parts.Length > 1 ? parts[1].Trim() : "{}";
@@ -454,7 +514,7 @@ public sealed class StubModelProvider : IModelProvider
             yield break;
         }
 
-        var content = lastUser?.Content ?? "No prompt supplied.";
+        var content = lastUser?.TextContent ?? "No prompt supplied.";
         string[] segments = content.Length <= 8
             ? [content]
             : [content[..Math.Min(8, content.Length)], content[Math.Min(8, content.Length)..]];
