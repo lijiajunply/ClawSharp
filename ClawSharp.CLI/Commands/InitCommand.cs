@@ -16,7 +16,7 @@ public static class InitCommand
         pathOption.SetDefaultValue(".");
         command.AddOption(pathOption);
 
-        command.SetHandler(async (path) =>
+        command.SetHandler(async path =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
             {

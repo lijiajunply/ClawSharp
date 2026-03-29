@@ -4,6 +4,7 @@ using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace ClawSharp.CLI.Commands;
 
@@ -14,8 +15,8 @@ public static class HistoryCommand
         var command = new Command("history", "View message history for a session");
         var sessionIdArg = new Argument<string>("session-id", "The ID of the session to view");
         command.AddArgument(sessionIdArg);
-
-        command.SetHandler(async (sessionIdValue) =>
+        
+        command.SetHandler(async sessionIdValue =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
             {
@@ -30,7 +31,7 @@ public static class HistoryCommand
                     if (entry.Message == null) continue;
                     
                     var message = entry.Message;
-                    var panel = new Panel(message.Content.EscapeMarkup());
+                    var panel = new Panel(new Markdown(message.Content));
                     panel.Header = new PanelHeader(message.Role.ToString());
                     
                     if (message.Role == PromptMessageRole.User)

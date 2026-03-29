@@ -44,7 +44,7 @@ public static class RegistryCommands
 
                 foreach (var agent in agents)
                 {
-                    string resolvedProvider = "Error";
+                    var resolvedProvider = "Error";
                     string resolvedModel = "Error";
                     try 
                     {

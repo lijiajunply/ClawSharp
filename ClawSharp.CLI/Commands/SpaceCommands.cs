@@ -115,13 +115,17 @@ public static class SpaceCommands
                 ThreadSpaceRecord? space = null;
                 if (Guid.TryParse(identifier, out _))
                 {
-                    try { space = await spaceManager.GetAsync(new ThreadSpaceId(identifier)); } catch { }
+                    try
+                    {
+                        space = await spaceManager.GetAsync(new ThreadSpaceId(identifier));
+                    }
+                    catch
+                    {
+                        //
+                    }
                 }
                 
-                if (space == null)
-                {
-                    space = await spaceManager.GetByNameAsync(identifier);
-                }
+                space ??= await spaceManager.GetByNameAsync(identifier);
 
                 if (space == null)
                 {
@@ -253,7 +257,10 @@ public static class SpaceCommands
                 var space = await spaceManager.GetAsync(new ThreadSpaceId(identifier));
                 return space.ThreadSpaceId;
             }
-            catch { }
+            catch
+            {
+                //
+            }
         }
 
         var byName = await spaceManager.GetByNameAsync(identifier);

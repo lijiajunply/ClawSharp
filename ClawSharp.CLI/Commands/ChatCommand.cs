@@ -17,7 +17,7 @@ public static class ChatCommand
         var agentIdArg = new Argument<string?>("agent-id", () => null, "The ID of the agent to chat with (optional)");
         command.AddArgument(agentIdArg);
 
-        command.SetHandler(async (agentId) =>
+        command.SetHandler(async agentId =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
             {
@@ -78,7 +78,7 @@ public static class ChatCommand
                                 AnsiConsole.Clear();
                                 continue;
                             case "/remove":
-                                if (AnsiConsole.Confirm("Are you sure you want to delete all messages in this session?"))
+                                if (await AnsiConsole.ConfirmAsync("Are you sure you want to delete all messages in this session?"))
                                 {
                                     await runtime.DeleteSessionDataAsync(sessionId);
                                     AnsiConsole.MarkupLine("[yellow]Session history removed.[/]");
@@ -133,12 +133,12 @@ public static class ChatCommand
                                             if (@event.Delta != null)
                                             {
                                                 contentBuilder.Append(@event.Delta);
-                                                Console.Write(@event.Delta);
                                             }
                                         }
-                                        AnsiConsole.WriteLine();
-
+                                        
                                         var generatedContent = contentBuilder.ToString().Trim();
+                                        AnsiConsole.Write(new Markdown(generatedContent));
+                                        AnsiConsole.WriteLine();
                                         // Simple stripping if AI still provides code blocks
                                         if (generatedContent.StartsWith("```"))
                                         {
@@ -158,7 +158,7 @@ public static class ChatCommand
                                     var threadSpace = await kernel.ThreadSpaces.GetByBoundFolderPathAsync(fullPath);
                                     if (threadSpace == null)
                                     {
-                                        threadSpace = await kernel.ThreadSpaces.CreateAsync(new ClawSharp.Lib.Runtime.CreateThreadSpaceRequest(Path.GetFileName(fullPath), fullPath));
+                                        threadSpace = await kernel.ThreadSpaces.CreateAsync(new CreateThreadSpaceRequest(Path.GetFileName(fullPath), fullPath));
                                         AnsiConsole.MarkupLine($"[green]Created ThreadSpace: {threadSpace.Name}[/]");
                                     }
                                     else
@@ -175,7 +175,7 @@ public static class ChatCommand
                                 continue;
                             case "/init-proj":
                                 {
-                                    var scaffolder = host.Services.GetRequiredService<ClawSharp.Lib.Projects.IProjectScaffolder>();
+                                    var scaffolder = host.Services.GetRequiredService<Lib.Projects.IProjectScaffolder>();
                                     var templates = await scaffolder.ListTemplatesAsync();
                                     if (templates.Count == 0)
                                     {
@@ -184,16 +184,16 @@ public static class ChatCommand
                                     }
 
                                     var template = AnsiConsole.Prompt(
-                                        new SelectionPrompt<ClawSharp.Lib.Projects.ProjectTemplateDefinition>()
+                                        new SelectionPrompt<Lib.Projects.ProjectTemplateDefinition>()
                                             .Title("Select a project template:")
                                             .AddChoices(templates)
                                             .UseConverter(t => $"{t.Name} ({t.Id})"));
 
                                     var projName = AnsiConsole.Ask<string>("Enter project name:");
-                                    var targetPath = AnsiConsole.Ask<string>("Enter target path (relative to workspace root):", projName);
+                                    var targetPath = AnsiConsole.Ask("Enter target path (relative to workspace root):", projName);
 
-                                    var result = await scaffolder.CreateProjectAsync(new ClawSharp.Lib.Projects.CreateProjectRequest(template.Id, projName, targetPath));
-                                    if (result.IsSuccess && result.Value != null)
+                                    var result = await scaffolder.CreateProjectAsync(new Lib.Projects.CreateProjectRequest(template.Id, projName, targetPath));
+                                    if (result is { IsSuccess: true, Value: not null })
                                     {
                                         AnsiConsole.MarkupLine($"[green]Project created successfully at {result.Value.ProjectRootPath}[/]");
                                         foreach (var file in result.Value.CreatedFiles)
@@ -208,7 +208,7 @@ public static class ChatCommand
                                         var threadSpace = await kernel.ThreadSpaces.GetByBoundFolderPathAsync(projectRoot);
                                         if (threadSpace == null)
                                         {
-                                            threadSpace = await kernel.ThreadSpaces.CreateAsync(new ClawSharp.Lib.Runtime.CreateThreadSpaceRequest(projectName, projectRoot));
+                                            threadSpace = await kernel.ThreadSpaces.CreateAsync(new CreateThreadSpaceRequest(projectName, projectRoot));
                                             AnsiConsole.MarkupLine($"[green]Created ThreadSpace for project: {threadSpace.Name}[/]");
                                         }
                                         else
@@ -220,13 +220,13 @@ public static class ChatCommand
                                         // Try to find if an agent was created (templates might have one)
                                         await runtime.InitializeAsync(); // Reload agents
                                         
-                                        var agentId = projectName.ToLowerInvariant();
-                                        if (kernel.Agents.GetAll().All(a => a.Id != agentId))
+                                        var invariant = projectName.ToLowerInvariant();
+                                        if (kernel.Agents.GetAll().All(a => a.Id != invariant))
                                         {
-                                            agentId = finalAgentId; // Fallback to current agent or default
+                                            invariant = finalAgentId; // Fallback to current agent or default
                                         }
 
-                                        session = await runtime.StartSessionAsync(new StartSessionRequest(agentId, threadSpace.ThreadSpaceId));
+                                        session = await runtime.StartSessionAsync(new StartSessionRequest(invariant, threadSpace.ThreadSpaceId));
                                         sessionId = session.Record.SessionId;
                                         AnsiConsole.MarkupLine($"[bold blue]Switched to project session in:[/] [green]{projectRoot}[/]");
                                     }
@@ -243,22 +243,31 @@ public static class ChatCommand
 
                     AnsiConsole.Markup($"{ThemeConfig.AgentPrefix} ");
 
-                    var hasOutput = false;
-                    await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
-                    {
-                        if (@event.Delta != null)
+                    var responseBuilder = new StringBuilder();
+                    var hasTextOutput = false;
+                    var markdown = new Markdown("");
+
+                    await AnsiConsole.Live(markdown)
+                        .AutoClear(false)
+                        .StartAsync(async ctx =>
                         {
-                            hasOutput = true;
-                            Console.Write(@event.Delta);
-                        }
-                    }
+                            await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
+                            {
+                                if (@event.Delta != null)
+                                {
+                                    hasTextOutput = true;
+                                    responseBuilder.Append(@event.Delta);
+                                    markdown.Update(responseBuilder.ToString());
+                                    ctx.Refresh();
+                                }
+                            }
+                        });
                     
-                    if (!hasOutput)
+                    if (!hasTextOutput)
                     {
                         AnsiConsole.MarkupLine("[grey](No text response from agent)[/]");
                     }
                     
-                    AnsiConsole.WriteLine();
                     AnsiConsole.WriteLine();
                 }
 
