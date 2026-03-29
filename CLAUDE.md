@@ -126,3 +126,10 @@ private IClawRuntime CreateRuntime()
 ```
 
 Key test files: `RuntimeIntegrationTests`, `ProviderTests` (stream parsing), `ToolSecurityTests` (permission merging), `SessionStoreTests` (EF Core persistence), `MarkdownParsingTests`.
+
+## Active Technologies
+- C# 14 / .NET 10 + System.CommandLine, Spectre.Console, EF Core 9 + SQLite (luckyfish/002-redesign-threadspace-cli)
+- SQLite via EF Core migrations (`ClawDbContext`) (luckyfish/002-redesign-threadspace-cli)
+
+## Recent Changes
+- luckyfish/002-redesign-threadspace-cli: Added C# 14 / .NET 10 + System.CommandLine, Spectre.Console, EF Core 9 + SQLite
