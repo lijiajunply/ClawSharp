@@ -31,3 +31,5 @@ riderModule.iml
 *.pdb
 *.mdb
 *.exe
+
+/.clawsharp/

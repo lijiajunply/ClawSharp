@@ -1,50 +1,61 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: Placeholder → 1.0.0
+- List of modified principles:
+    - [PRINCIPLE_1_NAME] → I. Library-First & Local-First
+    - [PRINCIPLE_2_NAME] → II. Markdown-Driven Intelligence
+    - [PRINCIPLE_3_NAME] → III. Async-First & Modern .NET
+    - [PRINCIPLE_4_NAME] → IV. Provider & Tool Extensibility
+    - [PRINCIPLE_5_NAME] → V. Reliable Persistence & Analytics
+- Added sections: Technical Constraints, Development Workflow
+- Removed sections: None
+- Templates requiring updates:
+    - .specify/templates/plan-template.md (✅ updated/aligned)
+    - .specify/templates/spec-template.md (✅ updated/aligned)
+    - .specify/templates/tasks-template.md (✅ updated/aligned)
+- Follow-up TODOs: None
+-->
+
+# ClawSharp Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Library-First & Local-First
+Every feature MUST be implemented in `ClawSharp.Lib` first. The library is the core engine/kernel of the project. UI applications like `ClawSharp.CLI` and `ClawSharp.Desktop` should only be thin consumers of this library. Prioritize local execution, data privacy, and minimal external dependencies.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Markdown-Driven Intelligence
+Agents, skills, and project templates MUST be defined using Markdown files with YAML frontmatter. This ensures that AI definitions are human-readable, version-controllable, and portable across different environments. The system must support loading these definitions from the local filesystem.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Async-First & Modern .NET
+Strictly adhere to .NET 10 features and patterns. All runtime, model provider, and persistence operations MUST be asynchronous (`Task` or `ValueTask`). Nullable reference types must be enabled and strictly respected across the entire codebase to ensure type safety.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Provider & Tool Extensibility
+The architecture MUST support multiple AI providers (OpenAI, Anthropic, Gemini) through a unified abstraction (`IModelProvider`). The tool system must be flexible enough to handle both built-in local tools and external tools provided via the Model Context Protocol (MCP).
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Reliable Persistence & Analytics
+All user sessions, message history, and runtime events MUST be persisted using Entity Framework Core with a SQLite backend. Performance metrics and usage analytics should be stored and queried using DuckDB to enable efficient local data processing.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technical Constraints
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **Target Framework**: .NET 10 (Current)
+- **Primary Language**: C# 14 (or latest supported by .NET 10)
+- **Persistence**: EF Core with SQLite for operational data; DuckDB for analytical data.
+- **UI Frameworks**: Avalonia for cross-platform desktop; planned Terminal interface for CLI.
+- **AI Integration**: Support for OpenAI Responses API, OpenAI-compatible Chat Completions, and Anthropic Messages API.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- **Dependency Injection**: Use `Microsoft.Extensions.DependencyInjection` as the standard for component registration and lifecycle management.
+- **Repository Pattern**: Implement data access through well-defined repositories to decouple the domain logic from persistence details.
+- **Testing Discipline**: Every new feature or bug fix MUST include corresponding unit or integration tests using xUnit. Integration tests should be placed in `ClawSharp.Lib.Tests`.
+- **Markdown Schema**: Any changes to Agent or Skill definitions must update the corresponding Markdown parsers and YAML frontmatter schemas.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution is the foundational document for ClawSharp. All architectural decisions, pull requests, and feature implementations must align with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- **Amendment Process**: Any change to this constitution requires a version increment (MAJOR for principle removal, MINOR for additions).
+- **Compliance**: Code reviews must verify that changes do not violate the "Library-First" or "Async-First" mandates.
+- **Version Tracking**: The `CONSTITUTION_VERSION` must be updated in all related documentation when changed.
+
+**Version**: 1.0.0 | **Ratified**: 2026-03-29 | **Last Amended**: 2026-03-29

@@ -20,10 +20,11 @@ description: "Task list template for feature implementation"
 
 ## Path Conventions
 
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+- **Core Library**: `ClawSharp.Lib/`
+- **CLI App**: `ClawSharp.CLI/`
+- **Desktop App**: `ClawSharp.Desktop/`
+- **Tests**: `ClawSharp.Lib.Tests/`
+- Paths shown below assume `ClawSharp.Lib/` - adjust based on plan.md structure
 
 <!-- 
   ============================================================================
