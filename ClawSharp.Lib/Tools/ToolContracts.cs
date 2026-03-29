@@ -289,15 +289,13 @@ public sealed class ShellRunTool : IToolExecutor
         var shell = OperatingSystem.IsWindows() ? "cmd" : "/bin/zsh";
         var shellArgs = OperatingSystem.IsWindows() ? $"/c {command}" : $"-lc \"{command.Replace("\"", "\\\"", StringComparison.Ordinal)}\"";
 
-        using var process = new Process
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo(shell, shellArgs)
         {
-            StartInfo = new ProcessStartInfo(shell, shellArgs)
-            {
-                WorkingDirectory = context.WorkspaceRoot,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            }
+            WorkingDirectory = context.WorkspaceRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
         };
 
         process.Start();
@@ -317,6 +315,7 @@ public sealed class ShellRunTool : IToolExecutor
             }
             catch
             {
+                //
             }
 
             return ToolInvocationResult.Denied(Definition.Name, "Command timed out.");

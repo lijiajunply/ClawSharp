@@ -88,20 +88,11 @@ public sealed class DefaultAgentWorkerLauncher(
     }
 }
 
-public sealed class LoopbackAgentWorkerSession : IAgentWorkerSession
+public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvider provider) : IAgentWorkerSession
 {
-    private readonly AgentLaunchPlan _plan;
-    private readonly IModelProvider _provider;
     private CancellationTokenSource? _runCancellation;
 
-    public LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvider provider)
-    {
-        _plan = plan;
-        _provider = provider;
-        Handle = new AgentProcessHandle(null, null, true, plan.Session.Record.SessionId.Value, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-    }
-
-    public AgentProcessHandle Handle { get; }
+    public AgentProcessHandle Handle { get; } = new(null, null, true, plan.Session.Record.SessionId.Value, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
 
     public Task InitializeAsync(WorkerInitializeRequest request, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -124,7 +115,7 @@ public sealed class LoopbackAgentWorkerSession : IAgentWorkerSession
                 request.SystemPrompt);
 
             var hasToolCall = false;
-            await foreach (var chunk in _provider.StreamAsync(modelRequest, _runCancellation.Token).ConfigureAwait(false))
+            await foreach (var chunk in provider.StreamAsync(modelRequest, _runCancellation.Token).ConfigureAwait(false))
             {
                 if (!string.IsNullOrEmpty(chunk.TextDelta))
                 {
@@ -221,13 +212,14 @@ internal sealed class StdioAgentWorkerSession : IAgentWorkerSession
 
     public async ValueTask DisposeAsync()
     {
-        _loopCts.Cancel();
+        await _loopCts.CancelAsync();
         try
         {
             await _receiveLoop.ConfigureAwait(false);
         }
         catch
         {
+            //
         }
 
         if (!_process.HasExited)
@@ -247,7 +239,7 @@ internal sealed class StdioAgentWorkerSession : IAgentWorkerSession
         var envelope = JsonSerializer.Serialize(new WorkerRpcEnvelope(id, method, payload));
         var bytes = Encoding.UTF8.GetBytes(envelope);
         await _writer.WriteAsync($"Content-Length: {bytes.Length}\r\n\r\n{envelope}".AsMemory(), cancellationToken).ConfigureAwait(false);
-        await _writer.FlushAsync().ConfigureAwait(false);
+        await _writer.FlushAsync(cancellationToken).ConfigureAwait(false);
 
         var response = await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!response.Success)
