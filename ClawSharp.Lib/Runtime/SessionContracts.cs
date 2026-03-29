@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ClawSharp.Lib.Providers;
 
 namespace ClawSharp.Lib.Runtime;
 
@@ -164,21 +165,69 @@ public sealed record SessionRecord(
 /// <param name="SessionId">所属 session 标识。</param>
 /// <param name="TurnId">所属 turn 标识。</param>
 /// <param name="Role">消息角色。</param>
-/// <param name="Content">消息内容。</param>
+/// <param name="Blocks">结构化内容块。</param>
 /// <param name="SequenceNo">在 session 历史中的顺序号。</param>
 /// <param name="CreatedAt">创建时间。</param>
-/// <param name="Name">关联名称，例如工具名。</param>
-/// <param name="ToolCallId">关联的 tool call 标识。</param>
 public sealed record PromptMessage(
     MessageId MessageId,
     SessionId SessionId,
     TurnId TurnId,
     PromptMessageRole Role,
-    string Content,
+    IReadOnlyList<ModelContentBlock> Blocks,
     int SequenceNo,
-    DateTimeOffset CreatedAt,
-    string? Name = null,
-    string? ToolCallId = null);
+    DateTimeOffset CreatedAt)
+{
+    /// <summary>
+    /// 兼容旧调用方式返回文本内容。
+    /// </summary>
+    public string Content => string.Concat(Blocks.OfType<ModelTextBlock>().Select(block => block.Text))
+                             ?? string.Empty;
+
+    /// <summary>
+    /// 兼容旧调用方式返回关联名称，例如工具名。
+    /// </summary>
+    public string? Name => Blocks.OfType<ModelToolUseBlock>().Select(block => block.Name).FirstOrDefault()
+                           ?? Blocks.OfType<ModelToolResultBlock>().Select(block => block.ToolName).FirstOrDefault();
+
+    /// <summary>
+    /// 兼容旧调用方式返回关联的 tool call 标识。
+    /// </summary>
+    public string? ToolCallId => Blocks.OfType<ModelToolUseBlock>().Select(block => block.Id).FirstOrDefault()
+                                 ?? Blocks.OfType<ModelToolResultBlock>().Select(block => block.ToolCallId).FirstOrDefault();
+
+    /// <summary>
+    /// 用单段文本创建 prompt 消息。
+    /// </summary>
+    public PromptMessage(MessageId messageId, SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, int sequenceNo, DateTimeOffset createdAt)
+        : this(messageId, sessionId, turnId, role, [new ModelTextBlock(content)], sequenceNo, createdAt)
+    {
+    }
+
+    /// <summary>
+    /// 用兼容旧字段的方式创建 prompt 消息。
+    /// </summary>
+    public PromptMessage(MessageId messageId, SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, int sequenceNo, DateTimeOffset createdAt, string? name, string? toolCallId)
+        : this(messageId, sessionId, turnId, role, CreateBlocks(role, content, name, toolCallId), sequenceNo, createdAt)
+    {
+    }
+
+    private static IReadOnlyList<ModelContentBlock> CreateBlocks(PromptMessageRole role, string content, string? name, string? toolCallId)
+    {
+        if (role == PromptMessageRole.Tool && !string.IsNullOrWhiteSpace(toolCallId))
+        {
+            return [new ModelToolResultBlock(toolCallId, content, name)];
+        }
+
+        if (role == PromptMessageRole.Assistant &&
+            !string.IsNullOrWhiteSpace(toolCallId) &&
+            !string.IsNullOrWhiteSpace(name))
+        {
+            return [new ModelToolUseBlock(toolCallId, name, content)];
+        }
+
+        return [new ModelTextBlock(content)];
+    }
+}
 
 /// <summary>
 /// 描述 session 中记录的一条结构化事件。
@@ -294,6 +343,17 @@ public interface IPromptHistoryStore
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>已保存的消息对象。</returns>
     Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, string? name = null, string? toolCallId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 追加一条带结构化内容块的 prompt 历史消息。
+    /// </summary>
+    /// <param name="sessionId">所属 session。</param>
+    /// <param name="turnId">所属 turn。</param>
+    /// <param name="role">消息角色。</param>
+    /// <param name="blocks">结构化内容块。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>已保存的消息对象。</returns>
+    Task<PromptMessage> AppendBlocksAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, IReadOnlyList<ModelContentBlock> blocks, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 列出某个 session 的全部 prompt 历史消息。

@@ -1,4 +1,5 @@
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
 
 namespace ClawSharp.Lib.Tests;
@@ -52,6 +53,33 @@ public sealed class SessionStoreTests : IDisposable
         await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
 
         Assert.True(File.Exists(legacyPath));
+    }
+
+    [Fact]
+    public async Task SqliteStores_PersistStructuredBlocksWithoutFlattening()
+    {
+        var options = CreateOptions();
+        var historyStore = new SqlitePromptHistoryStore(options);
+        var sessionStore = new SqliteSessionStore(options);
+        var session = new SessionRecord(new SessionId("session-blocks"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        await sessionStore.CreateAsync(session);
+
+        var turnId = new TurnId("turn-blocks");
+        await historyStore.AppendBlocksAsync(
+            session.SessionId,
+            turnId,
+            PromptMessageRole.Assistant,
+            [new ModelToolUseBlock("call_1", "system.info", """{"verbose":true}""")]);
+
+        var messages = await historyStore.ListAsync(session.SessionId);
+        var message = Assert.Single(messages);
+        var toolUse = Assert.IsType<ModelToolUseBlock>(Assert.Single(message.Blocks));
+
+        Assert.Equal("call_1", toolUse.Id);
+        Assert.Equal("system.info", toolUse.Name);
+        Assert.Equal("""{"verbose":true}""", toolUse.ArgumentsJson);
+        Assert.Equal("system.info", message.Name);
+        Assert.Equal("call_1", message.ToolCallId);
     }
 
     private ClawOptions CreateOptions() => new()

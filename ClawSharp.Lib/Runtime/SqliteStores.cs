@@ -1,5 +1,7 @@
 namespace ClawSharp.Lib.Runtime;
 
+using ClawSharp.Lib.Providers;
+
 /// <summary>
 /// 基于 EF Core SQLite 的 session 记录存储实现。
 /// </summary>
@@ -62,6 +64,10 @@ public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
     /// <inheritdoc />
     public Task<PromptMessage> AppendAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, string content, string? name = null, string? toolCallId = null, CancellationToken cancellationToken = default) =>
         _repository.AppendAsync(sessionId, turnId, role, content, name, toolCallId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<PromptMessage> AppendBlocksAsync(SessionId sessionId, TurnId turnId, PromptMessageRole role, IReadOnlyList<ModelContentBlock> blocks, CancellationToken cancellationToken = default) =>
+        _repository.AppendBlocksAsync(sessionId, turnId, role, blocks, cancellationToken);
 
     /// <inheritdoc />
     public Task<IReadOnlyList<PromptMessage>> ListAsync(SessionId sessionId, CancellationToken cancellationToken = default) =>

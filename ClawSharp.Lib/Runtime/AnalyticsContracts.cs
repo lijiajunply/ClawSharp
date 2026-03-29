@@ -1,4 +1,5 @@
 using System.Globalization;
+using ClawSharp.Lib.Providers;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClawSharp.Lib.Runtime;
@@ -25,7 +26,9 @@ public sealed record SessionAnalyticsSnapshot(
     IReadOnlyList<SessionStatusCount> SessionsByStatus,
     IReadOnlyList<PromptRoleCount> MessagesByRole,
     IReadOnlyList<EventTypeCount> EventsByType,
-    IReadOnlyList<SessionMessageCount> MessagesPerSession);
+    IReadOnlyList<SessionMessageCount> MessagesPerSession,
+    IReadOnlyList<PromptBlockTypeCount> BlocksByType,
+    IReadOnlyList<RoleBlockTypeCount> BlocksByRoleAndType);
 
 /// <summary>
 /// 按状态汇总的 session 数量。
@@ -47,6 +50,16 @@ public sealed record EventTypeCount(string EventType, int Count);
 /// </summary>
 public sealed record SessionMessageCount(SessionId SessionId, int Count);
 
+/// <summary>
+/// 按 block 类型汇总的内容块数量。
+/// </summary>
+public sealed record PromptBlockTypeCount(string BlockType, int Count);
+
+/// <summary>
+/// 按消息角色和 block 类型汇总的数量。
+/// </summary>
+public sealed record RoleBlockTypeCount(PromptMessageRole Role, string BlockType, int Count);
+
 internal interface IDuckDbAnalyticsProjector
 {
     Task RebuildAsync(CancellationToken cancellationToken = default);
@@ -66,7 +79,8 @@ internal sealed class DuckDbAnalyticsProjector(
 
         await using var sqlite = sqliteFactory.CreateDbContext();
         var sessions = await sqlite.Sessions.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
-        var messages = await sqlite.Messages.AsNoTracking().OrderBy(x => x.SequenceNo).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var messageEntities = await sqlite.Messages.AsNoTracking().OrderBy(x => x.SequenceNo).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var messages = messageEntities.Select(RuntimeEntityMapper.ToRecord).ToList();
         var events = await sqlite.SessionEvents.AsNoTracking().OrderBy(x => x.SequenceNo).ToListAsync(cancellationToken).ConfigureAwait(false);
         sessions = sessions.OrderBy(x => x.StartedAt).ToList();
 
@@ -74,6 +88,7 @@ internal sealed class DuckDbAnalyticsProjector(
         ExecuteNonQuery(duck, """
 DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS message_blocks;
 DROP TABLE IF EXISTS session_events;
 CREATE TABLE sessions (
   session_id VARCHAR PRIMARY KEY,
@@ -91,8 +106,21 @@ CREATE TABLE messages (
   content VARCHAR NOT NULL,
   name VARCHAR NULL,
   tool_call_id VARCHAR NULL,
+  blocks_json VARCHAR NULL,
   sequence_no INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+CREATE TABLE message_blocks (
+  message_id VARCHAR NOT NULL,
+  session_id VARCHAR NOT NULL,
+  role INTEGER NOT NULL,
+  block_index INTEGER NOT NULL,
+  block_type VARCHAR NOT NULL,
+  text VARCHAR NULL,
+  name VARCHAR NULL,
+  tool_call_id VARCHAR NULL,
+  arguments_json VARCHAR NULL,
+  tool_name VARCHAR NULL
 );
 CREATE TABLE session_events (
   event_id VARCHAR PRIMARY KEY,
@@ -116,9 +144,36 @@ VALUES ({{ToSqlLiteral(session.SessionId)}}, {{ToSqlLiteral(session.AgentId)}}, 
         foreach (var message in messages)
         {
             ExecuteNonQuery(duck, $$"""
-INSERT INTO messages(message_id, session_id, turn_id, role, content, name, tool_call_id, sequence_no, created_at)
-VALUES ({{ToSqlLiteral(message.MessageId)}}, {{ToSqlLiteral(message.SessionId)}}, {{ToSqlLiteral(message.TurnId)}}, {{((int)message.Role).ToString(CultureInfo.InvariantCulture)}}, {{ToSqlLiteral(message.Content)}}, {{ToSqlLiteral(message.Name)}}, {{ToSqlLiteral(message.ToolCallId)}}, {{message.SequenceNo.ToString(CultureInfo.InvariantCulture)}}, {{ToSqlLiteral(message.CreatedAt)}});
+INSERT INTO messages(message_id, session_id, turn_id, role, content, name, tool_call_id, blocks_json, sequence_no, created_at)
+VALUES ({{ToSqlLiteral(message.MessageId.Value)}}, {{ToSqlLiteral(message.SessionId.Value)}}, {{ToSqlLiteral(message.TurnId.Value)}}, {{((int)message.Role).ToString(CultureInfo.InvariantCulture)}}, {{ToSqlLiteral(message.Content)}}, {{ToSqlLiteral(message.Name)}}, {{ToSqlLiteral(message.ToolCallId)}}, {{ToSqlLiteral(JsonSessionSerializerHelper.SerializeBlocks(message.Blocks))}}, {{message.SequenceNo.ToString(CultureInfo.InvariantCulture)}}, {{ToSqlLiteral(message.CreatedAt)}});
 """);
+
+            for (var index = 0; index < message.Blocks.Count; index++)
+            {
+                var block = message.Blocks[index];
+                var blockType = block switch
+                {
+                    ModelTextBlock => "text",
+                    ModelToolUseBlock => "tool_use",
+                    ModelToolResultBlock => "tool_result",
+                    _ => "unknown"
+                };
+                var text = block is ModelTextBlock textBlock ? textBlock.Text : null;
+                var name = block is ModelToolUseBlock toolUseBlock ? toolUseBlock.Name : null;
+                var toolCallId = block switch
+                {
+                    ModelToolUseBlock toolUseIdBlock => toolUseIdBlock.Id,
+                    ModelToolResultBlock toolResultBlock => toolResultBlock.ToolCallId,
+                    _ => null
+                };
+                var argumentsJson = block is ModelToolUseBlock toolUse ? toolUse.ArgumentsJson : null;
+                var toolName = block is ModelToolResultBlock toolResult ? toolResult.ToolName : null;
+
+                ExecuteNonQuery(duck, $$"""
+INSERT INTO message_blocks(message_id, session_id, role, block_index, block_type, text, name, tool_call_id, arguments_json, tool_name)
+VALUES ({{ToSqlLiteral(message.MessageId.Value)}}, {{ToSqlLiteral(message.SessionId.Value)}}, {{((int)message.Role).ToString(CultureInfo.InvariantCulture)}}, {{index.ToString(CultureInfo.InvariantCulture)}}, {{ToSqlLiteral(blockType)}}, {{ToSqlLiteral(text)}}, {{ToSqlLiteral(name)}}, {{ToSqlLiteral(toolCallId)}}, {{ToSqlLiteral(argumentsJson)}}, {{ToSqlLiteral(toolName)}});
+""");
+            }
         }
 
         foreach (var sessionEvent in events)
@@ -153,7 +208,7 @@ internal sealed class DuckDbSessionAnalyticsService(
     {
         if (!options.Databases.DuckDb.Enabled)
         {
-            return new SessionAnalyticsSnapshot(0, 0, [], [], [], []);
+            return new SessionAnalyticsSnapshot(0, 0, [], [], [], [], [], []);
         }
 
         await projector.RebuildAsync(cancellationToken).ConfigureAwait(false);
@@ -170,8 +225,12 @@ internal sealed class DuckDbSessionAnalyticsService(
             reader => new EventTypeCount(reader.GetString(0), reader.GetInt32(1)));
         var messagesPerSession = ReadList(connection, "SELECT session_id, COUNT(*) FROM messages GROUP BY session_id ORDER BY session_id;",
             reader => new SessionMessageCount(new SessionId(reader.GetString(0)), reader.GetInt32(1)));
+        var blocksByType = ReadList(connection, "SELECT block_type, COUNT(*) FROM message_blocks GROUP BY block_type ORDER BY block_type;",
+            reader => new PromptBlockTypeCount(reader.GetString(0), reader.GetInt32(1)));
+        var blocksByRoleAndType = ReadList(connection, "SELECT role, block_type, COUNT(*) FROM message_blocks GROUP BY role, block_type ORDER BY role, block_type;",
+            reader => new RoleBlockTypeCount((PromptMessageRole)reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2)));
 
-        return new SessionAnalyticsSnapshot(totalSessions, activeSessions, sessionsByStatus, messagesByRole, eventsByType, messagesPerSession);
+        return new SessionAnalyticsSnapshot(totalSessions, activeSessions, sessionsByStatus, messagesByRole, eventsByType, messagesPerSession, blocksByType, blocksByRoleAndType);
     }
 
     private static int ExecuteScalarInt(DuckDB.NET.Data.DuckDBConnection connection, string sql)
@@ -199,5 +258,5 @@ internal sealed class DuckDbSessionAnalyticsService(
 internal sealed class NullSessionAnalyticsService : ISessionAnalyticsService
 {
     public Task<SessionAnalyticsSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult(new SessionAnalyticsSnapshot(0, 0, [], [], [], []));
+        Task.FromResult(new SessionAnalyticsSnapshot(0, 0, [], [], [], [], [], []));
 }
