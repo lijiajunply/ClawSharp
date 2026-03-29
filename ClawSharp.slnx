@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="ClawSharp.Lib.Tests/ClawSharp.Lib.Tests.csproj" />
   <Project Path="ClawSharp.Lib\ClawSharp.Lib.csproj" />
 </Solution>
