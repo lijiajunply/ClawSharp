@@ -18,6 +18,13 @@ namespace ClawSharp.Lib.Runtime;
 public sealed record RuntimeSession(SessionRecord Record, ToolPermissionSet? EffectivePermissions, AgentProcessHandle? WorkerHandle);
 
 /// <summary>
+/// 请求在某个 ThreadSpace 中启动 session。
+/// </summary>
+/// <param name="AgentId">agent 标识。</param>
+/// <param name="ThreadSpaceId">目标 ThreadSpace 标识。</param>
+public sealed record StartSessionRequest(string AgentId, ThreadSpaceId ThreadSpaceId);
+
+/// <summary>
 /// 请求为某个 session 准备 agent 的输入参数。
 /// </summary>
 /// <param name="AgentId">agent 标识。</param>
@@ -94,6 +101,11 @@ public interface IClawKernel
     ISessionManager Sessions { get; }
 
     /// <summary>
+    /// ThreadSpace 生命周期管理器。
+    /// </summary>
+    IThreadSpaceManager ThreadSpaces { get; }
+
+    /// <summary>
     /// prompt 历史存储。
     /// </summary>
     IPromptHistoryStore History { get; }
@@ -113,9 +125,8 @@ public interface IClawKernel
 /// ClawSharp 对外暴露的主运行时接口。
 /// </summary>
 /// <remarks>
-/// 典型调用顺序为：<see cref="InitializeAsync"/> -> <see cref="StartSessionAsync"/> ->
-/// <see cref="AppendUserMessageAsync"/> -> <see cref="RunTurnAsync"/>，随后可通过
-/// <see cref="GetHistoryAsync"/> 查询历史，或通过 <see cref="CancelSessionAsync"/> 中断 session。
+/// 典型调用顺序为：先 <see cref="InitializeAsync"/>，再启动 session、追加用户消息并执行 turn；
+/// 随后可通过 <see cref="GetHistoryAsync"/> 查询历史，或通过 <see cref="CancelSessionAsync"/> 中断 session。
 /// </remarks>
 public interface IClawRuntime
 {
@@ -148,6 +159,14 @@ public interface IClawRuntime
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>新创建的 runtime session。</returns>
     Task<RuntimeSession> StartSessionAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 在指定 ThreadSpace 中启动一个新的 session。
+    /// </summary>
+    /// <param name="request">session 启动请求。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>新创建的 runtime session。</returns>
+    Task<RuntimeSession> StartSessionAsync(StartSessionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 向 session 追加一条用户消息。
@@ -194,6 +213,7 @@ public sealed class ClawKernel(
     IMemoryIndex memory,
     IMcpClientManager mcp,
     ISessionManager sessions,
+    IThreadSpaceManager threadSpaces,
     IPromptHistoryStore history,
     ISessionEventStore events,
     IModelProviderResolver providers) : IClawKernel
@@ -218,6 +238,9 @@ public sealed class ClawKernel(
 
     /// <inheritdoc />
     public ISessionManager Sessions => sessions;
+
+    /// <inheritdoc />
+    public IThreadSpaceManager ThreadSpaces => threadSpaces;
 
     /// <inheritdoc />
     public IPromptHistoryStore History => history;
@@ -246,6 +269,7 @@ public sealed class ClawRuntime(
     {
         await kernel.Agents.ReloadAsync(cancellationToken).ConfigureAwait(false);
         await kernel.Skills.ReloadAsync(cancellationToken).ConfigureAwait(false);
+        await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -282,9 +306,17 @@ public sealed class ClawRuntime(
     }
 
     /// <inheritdoc />
-    public Task<RuntimeSession> StartSessionAsync(string agentId, CancellationToken cancellationToken = default)
+    public async Task<RuntimeSession> StartSessionAsync(string agentId, CancellationToken cancellationToken = default)
     {
-        return kernel.Sessions.StartAsync(agentId, kernel.Options.Runtime.WorkspaceRoot, cancellationToken);
+        var init = await kernel.ThreadSpaces.GetInitAsync(cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.StartAsync(agentId, init.ThreadSpaceId, init.BoundFolderPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<RuntimeSession> StartSessionAsync(StartSessionRequest request, CancellationToken cancellationToken = default)
+    {
+        var threadSpace = await kernel.ThreadSpaces.GetAsync(request.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.StartAsync(request.AgentId, threadSpace.ThreadSpaceId, threadSpace.BoundFolderPath, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

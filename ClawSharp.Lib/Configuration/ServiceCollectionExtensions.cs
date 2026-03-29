@@ -6,6 +6,7 @@ using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -87,13 +88,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IVectorStore, InMemoryVectorStore>();
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();
         services.AddSingleton<IMemoryIndex, MemoryIndex>();
-        services.AddSingleton<ClawSqliteDbContextFactory>();
+        services.AddDbContextFactory<ClawDbContext>(dbContextOptions =>
+            dbContextOptions.UseSqlite(
+                $"Data Source={DatabasePathResolver.ResolveSqlitePath(options)}",
+                sqlite => sqlite.MigrationsAssembly(typeof(ClawDbContext).Assembly.FullName)));
+        services.AddSingleton<ClawSqliteDatabaseInitializer>();
         services.AddSingleton<DuckDbConnectionFactory>();
+        services.AddSingleton<IThreadSpaceRepository, EfThreadSpaceRepository>();
         services.AddSingleton<ISessionRecordRepository, EfSessionRecordRepository>();
         services.AddSingleton<IPromptMessageRepository, EfPromptMessageRepository>();
         services.AddSingleton<ISessionEventRepository, EfSessionEventRepository>();
         services.AddSingleton<IDuckDbAnalyticsProjector, DuckDbAnalyticsProjector>();
         services.AddSingleton<ISessionSerializer, JsonSessionSerializer>();
+        services.AddSingleton<IThreadSpaceStore>(serviceProvider =>
+            new SqliteThreadSpaceStore(serviceProvider.GetRequiredService<IThreadSpaceRepository>()));
         services.AddSingleton<ISessionStore>(serviceProvider =>
             new SqliteSessionStore(serviceProvider.GetRequiredService<ISessionRecordRepository>()));
         services.AddSingleton<IPromptHistoryStore>(serviceProvider =>
@@ -108,6 +116,7 @@ public static class ServiceCollectionExtensions
                     serviceProvider.GetRequiredService<DuckDbConnectionFactory>())
                 : new NullSessionAnalyticsService());
         services.AddSingleton<ISessionManager, SessionManager>();
+        services.AddSingleton<IThreadSpaceManager, ThreadSpaceManager>();
         services.AddSingleton<IProviderHttpClientFactory, DefaultProviderHttpClientFactory>();
         services.AddSingleton<IModelProvider, StubModelProvider>();
         services.AddSingleton<IModelProvider, AnthropicMessagesModelProvider>();

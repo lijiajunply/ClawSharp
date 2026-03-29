@@ -35,6 +35,7 @@ What is already implemented in `ClawSharp.Lib`:
 - Tool capability and permission model
 - MCP client skeleton and process-backed sessions
 - Memory abstractions with default local implementations
+- ThreadSpace containers with bound folders and a default `init` workspace
 - SQLite-backed session store, prompt history, and session event store
 - Single-agent runtime loop with tool invocation and persisted history
 - Local worker abstraction with loopback worker and stdio JSON-RPC transport shape
@@ -46,6 +47,7 @@ What is already implemented in `ClawSharp.Lib`:
 The main runtime interface lives in [`IClawRuntime`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Runtime/RuntimeContracts.cs#L50). It currently supports:
 
 - `StartSessionAsync`
+- `StartSessionAsync(StartSessionRequest)`
 - `AppendUserMessageAsync`
 - `RunTurnAsync`
 - `GetHistoryAsync`
@@ -79,11 +81,27 @@ The library is organized around a few major subsystems:
   - OpenAI Responses API support
   - OpenAI-compatible Chat Completions support
 - `Runtime`
+  - ThreadSpaces
   - Sessions
   - Prompt history
   - Session events
   - Agent worker integration
   - Single-agent turn orchestration
+
+## Project / ThreadSpace / Session
+
+ClawSharp now separates three layers of workspace concepts:
+
+- `Project`
+  - template-driven scaffolding for content directories
+- `ThreadSpace`
+  - a chat/work container bound to a specific folder
+  - a single ThreadSpace can contain multiple sessions
+  - the runtime always guarantees a default `init` ThreadSpace bound to `Runtime.WorkspaceRoot`
+- `session`
+  - the concrete conversation execution unit inside a ThreadSpace
+
+For backward compatibility, `StartSessionAsync("planner")` automatically creates the session inside the default `init` ThreadSpace. New callers can explicitly target a ThreadSpace through `StartSessionRequest`.
 
 ## Provider Support
 

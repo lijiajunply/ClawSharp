@@ -14,7 +14,7 @@ public sealed class SqliteSessionStore : ISessionStore
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqliteSessionStore(Configuration.ClawOptions options)
-        : this(new EfSessionRecordRepository(new ClawSqliteDbContextFactory(options)))
+        : this(SqlitePersistenceFactory.CreateSessionRecordRepository(options))
     {
     }
 
@@ -36,6 +36,10 @@ public sealed class SqliteSessionStore : ISessionStore
         _repository.ListActiveAsync(cancellationToken);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<SessionRecord>> ListByThreadSpaceAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default) =>
+        _repository.ListByThreadSpaceAsync(threadSpaceId, cancellationToken);
+
+    /// <inheritdoc />
     public Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt = null, CancellationToken cancellationToken = default) =>
         _repository.UpdateStatusAsync(sessionId, status, endedAt, cancellationToken);
 }
@@ -52,7 +56,7 @@ public sealed class SqlitePromptHistoryStore : IPromptHistoryStore
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqlitePromptHistoryStore(Configuration.ClawOptions options)
-        : this(new EfPromptMessageRepository(new ClawSqliteDbContextFactory(options)))
+        : this(SqlitePersistenceFactory.CreatePromptMessageRepository(options))
     {
     }
 
@@ -86,7 +90,7 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
     /// </summary>
     /// <param name="options">用于解析数据库路径的库配置。</param>
     public SqliteSessionEventStore(Configuration.ClawOptions options)
-        : this(new EfSessionEventRepository(new ClawSqliteDbContextFactory(options)))
+        : this(SqlitePersistenceFactory.CreateSessionEventRepository(options))
     {
     }
 
@@ -111,9 +115,9 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
 public sealed class SessionManager(ISessionStore sessions) : ISessionManager
 {
     /// <inheritdoc />
-    public async Task<RuntimeSession> StartAsync(string agentId, string workspaceRoot, CancellationToken cancellationToken = default)
+    public async Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, CancellationToken cancellationToken = default)
     {
-        var record = new SessionRecord(SessionId.New(), agentId, workspaceRoot, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var record = new SessionRecord(SessionId.New(), threadSpaceId, agentId, workspaceRoot, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessions.CreateAsync(record, cancellationToken).ConfigureAwait(false);
         return new RuntimeSession(record, null, null);
     }
@@ -133,4 +137,169 @@ public sealed class SessionManager(ISessionStore sessions) : ISessionManager
     /// <inheritdoc />
     public Task CompleteAsync(SessionId sessionId, SessionStatus status, CancellationToken cancellationToken = default) =>
         sessions.UpdateStatusAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken);
+}
+
+/// <summary>
+/// 基于 EF Core SQLite 的 ThreadSpace 存储实现。
+/// </summary>
+public sealed class SqliteThreadSpaceStore : IThreadSpaceStore
+{
+    private readonly IThreadSpaceRepository _repository;
+
+    /// <summary>
+    /// 创建一个 SQLite ThreadSpace store，并确保所需表结构存在。
+    /// </summary>
+    /// <param name="options">用于解析数据库路径的库配置。</param>
+    public SqliteThreadSpaceStore(Configuration.ClawOptions options)
+        : this(SqlitePersistenceFactory.CreateThreadSpaceRepository(options))
+    {
+    }
+
+    internal SqliteThreadSpaceStore(IThreadSpaceRepository repository)
+    {
+        _repository = repository;
+    }
+
+    /// <inheritdoc />
+    public Task CreateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default) =>
+        _repository.CreateAsync(threadSpace, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ThreadSpaceRecord?> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default) =>
+        _repository.GetAsync(threadSpaceId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ThreadSpaceRecord?> GetByNameAsync(string name, CancellationToken cancellationToken = default) =>
+        _repository.GetByNameAsync(name, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ThreadSpaceRecord?> GetByBoundFolderPathAsync(string boundFolderPath, CancellationToken cancellationToken = default) =>
+        _repository.GetByBoundFolderPathAsync(boundFolderPath, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived = false, CancellationToken cancellationToken = default) =>
+        _repository.ListAsync(includeArchived, cancellationToken);
+}
+
+/// <summary>
+/// 默认的 ThreadSpace 生命周期管理器。
+/// </summary>
+public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionStore sessions, Configuration.ClawOptions options) : IThreadSpaceManager
+{
+    private const string InitName = "init";
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord> EnsureDefaultAsync(CancellationToken cancellationToken = default)
+    {
+        var workspaceRoot = NormalizeBoundFolderPath(options.Runtime.WorkspaceRoot);
+        var existing = await threadSpaces.GetByNameAsync(InitName, cancellationToken).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        Directory.CreateDirectory(workspaceRoot);
+        var init = new ThreadSpaceRecord(ThreadSpaceId.New(), InitName, workspaceRoot, true, DateTimeOffset.UtcNow);
+        await threadSpaces.CreateAsync(init, cancellationToken).ConfigureAwait(false);
+        return init;
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord> GetInitAsync(CancellationToken cancellationToken = default)
+    {
+        return await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord> CreateAsync(CreateThreadSpaceRequest request, CancellationToken cancellationToken = default)
+    {
+        request.Validate();
+        await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var normalizedName = request.Name.Trim();
+        if (string.Equals(normalizedName, InitName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("ThreadSpace name 'init' is reserved.");
+        }
+
+        var boundFolderPath = NormalizeAndValidateBoundFolderPath(request.BoundFolderPath);
+        Directory.CreateDirectory(boundFolderPath);
+
+        if (await threadSpaces.GetByNameAsync(normalizedName, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            throw new InvalidOperationException($"ThreadSpace '{normalizedName}' already exists.");
+        }
+
+        if (await threadSpaces.GetByBoundFolderPathAsync(boundFolderPath, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            throw new InvalidOperationException($"ThreadSpace for '{boundFolderPath}' already exists.");
+        }
+
+        var threadSpace = new ThreadSpaceRecord(ThreadSpaceId.New(), normalizedName, boundFolderPath, false, DateTimeOffset.UtcNow);
+        await threadSpaces.CreateAsync(threadSpace, cancellationToken).ConfigureAwait(false);
+        return threadSpace;
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default)
+    {
+        await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return await threadSpaces.GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false)
+               ?? throw new KeyNotFoundException($"ThreadSpace '{threadSpaceId}' was not found.");
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return await threadSpaces.GetByNameAsync(name, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<ThreadSpaceRecord?> GetByBoundFolderPathAsync(string boundFolderPath, CancellationToken cancellationToken = default)
+    {
+        await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return await threadSpaces.GetByBoundFolderPathAsync(NormalizeBoundFolderPath(boundFolderPath), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ThreadSpaceRecord>> ListAsync(bool includeArchived = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return await threadSpaces.ListAsync(includeArchived, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SessionRecord>> ListSessionsAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default)
+    {
+        await GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
+        return await sessions.ListByThreadSpaceAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private string NormalizeAndValidateBoundFolderPath(string boundFolderPath)
+    {
+        var normalized = NormalizeBoundFolderPath(boundFolderPath);
+        var workspaceRoot = NormalizeBoundFolderPath(options.Runtime.WorkspaceRoot);
+        var normalizedWorkspaceRoot = EnsureTrailingSeparator(workspaceRoot);
+        var candidateWithSeparator = EnsureTrailingSeparator(normalized);
+
+        if (!candidateWithSeparator.StartsWith(normalizedWorkspaceRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"ThreadSpace path '{normalized}' must be within workspace root '{workspaceRoot}'.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeBoundFolderPath(string path) => Path.GetFullPath(path.Trim());
+
+    private static string EnsureTrailingSeparator(string path)
+    {
+        if (path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar))
+        {
+            return path;
+        }
+
+        return path + Path.DirectorySeparatorChar;
+    }
 }

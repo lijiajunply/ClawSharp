@@ -216,7 +216,35 @@ data: {"type":"message_stop"}
             entry.ReplayBlocks.OfType<ModelTextBlock>().Any(block => block.Text == "Claude handled tool"));
     }
 
-    private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
+    [Fact]
+    public async Task Runtime_StartSessionAsync_DefaultsToInitThreadSpace()
+    {
+        var runtime = CreateRuntime(out _, out _, out var threadSpaces);
+        var init = await threadSpaces.GetInitAsync();
+
+        var session = await runtime.StartSessionAsync("planner");
+
+        Assert.Equal(init.ThreadSpaceId, session.Record.ThreadSpaceId);
+        Assert.Equal(_root, session.Record.WorkspaceRoot);
+    }
+
+    [Fact]
+    public async Task Runtime_StartSessionAsync_CanTargetExplicitThreadSpace()
+    {
+        var runtime = CreateRuntime(out _, out _, out var threadSpaces);
+        var docsPath = Path.Combine(_root, "docs");
+        var docs = await threadSpaces.CreateAsync(new CreateThreadSpaceRequest("docs", docsPath));
+
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", docs.ThreadSpaceId));
+
+        Assert.Equal(docs.ThreadSpaceId, session.Record.ThreadSpaceId);
+        Assert.Equal(docs.BoundFolderPath, session.Record.WorkspaceRoot);
+    }
+
+    private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore) =>
+        CreateRuntime(out historyStore, out eventStore, out _);
+
+    private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore, out IThreadSpaceManager threadSpaceManager)
     {
         var options = new ClawOptions
         {
@@ -252,10 +280,12 @@ data: {"type":"message_stop"}
             }
         };
 
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         historyStore = new SqlitePromptHistoryStore(options);
         eventStore = new SqliteSessionEventStore(options);
         var sessionManager = new SessionManager(sessionStore);
+        threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
 
         var agent = new AgentDefinition(
             "planner",
@@ -283,6 +313,7 @@ data: {"type":"message_stop"}
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             new McpClientManager(new McpServerCatalog(options)),
             sessionManager,
+            threadSpaceManager,
             historyStore,
             eventStore,
             resolver);
@@ -331,10 +362,12 @@ data: {"type":"message_stop"}
             }
         };
 
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         historyStore = new SqlitePromptHistoryStore(options);
         eventStore = new SqliteSessionEventStore(options);
         var sessionManager = new SessionManager(sessionStore);
+        var threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
 
         var agent = new AgentDefinition(
             "planner",
@@ -367,6 +400,7 @@ data: {"type":"message_stop"}
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             new McpClientManager(new McpServerCatalog(options)),
             sessionManager,
+            threadSpaceManager,
             historyStore,
             eventStore,
             resolver);
@@ -414,10 +448,12 @@ data: {"type":"message_stop"}
             }
         };
 
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         historyStore = new SqlitePromptHistoryStore(options);
         eventStore = new SqliteSessionEventStore(options);
         var sessionManager = new SessionManager(sessionStore);
+        var threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
 
         var agent = new AgentDefinition(
             "planner",
@@ -450,6 +486,7 @@ data: {"type":"message_stop"}
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             new McpClientManager(new McpServerCatalog(options)),
             sessionManager,
+            threadSpaceManager,
             historyStore,
             eventStore,
             resolver);

@@ -145,6 +145,7 @@ public enum PromptMessageRole
 /// 描述一个 session 的持久化记录。
 /// </summary>
 /// <param name="SessionId">session 标识。</param>
+/// <param name="ThreadSpaceId">所属 ThreadSpace 标识。</param>
 /// <param name="AgentId">关联的 agent 标识。</param>
 /// <param name="WorkspaceRoot">session 对应的 workspace 根目录。</param>
 /// <param name="Status">当前 session 状态。</param>
@@ -152,6 +153,7 @@ public enum PromptMessageRole
 /// <param name="EndedAt">结束时间；未结束时为 <see langword="null"/>。</param>
 public sealed record SessionRecord(
     SessionId SessionId,
+    ThreadSpaceId ThreadSpaceId,
     string AgentId,
     string WorkspaceRoot,
     SessionStatus Status,
@@ -382,6 +384,14 @@ public interface ISessionStore
     Task<IReadOnlyList<SessionRecord>> ListActiveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 列出某个 ThreadSpace 下的全部 session。
+    /// </summary>
+    /// <param name="threadSpaceId">ThreadSpace 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>按创建时间倒序排列的 session 列表。</returns>
+    Task<IReadOnlyList<SessionRecord>> ListByThreadSpaceAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 更新 session 状态。
     /// </summary>
     /// <param name="sessionId">session 标识。</param>
@@ -463,10 +473,11 @@ public interface ISessionManager
     /// 为指定 agent 启动一个新的 session。
     /// </summary>
     /// <param name="agentId">agent 标识。</param>
+    /// <param name="threadSpaceId">session 所属 ThreadSpace。</param>
     /// <param name="workspaceRoot">session 使用的 workspace 根目录。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>新建的 runtime session。</returns>
-    Task<RuntimeSession> StartAsync(string agentId, string workspaceRoot, CancellationToken cancellationToken = default);
+    Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 读取一个已存在的 session。

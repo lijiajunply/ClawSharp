@@ -19,16 +19,19 @@ public sealed class AnalyticsTests : IDisposable
     public async Task SessionAnalyticsService_RebuildsDuckDbAndReturnsAggregates()
     {
         var options = CreateOptions(enabled: true);
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         var historyStore = new SqlitePromptHistoryStore(options);
         var eventStore = new SqliteSessionEventStore(options);
+        var dbContextFactory = SqlitePersistenceFactory.CreateDbContextFactory(options);
+        var init = await threadSpaceStore.GetByNameAsync("init");
         var analytics = new DuckDbSessionAnalyticsService(
             options,
-            new DuckDbAnalyticsProjector(options, new ClawSqliteDbContextFactory(options), new DuckDbConnectionFactory(options)),
+            new DuckDbAnalyticsProjector(options, dbContextFactory, SqlitePersistenceFactory.CreateInitializer(options, dbContextFactory), new DuckDbConnectionFactory(options)),
             new DuckDbConnectionFactory(options));
 
-        var sessionA = new SessionRecord(new SessionId("session-a"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
-        var sessionB = new SessionRecord(new SessionId("session-b"), "planner", _root, SessionStatus.Completed, DateTimeOffset.UtcNow);
+        var sessionA = new SessionRecord(new SessionId("session-a"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var sessionB = new SessionRecord(new SessionId("session-b"), init.ThreadSpaceId, "planner", _root, SessionStatus.Completed, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(sessionA);
         await sessionStore.CreateAsync(sessionB);
 

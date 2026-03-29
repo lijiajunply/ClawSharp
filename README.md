@@ -35,6 +35,7 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
 - 工具 capability 与权限模型
 - MCP client 骨架与进程型 session
 - Memory 抽象与本地默认实现
+- ThreadSpace 容器层，支持绑定目录与默认 `init` 工作单元
 - 基于 SQLite 的 session store、prompt history 和 session event store
 - 单 agent runtime loop，支持工具调用与历史持久化
 - 本地 worker 抽象，包含 loopback worker 与 stdio JSON-RPC 传输形态
@@ -46,6 +47,7 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
 核心 runtime 接口位于 [`IClawRuntime`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Runtime/RuntimeContracts.cs#L50)，目前支持：
 
 - `StartSessionAsync`
+- `StartSessionAsync(StartSessionRequest)`
 - `AppendUserMessageAsync`
 - `RunTurnAsync`
 - `GetHistoryAsync`
@@ -79,11 +81,27 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
   - OpenAI Responses API 支持
   - OpenAI-compatible Chat Completions 支持
 - `Runtime`
+  - ThreadSpaces
   - Sessions
   - Prompt history
   - Session events
   - Agent worker 集成
   - 单 agent turn orchestration
+
+## Project / ThreadSpace / Session
+
+ClawSharp 现在区分三层概念：
+
+- `Project`
+  - 用于模板脚手架和内容目录生成
+- `ThreadSpace`
+  - 绑定某个文件夹的聊天/工作容器
+  - 一个 ThreadSpace 可以承载多个 session
+  - 系统会自动确保存在默认 `init` ThreadSpace，并将其绑定到 `Runtime.WorkspaceRoot`
+- `session`
+  - ThreadSpace 内的实际对话执行单元
+
+兼容旧调用时，`StartSessionAsync("planner")` 会自动把 session 放入默认 `init` ThreadSpace。新代码也可以通过 `StartSessionRequest` 显式指定目标 ThreadSpace。
 
 ## Provider 支持
 

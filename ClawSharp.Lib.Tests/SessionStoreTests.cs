@@ -1,6 +1,8 @@
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Lib.Tests;
 
@@ -17,11 +19,13 @@ public sealed class SessionStoreTests : IDisposable
     public async Task SqliteStores_PersistSessionsMessagesAndEventsInOrder()
     {
         var options = CreateOptions();
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         var historyStore = new SqlitePromptHistoryStore(options);
         var eventStore = new SqliteSessionEventStore(options);
+        var init = await threadSpaceStore.GetByNameAsync("init");
 
-        var session = new SessionRecord(new SessionId("session-a"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var session = new SessionRecord(new SessionId("session-a"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(session);
 
         var turnId = new TurnId("turn-a");
@@ -49,8 +53,10 @@ public sealed class SessionStoreTests : IDisposable
             Sessions = new SessionOptions { DatabasePath = legacyPath }
         };
 
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
-        await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
+        var init = await threadSpaceStore.GetByNameAsync("init");
+        await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
 
         Assert.True(File.Exists(legacyPath));
     }
@@ -59,9 +65,11 @@ public sealed class SessionStoreTests : IDisposable
     public async Task SqliteStores_PersistStructuredBlocksWithoutFlattening()
     {
         var options = CreateOptions();
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var historyStore = new SqlitePromptHistoryStore(options);
         var sessionStore = new SqliteSessionStore(options);
-        var session = new SessionRecord(new SessionId("session-blocks"), "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var init = await threadSpaceStore.GetByNameAsync("init");
+        var session = new SessionRecord(new SessionId("session-blocks"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(session);
 
         var turnId = new TurnId("turn-blocks");
@@ -80,6 +88,39 @@ public sealed class SessionStoreTests : IDisposable
         Assert.Equal("""{"verbose":true}""", toolUse.ArgumentsJson);
         Assert.Equal("system.info", message.Name);
         Assert.Equal("call_1", message.ToolCallId);
+    }
+
+    [Fact]
+    public async Task AddClawSharp_ResolvesStoresThroughDbContextFactory()
+    {
+        var services = new ServiceCollection();
+        services.AddClawSharp(builder =>
+        {
+            builder.Configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Runtime:WorkspaceRoot"] = _root,
+                    ["Databases:Sqlite:DatabasePath"] = Path.Combine(_root, "di-runtime.db"),
+                    ["Databases:DuckDb:Enabled"] = false.ToString()
+                })
+                .Build();
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var sessionStore = provider.GetRequiredService<ISessionStore>();
+        var historyStore = provider.GetRequiredService<IPromptHistoryStore>();
+        var eventStore = provider.GetRequiredService<ISessionEventStore>();
+        var threadSpaces = provider.GetRequiredService<IThreadSpaceStore>();
+
+        var init = await threadSpaces.GetByNameAsync("init");
+        var session = new SessionRecord(new SessionId("di-session"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        await sessionStore.CreateAsync(session);
+        await historyStore.AppendAsync(session.SessionId, new TurnId("di-turn"), PromptMessageRole.User, "hello");
+        await eventStore.AppendAsync(session.SessionId, new TurnId("di-turn"), "TurnCompleted", TestHelpers.Json(new { ok = true }));
+
+        Assert.NotNull(await sessionStore.GetAsync(session.SessionId));
+        Assert.Single(await historyStore.ListAsync(session.SessionId));
+        Assert.Single(await eventStore.ListAsync(session.SessionId));
     }
 
     private ClawOptions CreateOptions() => new()

@@ -1,6 +1,7 @@
 using System.Globalization;
 using ClawSharp.Lib.Providers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ClawSharp.Lib.Runtime;
 
@@ -67,7 +68,8 @@ internal interface IDuckDbAnalyticsProjector
 
 internal sealed class DuckDbAnalyticsProjector(
     ClawSharp.Lib.Configuration.ClawOptions options,
-    ClawSqliteDbContextFactory sqliteFactory,
+    IDbContextFactory<ClawDbContext> sqliteFactory,
+    ClawSqliteDatabaseInitializer sqliteInitializer,
     DuckDbConnectionFactory duckDbFactory) : IDuckDbAnalyticsProjector
 {
     public async Task RebuildAsync(CancellationToken cancellationToken = default)
@@ -77,7 +79,8 @@ internal sealed class DuckDbAnalyticsProjector(
             return;
         }
 
-        await using var sqlite = sqliteFactory.CreateDbContext();
+        sqliteInitializer.EnsureInitialized();
+        await using var sqlite = await sqliteFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         var sessions = await sqlite.Sessions.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
         var messageEntities = await sqlite.Messages.AsNoTracking().OrderBy(x => x.SequenceNo).ToListAsync(cancellationToken).ConfigureAwait(false);
         var messages = messageEntities.Select(RuntimeEntityMapper.ToRecord).ToList();
