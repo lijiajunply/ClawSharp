@@ -9,11 +9,11 @@ public static class CliErrorHandler
     {
         if (ex is ValidationException validationEx)
         {
-            AnsiConsole.MarkupLine($"[red]Validation Error:[/] {validationEx.Message}");
+            AnsiConsole.MarkupLine($"[red]Validation Error:[/] {validationEx.Message.EscapeMarkup()}");
         }
         else
         {
-            AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}");
+            AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message.EscapeMarkup()}");
             if (AnsiConsole.Confirm("Show stack trace?"))
             {
                 AnsiConsole.WriteException(ex);

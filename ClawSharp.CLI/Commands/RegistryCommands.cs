@@ -1,6 +1,8 @@
 using System.CommandLine;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Agents;
+using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,21 +24,46 @@ public static class RegistryCommands
                 await runtime.InitializeAsync();
 
                 var kernel = host.Services.GetRequiredService<IClawKernel>();
+                var options = host.Services.GetRequiredService<ClawOptions>();
+                
+                AnsiConsole.MarkupLine($"[grey]Config BasePath: {Directory.GetCurrentDirectory().EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine($"[grey]Default Provider: {options.Providers.DefaultProvider.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine($"[grey]Model Count: {options.Providers.Models.Count}[/]");
+
                 var agents = kernel.Agents.GetAll();
 
                 var table = new Table();
                 table.AddColumn("ID");
                 table.AddColumn("Name");
-                table.AddColumn("Provider");
+                table.AddColumn("Configured Provider");
+                table.AddColumn("Resolved Provider");
+                table.AddColumn("Resolved Model");
                 table.AddColumn("Version");
+
+                var resolver = host.Services.GetRequiredService<IModelProviderResolver>();
 
                 foreach (var agent in agents)
                 {
+                    string resolvedProvider = "Error";
+                    string resolvedModel = "Error";
+                    try 
+                    {
+                        var resolved = resolver.Resolve(agent);
+                        resolvedProvider = resolved.Target.ProviderName;
+                        resolvedModel = resolved.Target.Model;
+                    }
+                    catch (Exception ex)
+                    {
+                        resolvedProvider = $"[red]Error: {ex.Message.EscapeMarkup()}[/]";
+                    }
+
                     table.AddRow(
-                        agent.Id,
-                        agent.Name,
-                        agent.Provider ?? "[grey]default[/]",
-                        agent.Version);
+                        agent.Id.EscapeMarkup(),
+                        agent.Name.EscapeMarkup(),
+                        (agent.Provider ?? "[grey]default[/]").EscapeMarkup(),
+                        resolvedProvider.EscapeMarkup(),
+                        resolvedModel.EscapeMarkup(),
+                        agent.Version.EscapeMarkup());
                 }
 
                 AnsiConsole.Write(table);

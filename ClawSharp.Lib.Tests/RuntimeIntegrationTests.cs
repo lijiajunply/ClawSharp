@@ -43,14 +43,14 @@ public sealed class RuntimeIntegrationTests : IDisposable
     {
         var runtime = CreateRuntime(out var historyStore, out var eventStore);
         var session = await runtime.StartSessionAsync("planner");
-        await runtime.AppendUserMessageAsync(session.Record.SessionId, "tool:system.info:{}");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "tool:system_info:{}");
 
         var result = await runtime.RunTurnAsync(session.Record.SessionId);
         var messages = await historyStore.ListAsync(session.Record.SessionId);
         var events = await eventStore.ListAsync(session.Record.SessionId);
 
         Assert.Equal(1, result.ToolCallCount);
-        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system.info");
+        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system_info");
         Assert.Contains(events, @event => @event.EventType == "ToolCallRequested");
         Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
     }
@@ -99,7 +99,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output
         var runtime = CreateOpenAiRuntime(
             [
                 """
-data: {"type":"response.output_item.done","item":{"type":"function_call","call_id":"call_1","name":"system.info","arguments":"{}"}}
+data: {"type":"response.output_item.done","item":{"type":"function_call","call_id":"call_1","name":"system_info","arguments":"{}"}}
 
 data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":1,"total_tokens":4}}}
 
@@ -122,7 +122,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
         var events = await eventStore.ListAsync(session.Record.SessionId);
 
         Assert.Equal(1, result.ToolCallCount);
-        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system.info");
+        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system_info");
         Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
     }
 
@@ -132,7 +132,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output
         var runtime = CreateAnthropicRuntime(
             [
                 """
-data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system.info","input":{}}}
+data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system_info","input":{}}}
 
 data: {"type":"content_block_stop","index":0}
 
@@ -161,7 +161,7 @@ data: {"type":"message_stop"}
         var events = await eventStore.ListAsync(session.Record.SessionId);
 
         Assert.Equal(1, result.ToolCallCount);
-        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system.info");
+        Assert.Contains(messages, message => message.Role == PromptMessageRole.Tool && message.Name == "system_info");
         Assert.Contains(messages, message => message.Role == PromptMessageRole.Assistant && message.Content == "Claude handled tool");
         Assert.Contains(events, @event => @event.EventType == "ToolCallCompleted");
     }
@@ -172,7 +172,7 @@ data: {"type":"message_stop"}
         var runtime = CreateAnthropicRuntime(
             [
                 """
-data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system.info","input":{}}}
+data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"system_info","input":{}}}
 
 data: {"type":"content_block_stop","index":0}
 
@@ -201,15 +201,15 @@ data: {"type":"message_stop"}
 
         Assert.Contains(history, entry =>
             entry.Message?.Role == PromptMessageRole.Tool &&
-            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system.info"));
+            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system_info"));
 
         Assert.Contains(history, entry =>
             entry.Event?.EventType == "ToolCallRequested" &&
-            entry.ReplayBlocks.OfType<ModelToolUseBlock>().Any(block => block.Name == "system.info"));
+            entry.ReplayBlocks.OfType<ModelToolUseBlock>().Any(block => block.Name == "system_info"));
 
         Assert.Contains(history, entry =>
             entry.Event?.EventType == "ToolCallCompleted" &&
-            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system.info"));
+            entry.ReplayBlocks.OfType<ModelToolResultBlock>().Any(block => block.ToolName == "system_info"));
 
         Assert.Contains(history, entry =>
             entry.Event?.EventType == "TurnCompleted" &&
@@ -294,7 +294,7 @@ data: {"type":"message_stop"}
             "",
             "stub-model",
             "You are helpful",
-            ["system.info", "shell.run"],
+            ["system_info", "shell_run"],
             [],
             "workspace",
             [],
@@ -376,7 +376,7 @@ data: {"type":"message_stop"}
             "",
             "gpt-runtime",
             "You are helpful",
-            ["system.info"],
+            ["system_info"],
             [],
             "workspace",
             [],
@@ -462,7 +462,7 @@ data: {"type":"message_stop"}
             "",
             "claude-sonnet",
             "You are helpful",
-            ["system.info"],
+            ["system_info"],
             [],
             "workspace",
             [],

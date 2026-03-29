@@ -416,17 +416,28 @@ public sealed class ModelProviderResolver(ClawOptions options, IModelProviderReg
     /// <inheritdoc />
     public ResolvedModelProvider Resolve(AgentDefinition agent)
     {
+        // 确定要使用的 provider 名称
         var configuredProvider = string.IsNullOrWhiteSpace(agent.Provider)
             ? options.Providers.DefaultProvider
             : agent.Provider;
-        var providerConfig = options.Providers.Models.FirstOrDefault(model => string.Equals(model.Name, configuredProvider, StringComparison.OrdinalIgnoreCase))
-                             ?? CreateFallback(configuredProvider, options);
+
+        // 尝试按名称查找配置
+        var providerConfig = options.Providers.Models.FirstOrDefault(model => string.Equals(model.Name, configuredProvider, StringComparison.OrdinalIgnoreCase));
+
+        // 如果按名称没找到，且 agent 没指定 provider，则尝试取配置中的第一个
+        if (providerConfig == null && string.IsNullOrWhiteSpace(agent.Provider))
+        {
+            providerConfig = options.Providers.Models.FirstOrDefault();
+        }
+
+        // 如果还是没找到，尝试回退到 stub (测试模式)
+        providerConfig ??= CreateFallback(configuredProvider, options);
 
         if (providerConfig is null)
         {
             throw new ModelProviderException(
-                $"Configured provider '{configuredProvider}' was not found.",
-                configuredProvider);
+                $"Configured provider '{configuredProvider}' was not found and no default models are configured.",
+                configuredProvider ?? "none");
         }
 
         var model = !string.IsNullOrWhiteSpace(agent.Model)

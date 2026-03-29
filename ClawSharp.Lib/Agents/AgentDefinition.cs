@@ -35,6 +35,11 @@ public sealed record AgentDefinition(
     string Body)
 {
     /// <summary>
+    /// 标识该 agent 是否在定义中明确列出了工具；为 false 表示应使用全部可用工具。
+    /// </summary>
+    public bool HasExplicitTools { get; init; }
+
+    /// <summary>
     /// 校验 agent 定义是否包含运行时必需字段。
     /// </summary>
     /// <exception cref="ValidationException">当必需字段为空时抛出。</exception>

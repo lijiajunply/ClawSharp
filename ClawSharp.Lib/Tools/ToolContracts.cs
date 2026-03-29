@@ -50,7 +50,7 @@ public static class ToolCapabilityParser
     /// <summary>
     /// 尝试解析工具能力字符串。
     /// </summary>
-    /// <param name="value">能力声明，例如 <c>file.read</c>。</param>
+    /// <param name="value">能力声明，例如 <c>file_read</c>。</param>
     /// <param name="capability">解析成功时输出的能力值。</param>
     /// <returns>解析成功时返回 <see langword="true"/>。</returns>
     public static bool TryParse(string value, out ToolCapability capability)
@@ -58,8 +58,8 @@ public static class ToolCapabilityParser
         capability = value.Trim().ToLowerInvariant() switch
         {
             "shell.execute" => ToolCapability.ShellExecute,
-            "file.read" => ToolCapability.FileRead,
-            "file.write" => ToolCapability.FileWrite,
+            "file_read" => ToolCapability.FileRead,
+            "file_write" => ToolCapability.FileWrite,
             "system.inspect" => ToolCapability.SystemInspect,
             "network.access" => ToolCapability.NetworkAccess,
             _ => ToolCapability.None
@@ -452,9 +452,14 @@ public sealed class ShellRunTool : IToolExecutor
 {
     /// <inheritdoc />
     public ToolDefinition Definition { get; } = new(
-        "shell.run",
+        "shell_run",
         "Run a shell command in the local workspace.",
-        null,
+        ToolSecurity.Json(new
+        {
+            type = "object",
+            properties = new { command = new { type = "string", description = "The shell command to run." } },
+            required = new[] { "command" }
+        }),
         null,
         ToolCapability.ShellExecute);
 
@@ -529,7 +534,12 @@ public sealed class ShellRunTool : IToolExecutor
 public sealed class FileReadTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("file.read", "Read a file.", null, null, ToolCapability.FileRead);
+    public ToolDefinition Definition { get; } = new(
+        "file_read", 
+        "Read a file.", 
+        ToolSecurity.Json(new { type = "object", properties = new { path = new { type = "string" } }, required = new[] { "path" } }), 
+        null, 
+        ToolCapability.FileRead);
 
     /// <inheritdoc />
     public async Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -553,7 +563,19 @@ public sealed class FileReadTool : IToolExecutor
 public sealed class FileWriteTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("file.write", "Write a file.", null, null, ToolCapability.FileWrite);
+    public ToolDefinition Definition { get; } = new(
+        "file_write", 
+        "Write a file.", 
+        ToolSecurity.Json(new { 
+            type = "object", 
+            properties = new { 
+                path = new { type = "string" },
+                content = new { type = "string" }
+            }, 
+            required = new[] { "path", "content" } 
+        }), 
+        null, 
+        ToolCapability.FileWrite);
 
     /// <inheritdoc />
     public async Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -584,7 +606,7 @@ public sealed class FileWriteTool : IToolExecutor
 public sealed class FileListTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("file.list", "List files under a directory.", null, null, ToolCapability.FileRead);
+    public ToolDefinition Definition { get; } = new("file_list", "List files under a directory.", null, null, ToolCapability.FileRead);
 
     /// <inheritdoc />
     public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -612,7 +634,12 @@ public sealed class FileListTool : IToolExecutor
 public sealed class SystemInfoTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("system.info", "Get local system information.", null, null, ToolCapability.SystemInspect);
+    public ToolDefinition Definition { get; } = new(
+        "system_info",
+        "Get local system information.",
+        ToolSecurity.Json(new { type = "object", properties = new { } }),
+        null,
+        ToolCapability.SystemInspect);
 
     /// <inheritdoc />
     public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -635,7 +662,7 @@ public sealed class SystemInfoTool : IToolExecutor
 public sealed class SystemProcessesTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("system.processes", "List local processes.", null, null, ToolCapability.SystemInspect);
+    public ToolDefinition Definition { get; } = new("system_processes", "List local processes.", null, null, ToolCapability.SystemInspect);
 
     /// <inheritdoc />
     public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -656,7 +683,7 @@ public sealed class SystemProcessesTool : IToolExecutor
 public sealed class SearchTextTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("search.text", "Search text within workspace files.", null, null, ToolCapability.FileRead);
+    public ToolDefinition Definition { get; } = new("search_text", "Search text within workspace files.", null, null, ToolCapability.FileRead);
 
     /// <inheritdoc />
     public async Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
@@ -691,7 +718,7 @@ public sealed class SearchTextTool : IToolExecutor
 public sealed class SearchFilesTool : IToolExecutor
 {
     /// <inheritdoc />
-    public ToolDefinition Definition { get; } = new("search.files", "Search files by pattern.", null, null, ToolCapability.FileRead);
+    public ToolDefinition Definition { get; } = new("search_files", "Search files by pattern.", null, null, ToolCapability.FileRead);
 
     /// <inheritdoc />
     public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)

@@ -23,7 +23,7 @@ public static class InitCommand
                 var runtime = host.Services.GetRequiredService<IClawRuntime>();
                 
                 var absolutePath = Path.GetFullPath(path);
-                AnsiConsole.MarkupLine($"[bold blue]Initializing ThreadSpace at:[/] [green]{absolutePath}[/]");
+                AnsiConsole.MarkupLine($"[bold blue]Initializing ThreadSpace at:[/] [green]{absolutePath.EscapeMarkup()}[/]");
 
                 await AnsiConsole.Status()
                     .StartAsync("Working...", async ctx =>

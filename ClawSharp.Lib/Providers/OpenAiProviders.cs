@@ -107,15 +107,6 @@ internal static class OpenAiRequestMapper
         }
 
         var messages = new JsonArray();
-        if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
-        {
-            messages.Add(new JsonObject
-            {
-                ["role"] = "system",
-                ["content"] = request.SystemPrompt
-            });
-        }
-
         foreach (var message in request.Messages)
         {
             messages.Add(ToCompatibleMessage(message));
@@ -143,31 +134,25 @@ internal static class OpenAiRequestMapper
             };
         }
 
+        var isAssistant = message.Role == ModelMessageRole.Assistant;
         var contentItems = new JsonArray();
+        
+        // 分离工具调用块
+        var toolUse = message.Blocks.OfType<ModelToolUseBlock>().FirstOrDefault();
+
         foreach (var block in message.Blocks)
         {
-            switch (block)
+            if (block is ModelTextBlock textBlock)
             {
-                case ModelTextBlock textBlock:
-                    contentItems.Add(new JsonObject
-                    {
-                        ["type"] = "input_text",
-                        ["text"] = textBlock.Text
-                    });
-                    break;
-                case ModelToolUseBlock toolUseBlock:
-                    contentItems.Add(new JsonObject
-                    {
-                        ["type"] = "function_call",
-                        ["call_id"] = toolUseBlock.Id,
-                        ["name"] = toolUseBlock.Name,
-                        ["arguments"] = toolUseBlock.ArgumentsJson
-                    });
-                    break;
+                contentItems.Add(new JsonObject
+                {
+                    ["type"] = isAssistant ? "output_text" : "input_text",
+                    ["text"] = textBlock.Text
+                });
             }
         }
 
-        return new JsonObject
+        var node = new JsonObject
         {
             ["role"] = message.Role switch
             {
@@ -178,6 +163,20 @@ internal static class OpenAiRequestMapper
             },
             ["content"] = contentItems
         };
+
+        // 如果是 Assistant 且有工具调用
+        if (isAssistant && toolUse != null)
+        {
+            contentItems.Add(new JsonObject
+            {
+                ["type"] = "function_call",
+                ["call_id"] = toolUse.Id,
+                ["name"] = toolUse.Name,
+                ["arguments"] = toolUse.ArgumentsJson
+            });
+        }
+
+        return node;
     }
 
     private static JsonNode ToResponsesTool(ModelToolSchema tool)
@@ -239,16 +238,18 @@ internal static class OpenAiRequestMapper
         };
 
         var textContent = message.TextContent;
+        var toolUses = message.Blocks.OfType<ModelToolUseBlock>().ToArray();
+
         if (!string.IsNullOrWhiteSpace(textContent) || role is "user" or "system")
         {
             node["content"] = textContent;
         }
-        else
+        else if (toolUses.Length == 0)
         {
             node["content"] = string.Empty;
         }
+        // else: Omit 'content' entirely when 'tool_calls' are present and content is empty.
 
-        var toolUses = message.Blocks.OfType<ModelToolUseBlock>().ToArray();
         if (toolUses.Length > 0)
         {
             node["tool_calls"] = new JsonArray(toolUses.Select(toolUse => (JsonNode)new JsonObject
@@ -409,28 +410,26 @@ internal static class CompatibleChatStreamReader
             throw new ModelProviderException($"Provider configuration '{request.Target.ProviderName}' was not found.", request.Target.ProviderName);
         }
 
-        if (string.IsNullOrWhiteSpace(providerOptions.BaseUrl))
-        {
-            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing BaseUrl.", request.Target.ProviderName);
-        }
-
-        if (string.IsNullOrWhiteSpace(providerOptions.ApiKey))
-        {
-            throw new ModelProviderException($"Provider '{request.Target.ProviderName}' is missing ApiKey.", request.Target.ProviderName);
-        }
-
         var client = httpClientFactory.CreateClient(request.Target);
         var payload = OpenAiRequestMapper.CreateCompatibleChatPayload(request);
         var path = string.IsNullOrWhiteSpace(request.Target.RequestPath) ? defaultPath : request.Target.RequestPath!;
         using var httpRequest = ProviderHttpHelpers.CreateRequest(HttpMethod.Post, request.Target, path, payload, providerOptions.ApiKey);
+        
         using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        await ProviderHttpHelpers.EnsureSuccessAsync(response, request.Target.ProviderName, cancellationToken).ConfigureAwait(false);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            yield return new ModelResponseChunk(Error: $"Provider '{request.Target.ProviderName}' failed with {(int)response.StatusCode}: {body}");
+            yield break;
+        }
 
         var toolCallBuilders = new Dictionary<int, (string? Id, string? Name, StringBuilder Arguments)>();
 
         await foreach (var document in ProviderHttpHelpers.ReadSseDocumentsAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
         {
             var root = document.RootElement;
+            
             if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
             {
                 if (root.TryGetProperty("usage", out _))
@@ -442,6 +441,7 @@ internal static class CompatibleChatStreamReader
             }
 
             var choice = choices[0];
+            
             if (choice.TryGetProperty("delta", out var delta))
             {
                 if (delta.TryGetProperty("content", out var contentElement))
@@ -490,7 +490,10 @@ internal static class CompatibleChatStreamReader
             if (choice.TryGetProperty("finish_reason", out var finishReasonElement) && finishReasonElement.ValueKind == JsonValueKind.String)
             {
                 var finishReason = finishReasonElement.GetString();
-                if (string.Equals(finishReason, "tool_calls", StringComparison.OrdinalIgnoreCase))
+                var hasPendingToolCalls = toolCallBuilders.Count > 0;
+
+                if (string.Equals(finishReason, "tool_calls", StringComparison.OrdinalIgnoreCase) || 
+                    (string.Equals(finishReason, "stop", StringComparison.OrdinalIgnoreCase) && hasPendingToolCalls))
                 {
                     foreach (var state in toolCallBuilders.OrderBy(pair => pair.Key).Select(pair => pair.Value))
                     {
@@ -558,7 +561,13 @@ public sealed class OpenAiResponsesModelProvider(ClawOptions options, IProviderH
         var path = string.IsNullOrWhiteSpace(request.Target.RequestPath) ? "v1/responses" : request.Target.RequestPath!;
         using var httpRequest = ProviderHttpHelpers.CreateRequest(HttpMethod.Post, request.Target, path, payload, providerOptions.ApiKey);
         using var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        await ProviderHttpHelpers.EnsureSuccessAsync(response, request.Target.ProviderName, cancellationToken).ConfigureAwait(false);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            yield return new ModelResponseChunk(Error: $"Provider '{request.Target.ProviderName}' failed with {(int)response.StatusCode}: {body}");
+            yield break;
+        }
 
         var argumentBuffers = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
         var toolNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

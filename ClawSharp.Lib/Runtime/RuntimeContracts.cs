@@ -122,6 +122,13 @@ public interface IClawKernel
 }
 
 /// <summary>
+/// 表示一次 turn 运行过程中的流式事件。
+/// </summary>
+/// <param name="Delta">增量文本内容；仅在部分消息时存在。</param>
+/// <param name="FinalResult">最终结果；仅在流结束时存在。</param>
+public sealed record RunTurnStreamEvent(string? Delta = null, RunTurnResult? FinalResult = null);
+
+/// <summary>
 /// ClawSharp 对外暴露的主运行时接口。
 /// </summary>
 /// <remarks>
@@ -185,6 +192,14 @@ public interface IClawRuntime
     /// <returns>本次 turn 的最终结果。</returns>
     /// <exception cref="InvalidOperationException">当缺少用户消息或 worker 返回错误时抛出。</exception>
     Task<RunTurnResult> RunTurnAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 以流式方式执行 session 的下一次 turn。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>异步流事件。</returns>
+    IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取一个 session 的完整历史视图，包括消息与事件。
@@ -276,7 +291,15 @@ public sealed class ClawRuntime(
     public async Task<AgentLaunchPlan> PrepareAgentAsync(AgentLaunchRequest request, CancellationToken cancellationToken = default)
     {
         var agent = kernel.Agents.Get(request.AgentId);
-        var permissions = agent.Permissions.Merge(kernel.Options.WorkspacePolicy.Permissions);
+        
+        // 关键修复：如果 Agent 没定义权限位，则继承工作空间的全部能力位
+        var agentPermissions = agent.Permissions;
+        if (agentPermissions.Capabilities == ToolCapability.None)
+        {
+            agentPermissions = agentPermissions with { Capabilities = kernel.Options.WorkspacePolicy.Permissions.Capabilities };
+        }
+        
+        var permissions = agentPermissions.Merge(kernel.Options.WorkspacePolicy.Permissions);
         var provider = kernel.Providers.Resolve(agent);
         var record = await sessionStore.GetAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
                      ?? throw new KeyNotFoundException($"Session '{request.SessionId}' was not found.");
@@ -285,7 +308,7 @@ public sealed class ClawRuntime(
 
         var skills = agent.Skills.Select(kernel.Skills.Get).ToArray();
         var tools = kernel.Tools.GetAuthorizedTools(permissions)
-            .Where(x => agent.Tools.Count == 0 || agent.Tools.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
+            .Where(x => !agent.HasExplicitTools || agent.Tools.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
             .ToArray();
         var mcpServers = agent.McpServers.Select(serverCatalog.Get).ToArray();
 
@@ -332,6 +355,21 @@ public sealed class ClawRuntime(
     /// <inheritdoc />
     public async Task<RunTurnResult> RunTurnAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
+        RunTurnResult? result = null;
+        await foreach (var @event in RunTurnStreamingAsync(sessionId, cancellationToken).ConfigureAwait(false))
+        {
+            if (@event.FinalResult != null)
+            {
+                result = @event.FinalResult;
+            }
+        }
+
+        return result ?? throw new InvalidOperationException("Turn failed to produce a result.");
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         var session = await kernel.Sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
         var messages = await kernel.History.ListAsync(sessionId, cancellationToken).ConfigureAwait(false);
         var lastUser = messages.LastOrDefault(x => x.Role == PromptMessageRole.User)
@@ -361,11 +399,11 @@ public sealed class ClawRuntime(
             plan.Agent.SystemPrompt);
 
         var assistant = new List<string>();
-        var toolCalls = 0;
+        var totalToolCalls = 0;
+        bool turnSuccess = false;
 
         try
         {
-            // turn 期间的状态变化、增量文本和工具事件都会写入历史事件流，便于调试和后续 UI 回放。
             await foreach (var workerEvent in worker.RunTurnAsync(
                                request,
                                toolRequest => HandleToolRequestAsync(plan, lastUser, toolRequest, cancellationToken),
@@ -376,27 +414,33 @@ public sealed class ClawRuntime(
                     case "worker.message.delta":
                         var delta = workerEvent.Payload.GetProperty("delta").GetString() ?? string.Empty;
                         assistant.Add(delta);
+                        yield return new RunTurnStreamEvent(Delta: delta);
+
                         if (kernel.Options.History.RecordMessageDeltas)
                         {
                             await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "MessageDelta", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
                         }
                         break;
                     case "worker.tool.requested":
-                        toolCalls++;
+                        totalToolCalls++;
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallRequested", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
+                        yield return new RunTurnStreamEvent(Delta: $"\n[Calling tool: {workerEvent.Payload.GetProperty("name").GetString()}]... ");
                         break;
                     case "worker.tool.completed":
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallCompleted", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
+                        yield return new RunTurnStreamEvent(Delta: "[Done]\n");
                         break;
+                    case "worker.error":
+                        var errorMsg = workerEvent.Payload.TryGetProperty("message", out var m) ? m.GetString() : workerEvent.Payload.GetRawText();
+                        yield return new RunTurnStreamEvent(Delta: $"\n[ERROR: {errorMsg}]\n");
+                        await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "TurnFailed", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
+                        throw new InvalidOperationException(errorMsg);
                     case "worker.state.changed":
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "WorkerStateChanged", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
                         break;
-                    case "worker.error":
-                        await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "TurnFailed", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
-                        await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Failed, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
-                        throw new InvalidOperationException(workerEvent.Payload.GetRawText());
                 }
             }
+
 
             var finalAssistant = string.Concat(assistant);
             if (!string.IsNullOrWhiteSpace(finalAssistant))
@@ -417,7 +461,7 @@ public sealed class ClawRuntime(
                     serializer.SerializeToElement(new
                     {
                         content = finalAssistant,
-                        toolCalls,
+                        toolCalls = totalToolCalls,
                         blocks = string.IsNullOrWhiteSpace(finalAssistant)
                             ? Array.Empty<object>()
                             : new[]
@@ -432,17 +476,18 @@ public sealed class ClawRuntime(
                     cancellationToken)
                 .ConfigureAwait(false);
             await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Completed, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
-            return new RunTurnResult(sessionId, lastUser.TurnId, finalAssistant, SessionStatus.Completed, toolCalls);
+
+            turnSuccess = true;
+            var finalResult = new RunTurnResult(sessionId, lastUser.TurnId, finalAssistant, SessionStatus.Completed, totalToolCalls);
+            yield return new RunTurnStreamEvent(FinalResult: finalResult);
         }
-        catch (OperationCanceledException)
+        finally
         {
-            await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Cancelled, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
-            throw;
-        }
-        catch
-        {
-            await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Failed, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
-            throw;
+            if (!turnSuccess)
+            {
+                var status = cancellationToken.IsCancellationRequested ? SessionStatus.Cancelled : SessionStatus.Failed;
+                await sessionStore.UpdateStatusAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 

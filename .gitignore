@@ -33,3 +33,5 @@ riderModule.iml
 *.exe
 
 /.clawsharp/
+
+appsettings.Local.json

@@ -112,6 +112,11 @@ public sealed class RuntimeOptions
 public sealed class AgentOptions
 {
     /// <summary>
+    /// 默认使用的 agent 标识。
+    /// </summary>
+    public string? DefaultAgentId { get; set; }
+
+    /// <summary>
     /// agent 定义目录。相对路径默认解析到 workspace 下的 <c>workspace/agents</c>。
     /// </summary>
     public string AgentsPath { get; set; } = "workspace/agents";

@@ -40,7 +40,10 @@ public sealed class MarkdownAgentParser
             dto.McpServers ?? [],
             dto.Permissions?.ToPermissionSet() ?? ToolPermissionSet.Empty,
             dto.Version ?? string.Empty,
-            body.Trim());
+            body.Trim())
+        {
+            HasExplicitTools = dto.Tools != null
+        };
 
         definition.Validate();
         return definition;
