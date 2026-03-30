@@ -57,6 +57,8 @@ ClawSharp is a local-first AI application kernel built with C# for .NET 10. It p
 ## Active Technologies
 - C# 14 / .NET 10 + ClawSharp.Lib, Microsoft.Extensions.DependencyInjection, Spectre.Console (for rich UI/REPL), System.CommandLine (for argument parsing) (001-cli-interface-implementation)
 - SQLite (via ClawSharp.Lib) (001-cli-interface-implementation)
+- C# 14 / .NET 10 + `ClawSharp.Lib`, `Spectre.Console`, `Microsoft.Extensions.Configuration`, `System.CommandLine`. (luckyfish/002-cli-config-ops)
+- `appsettings.Local.json` for persistent settings. (luckyfish/002-cli-config-ops)
 
 ## Recent Changes
 - 001-cli-interface-implementation: Added C# 14 / .NET 10 + ClawSharp.Lib, Microsoft.Extensions.DependencyInjection, Spectre.Console (for rich UI/REPL), System.CommandLine (for argument parsing)
