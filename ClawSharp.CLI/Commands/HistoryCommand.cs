@@ -4,7 +4,6 @@ using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 namespace ClawSharp.CLI.Commands;
 

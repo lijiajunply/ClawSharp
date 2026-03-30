@@ -8,6 +8,7 @@ using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -242,6 +243,50 @@ data: {"type":"message_stop"}
 
         Assert.Equal(docs.ThreadSpaceId, session.Record.ThreadSpaceId);
         Assert.Equal(docs.BoundFolderPath, session.Record.WorkspaceRoot);
+    }
+
+    [Fact]
+    public async Task ThreadSpace_ListSessions_CanSelectExistingSessionAndReplayHistory()
+    {
+        var runtime = CreateRuntime(out _, out _, out var threadSpaces);
+        var global = await threadSpaces.GetGlobalAsync();
+        var firstSession = await runtime.StartSessionAsync(new StartSessionRequest("planner", global.ThreadSpaceId));
+        var secondSession = await runtime.StartSessionAsync(new StartSessionRequest("planner", global.ThreadSpaceId));
+
+        await runtime.AppendUserMessageAsync(firstSession.Record.SessionId, "first question");
+        await runtime.RunTurnAsync(firstSession.Record.SessionId);
+        await runtime.AppendUserMessageAsync(secondSession.Record.SessionId, "second question");
+
+        var listedSessions = await threadSpaces.ListSessionsAsync(global.ThreadSpaceId);
+        var selected = listedSessions.Single(session => session.SessionId == firstSession.Record.SessionId);
+        var replayHistory = await runtime.GetHistoryAsync(selected.SessionId);
+
+        Assert.Contains(listedSessions, session => session.SessionId == firstSession.Record.SessionId);
+        Assert.Contains(replayHistory, entry => entry.Message?.Content == "first question");
+        Assert.Contains(replayHistory, entry => entry.Message?.Role == PromptMessageRole.Assistant && entry.Message.Content == "first question");
+    }
+
+    [Fact]
+    public async Task ThreadSpace_ReplayLargeSessionHistory_CompletesWithinFiveSeconds()
+    {
+        var runtime = CreateRuntime(out _, out _, out var threadSpaces);
+        var global = await threadSpaces.GetGlobalAsync();
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", global.ThreadSpaceId));
+
+        for (var index = 0; index < 200; index++)
+        {
+            await runtime.AppendUserMessageAsync(session.Record.SessionId, $"question {index}");
+            await runtime.RunTurnAsync(session.Record.SessionId);
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        var sessions = await threadSpaces.ListSessionsAsync(global.ThreadSpaceId);
+        var selected = sessions.Single(record => record.SessionId == session.Record.SessionId);
+        var history = await runtime.GetHistoryAsync(selected.SessionId);
+        stopwatch.Stop();
+
+        Assert.NotEmpty(history);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Replay exceeded budget: {stopwatch.Elapsed}.");
     }
 
     private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore) =>

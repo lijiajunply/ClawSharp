@@ -6,6 +6,24 @@ namespace ClawSharp.CLI.Infrastructure;
 
 public sealed class ReplPrompt
 {
+    private static readonly string[] DefaultSuggestions =
+    [
+        "/help",
+        "/new",
+        "/resume",
+        "/sessions",
+        "/tools",
+        "/paste",
+        "/edit",
+        "/cd",
+        "/home",
+        "/clear",
+        "/quit",
+        "/exit",
+        "/init",
+        "/init-proj"
+    ];
+
     private readonly List<string> _suggestions = new();
     private List<string> _history = new();
     private int _historyIndex = -1;
@@ -21,6 +39,8 @@ public sealed class ReplPrompt
                 _suggestions.Add(s);
         }
     }
+
+    public void AddDefaultSuggestions() => AddSuggestions(DefaultSuggestions);
 
     public void LoadHistory(string filePath)
     {

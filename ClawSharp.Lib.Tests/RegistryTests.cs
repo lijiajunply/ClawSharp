@@ -1,7 +1,6 @@
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Skills;
-using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 

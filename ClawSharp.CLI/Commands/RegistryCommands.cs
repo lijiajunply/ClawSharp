@@ -1,10 +1,8 @@
 using System.CommandLine;
 using ClawSharp.CLI.Infrastructure;
-using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
-using ClawSharp.Lib.Skills;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;

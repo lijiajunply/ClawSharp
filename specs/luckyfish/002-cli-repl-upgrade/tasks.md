@@ -23,7 +23,7 @@
 
 **目的**: 项目初始化和依赖验证。
 
-- [ ] T001 [P] 在 `ClawSharp.CLI/ClawSharp.CLI.csproj` 中验证 `Spectre.Console` 的项目依赖。
+- [X] T001 [P] 在 `ClawSharp.CLI/ClawSharp.CLI.csproj` 中验证 `Spectre.Console` 的项目依赖。
 
 ---
 
@@ -33,7 +33,7 @@
 
 **⚠️ 关键**: 现有的 `ChatCommand.cs` 使用了庞大的 switch-case；需要进行重构以适应新命令的扩展。
 
-- [ ] T002 重构 `ClawSharp.CLI/Commands/ChatCommand.cs` 中的命令处理逻辑，将单个命令（如 `/help`, `/new`）提取为独立的私有方法，以提高可维护性。
+- [X] T002 重构 `ClawSharp.CLI/Commands/ChatCommand.cs` 中的命令处理逻辑，将单个命令（如 `/help`, `/new`）提取为独立的私有方法，以提高可维护性。
 
 **检查点**: 基础就绪 - 命令注册现在具有可扩展性。
 
@@ -47,14 +47,14 @@
 
 ### 用户故事 1 的测试 (根据项目宪法必填)
 
-- [ ] T003 [US1] 在 `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs` 中增加集成测试，验证通过 `IThreadSpaceManager` 获取会话列表及通过 `IClawRuntime` 切换会话的逻辑。
+- [X] T003 [US1] 在 `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs` 中增加集成测试，验证通过 `IThreadSpaceManager` 获取会话列表及通过 `IClawRuntime` 切换会话的逻辑。
 
 ### 用户故事 1 的实施
 
-- [ ] T004 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/sessions` 命令逻辑，从 `IClawKernel.ThreadSpaces.ListSessionsAsync` 获取会话。
-- [ ] T005 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Table` 创建格式化的会话列表输出。
-- [ ] T006 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/sessions <index>` 切换逻辑，更新活动会话。
-- [ ] T007 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现成功切换会话后的自动历史回放（最近 5 条消息）。
+- [X] T004 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/sessions` 命令逻辑，从 `IClawKernel.ThreadSpaces.ListSessionsAsync` 获取会话。
+- [X] T005 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Table` 创建格式化的会话列表输出。
+- [X] T006 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/sessions <index>` 切换逻辑，更新活动会话。
+- [X] T007 [US1] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现成功切换会话后的自动历史回放（最近 5 条消息）。
 
 **检查点**: 用户故事 1（会话管理）已完整实现并可通过测试验证。
 
@@ -68,12 +68,12 @@
 
 ### 用户故事 2 的测试
 
-- [ ] T008 [US2] 在 `ClawSharp.Lib.Tests/MarkdownParsingTests.cs` 中验证 Markdown 解析逻辑是否能正确识别不同语言的代码块。
+- [X] T008 [US2] 在 `ClawSharp.Lib.Tests/MarkdownParsingTests.cs` 中验证 Markdown 解析逻辑是否能正确识别不同语言的代码块。
 
 ### 用户故事 2 的实施
 
-- [ ] T009 [US2] 更新 `ClawSharp.CLI/Commands/ChatCommand.cs` 中的流式输出循环，以跟踪响应是否包含 Markdown 代码块。
-- [ ] T010 [US2] 在流式输出结束后，在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Markdown` 重新渲染最终消息以应用语法高亮。
+- [X] T009 [US2] 更新 `ClawSharp.CLI/Commands/ChatCommand.cs` 中的流式输出循环，以跟踪响应是否包含 Markdown 代码块。
+- [X] T010 [US2] 在流式输出结束后，在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Markdown` 重新渲染最终消息以应用语法高亮。
 
 **检查点**: 用户故事 2（语法高亮）已完整实现。
 
@@ -87,8 +87,8 @@
 
 ### 用户故事 3 的实施
 
-- [ ] T011 [US3] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/tools` 命令逻辑，从运行时获取已授权的工具。
-- [ ] T012 [US3] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Table` 格式化并显示工具列表。
+- [X] T011 [US3] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/tools` 命令逻辑，从运行时获取已授权的工具。
+- [X] T012 [US3] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中使用 `Spectre.Console.Table` 格式化并显示工具列表。
 
 **检查点**: 用户故事 3（工具检查）已完整实现。
 
@@ -102,13 +102,13 @@
 
 ### 用户故事 4 的测试
 
-- [ ] T013 [US4] 在 `ClawSharp.Lib.Tests/CliIntegrationTests.cs` 中模拟多行输入并验证其正确性。
+- [X] T013 [US4] 在 `ClawSharp.Lib.Tests/CliIntegrationTests.cs` 中模拟多行输入并验证其正确性。
 
 ### 用户故事 4 的实施
 
-- [ ] T014 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/paste` 模式，捕获输入直到输入仅包含 `.` 的行。
-- [ ] T015 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中为 `/paste` 模式添加视觉反馈（例如 `Paste >` 提示符）。
-- [ ] T016 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/edit` 命令，使用 `System.Diagnostics.Process` 启动 `EDITOR` 环境变量定义的编辑器。
+- [X] T014 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/paste` 模式，捕获输入直到输入仅包含 `.` 的行。
+- [X] T015 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中为 `/paste` 模式添加视觉反馈（例如 `Paste >` 提示符）。
+- [X] T016 [US4] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中实现 `/edit` 命令，使用 `System.Diagnostics.Process` 启动 `EDITOR` 环境变量定义的编辑器。
 
 **检查点**: 用户故事 4（多行输入）已完整实现。
 
@@ -118,10 +118,10 @@
 
 **目的**: 最终 UI 精化和性能验证。
 
-- [ ] T017 [P] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中更新 `/help` 文档，包含 REPL 2.0 命令。
-- [ ] T018 [P] 在 `ClawSharp.CLI/Infrastructure/ReplPrompt.cs` 的建议列表中添加新命令。
-- [ ] T019 **性能验证**: 测量会话切换时间，确保在大规模历史记录下仍满足 < 5s 的成功指标。
-- [ ] T020 运行 `quickstart.md` 验证，确保所有记录的场景均按预期工作。
+- [X] T017 [P] 在 `ClawSharp.CLI/Commands/ChatCommand.cs` 中更新 `/help` 文档，包含 REPL 2.0 命令。
+- [X] T018 [P] 在 `ClawSharp.CLI/Infrastructure/ReplPrompt.cs` 的建议列表中添加新命令。
+- [X] T019 **性能验证**: 测量会话切换时间，确保在大规模历史记录下仍满足 < 5s 的成功指标。
+- [X] T020 运行 `quickstart.md` 验证，确保所有记录的场景均按预期工作。
 
 ---
 

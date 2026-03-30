@@ -1,9 +1,7 @@
 using ClawSharp.Lib.Agents;
-using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Tools;
 using System.Text.Json;
-using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 

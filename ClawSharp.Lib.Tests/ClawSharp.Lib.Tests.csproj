@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ClawSharp.Lib\ClawSharp.Lib.csproj" />
+    <ProjectReference Include="..\ClawSharp.CLI\ClawSharp.CLI.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Core;
+using ClawSharp.Lib.Markdown;
 using ClawSharp.Lib.Skills;
 
 namespace ClawSharp.Lib.Tests;
@@ -86,5 +87,30 @@ body
 
         var parser = new MarkdownAgentParser();
         Assert.Throws<ValidationException>(() => parser.Parse(markdown));
+    }
+
+    [Fact]
+    public void MarkdownCodeFenceDetector_ReturnsTrue_ForClosedFencedCodeBlock()
+    {
+        const string markdown = """
+Here is some code:
+
+```csharp
+Console.WriteLine("hello");
+```
+""";
+
+        Assert.True(MarkdownCodeFenceDetector.ContainsFencedCodeBlock(markdown));
+    }
+
+    [Fact]
+    public void MarkdownCodeFenceDetector_ReturnsFalse_ForUnclosedFence()
+    {
+        const string markdown = """
+```csharp
+Console.WriteLine("hello");
+""";
+
+        Assert.False(MarkdownCodeFenceDetector.ContainsFencedCodeBlock(markdown));
     }
 }

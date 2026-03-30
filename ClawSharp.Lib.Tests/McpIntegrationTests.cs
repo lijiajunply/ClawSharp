@@ -2,7 +2,6 @@ using System.Text.Json;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Mcp;
 using ClawSharp.Lib.Tools;
-using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 

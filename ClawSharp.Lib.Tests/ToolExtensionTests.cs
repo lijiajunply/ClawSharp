@@ -1,6 +1,4 @@
-using System.Text.Json;
 using ClawSharp.Lib.Tools;
-using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 

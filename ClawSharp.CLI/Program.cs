@@ -1,7 +1,6 @@
 using System.CommandLine;
 using ClawSharp.CLI.Commands;
 using ClawSharp.CLI.Infrastructure;
-using Microsoft.Extensions.Hosting;
 
 // 1. 引导检查 (Bootstrap Check)
 if (!await BootstrapWizard.RunAsync())
