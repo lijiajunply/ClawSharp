@@ -323,6 +323,7 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
+            new McpService(),
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
@@ -411,6 +412,7 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
+            new McpService(),
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
@@ -498,6 +500,7 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
+            new McpService(),
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),

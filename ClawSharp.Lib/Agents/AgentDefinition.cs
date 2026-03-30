@@ -32,7 +32,10 @@ public sealed record AgentDefinition(
     IReadOnlyList<string> McpServers,
     ToolPermissionSet Permissions,
     string Version,
-    string Body)
+    string Body,
+    DynamicSourceType Source = DynamicSourceType.BuiltIn,
+    string? OriginalId = null,
+    string? SourcePath = null)
 {
     /// <summary>
     /// 标识该 agent 是否在定义中明确列出了工具；为 false 表示应使用全部可用工具。

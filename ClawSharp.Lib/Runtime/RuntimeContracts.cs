@@ -286,22 +286,35 @@ public sealed class ClawKernel(
 
 /// <summary>
 /// 默认的 ClawSharp 运行时实现。
-/// </summary>
 public sealed class ClawRuntime(
     IClawKernel kernel,
+    McpService mcpService,
     IMcpServerCatalog serverCatalog,
     ISessionStore sessionStore,
     IAgentWorkerLauncher workerLauncher,
-    ISessionSerializer serializer) : IClawRuntime
+    ISessionSerializer serializer) : IClawRuntime, IDisposable
 {
     private readonly Dictionary<string, IAgentWorkerSession> _workers = new(StringComparer.OrdinalIgnoreCase);
+    private DefinitionWatcher? _watcher;
 
     /// <inheritdoc />
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        await mcpService.StartAllAsync(cancellationToken).ConfigureAwait(false);
         await kernel.Agents.ReloadAsync(cancellationToken).ConfigureAwait(false);
         await kernel.Skills.ReloadAsync(cancellationToken).ConfigureAwait(false);
+
+        _watcher = new DefinitionWatcher(kernel.Agents, kernel.Skills);
+        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        _watcher.Watch(Path.Combine(userHome, ".agent"), isAgent: true);
+        _watcher.Watch(Path.Combine(userHome, ".skills"), isAgent: false);
+
         await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Dispose()
+    {
+        _watcher?.Dispose();
     }
 
     /// <inheritdoc />

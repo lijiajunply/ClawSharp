@@ -134,6 +134,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProjectScaffolder, ProjectScaffolder>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
         services.AddSingleton<IMcpClientManager, McpClientManager>();
+        services.AddSingleton<McpService>();
         services.AddSingleton<IAgentWorkerClient, StdioJsonRpcAgentWorkerClient>();
         services.AddSingleton<IAgentWorkerLauncher, DefaultAgentWorkerLauncher>();
         services.AddSingleton<IClawKernel, ClawKernel>();

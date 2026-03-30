@@ -19,9 +19,11 @@ public sealed class MarkdownAgentParser
     /// 解析单个 agent Markdown 文本。
     /// </summary>
     /// <param name="markdown">完整的 Markdown 内容，必须包含 frontmatter。</param>
+    /// <param name="source">定义来源。</param>
+    /// <param name="sourcePath">定义文件路径。</param>
     /// <returns>解析并校验后的 <see cref="AgentDefinition"/>。</returns>
     /// <exception cref="ValidationException">当 frontmatter 缺失、格式错误或必需字段为空时抛出。</exception>
-    public AgentDefinition Parse(string markdown)
+    public AgentDefinition Parse(string markdown, DynamicSourceType source = DynamicSourceType.BuiltIn, string? sourcePath = null)
     {
         var (frontMatter, body) = MarkdownFrontMatter.Parse(markdown);
         var dto = _deserializer.Deserialize<AgentFrontMatter>(frontMatter)
@@ -40,7 +42,10 @@ public sealed class MarkdownAgentParser
             dto.McpServers ?? [],
             dto.Permissions?.ToPermissionSet() ?? ToolPermissionSet.Empty,
             dto.Version ?? string.Empty,
-            body.Trim())
+            body.Trim(),
+            Source: source,
+            OriginalId: dto.Id,
+            SourcePath: sourcePath)
         {
             HasExplicitTools = dto.Tools != null
         };

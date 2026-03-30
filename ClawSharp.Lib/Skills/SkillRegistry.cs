@@ -18,9 +18,13 @@ public sealed class SkillRegistry(ISkillDefinitionStore store) : ISkillRegistry
 
         foreach (var definition in definitions)
         {
-            if (!map.TryAdd(definition.Id, definition))
+            var finalId = definition.Source == DynamicSourceType.User 
+                ? $"user.{definition.Id}" 
+                : definition.Id;
+
+            if (!map.TryAdd(finalId, definition with { Id = finalId }))
             {
-                throw new ValidationException($"Duplicate skill id '{definition.Id}' was found.");
+                throw new ValidationException($"Duplicate skill id '{finalId}' was found.");
             }
         }
 

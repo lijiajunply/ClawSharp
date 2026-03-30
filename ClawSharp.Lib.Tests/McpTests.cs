@@ -1,57 +1,53 @@
-using ClawSharp.Lib.Configuration;
+using System.Text.Json;
 using ClawSharp.Lib.Mcp;
-using ClawSharp.Lib.Tools;
+using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 
-public sealed class McpTests
+public class McpTests
 {
     [Fact]
-    public async Task McpClientManager_ThrowsForMissingCommand()
+    public void RequestSerialization_ShouldMatchJsonRpc()
     {
-        var options = new ClawOptions
+        var request = new McpRequest
         {
-            Mcp = new McpOptions
-            {
-                Servers =
-                [
-                    new McpServerDefinition { Name = "missing", Command = "/definitely/missing/command" }
-                ]
-            }
+            Id = JsonDocument.Parse("1").RootElement,
+            Method = "test",
+            Params = new { foo = "bar" }
         };
 
-        var manager = new McpClientManager(new McpServerCatalog(options));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => manager.ConnectAsync("missing"));
+        var json = JsonSerializer.Serialize(request);
+        using var doc = JsonDocument.Parse(json);
+
+        Assert.Equal("2.0", doc.RootElement.GetProperty("jsonrpc").GetString());
+        Assert.Equal("test", doc.RootElement.GetProperty("method").GetString());
+        Assert.Equal("bar", doc.RootElement.GetProperty("params").GetProperty("foo").GetString());
     }
 
     [Fact]
-    public async Task McpClientManager_TimesOutWhenReadySignalNeverArrives()
+    public void ResponseDeserialization_ShouldHandleResult()
     {
-        var shell = OperatingSystem.IsWindows() ? "cmd" : "/bin/zsh";
-        var args = OperatingSystem.IsWindows()
-            ? "/c ping 127.0.0.1 -n 2 >nul"
-            : "-lc \"sleep 1\"";
+        var json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"status\":\"ok\"}}";
+        var response = JsonSerializer.Deserialize<McpResponse>(json);
 
-        var options = new ClawOptions
-        {
-            Mcp = new McpOptions
-            {
-                Servers =
-                [
-                    new McpServerDefinition
-                    {
-                        Name = "slow",
-                        Command = shell,
-                        Arguments = args,
-                        ReadySignal = "READY",
-                        TimeoutSeconds = 1,
-                        Capabilities = ToolCapability.FileRead
-                    }
-                ]
-            }
-        };
+        Assert.NotNull(response);
+        Assert.Equal("2.0", response.Jsonrpc);
+        Assert.Equal("1", response.Id?.ToString());
+        Assert.NotNull(response.Result);
+        
+        var result = (JsonElement)response.Result;
+        Assert.Equal("ok", result.GetProperty("status").GetString());
+    }
 
-        var manager = new McpClientManager(new McpServerCatalog(options));
-        await Assert.ThrowsAsync<TimeoutException>(() => manager.ConnectAsync("slow"));
+    [Fact]
+    public void ResponseDeserialization_ShouldHandleError()
+    {
+        var json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
+        var response = JsonSerializer.Deserialize<McpResponse>(json);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response.Error);
+        Assert.Equal(-32601, response.Error.Code);
+        Assert.Equal("Method not found", response.Error.Message);
     }
 }

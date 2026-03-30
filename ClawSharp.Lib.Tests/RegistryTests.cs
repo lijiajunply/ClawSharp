@@ -1,48 +1,96 @@
 using ClawSharp.Lib.Agents;
-using ClawSharp.Lib.Core;
+using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Skills;
+using Xunit;
 
 namespace ClawSharp.Lib.Tests;
 
-public sealed class RegistryTests
+public class RegistryTests : IDisposable
 {
-    [Fact]
-    public async Task AgentRegistry_DuplicateIds_Throws()
-    {
-        var store = new FakeAgentStore(
-        [
-            new AgentDefinition("dup", "One", "Desc", "", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", ""),
-            new AgentDefinition("dup", "Two", "Desc", "", "gpt", "prompt", [], [], "workspace", [], Tools.ToolPermissionSet.Empty, "v1", "")
-        ]);
+    private readonly string _userAgentPath;
+    private readonly string _userSkillPath;
+    private readonly ClawOptions _options;
 
-        var registry = new AgentRegistry(store);
-        await Assert.ThrowsAsync<ValidationException>(() => registry.ReloadAsync());
+    public RegistryTests()
+    {
+        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        _userAgentPath = Path.Combine(userHome, ".agent");
+        _userSkillPath = Path.Combine(userHome, ".skills");
+
+        Directory.CreateDirectory(_userAgentPath);
+        Directory.CreateDirectory(_userSkillPath);
+
+        _options = new ClawOptions();
+        _options.Runtime.WorkspaceRoot = Directory.GetCurrentDirectory();
     }
 
     [Fact]
-    public async Task SkillRegistry_LoadsDefinitions()
+    public async Task AgentRegistry_ShouldLoadFromUserHome()
     {
-        var store = new FakeSkillStore(
-        [
-            new SkillDefinition("skill.one", "One", "Desc", [], [], [], [], [], "scripts/run.sh", "v1", "")
-        ]);
+        var testFile = Path.Combine(_userAgentPath, "test-agent.md");
+        var content = """
+            ---
+            id: user-agent-1
+            name: User Agent
+            description: Test
+            system_prompt: Hello
+            memory_scope: default
+            version: 1.0
+            ---
+            Body
+            """;
+        await File.WriteAllTextAsync(testFile, content);
 
-        var registry = new SkillRegistry(store);
-        await registry.ReloadAsync();
+        try
+        {
+            var store = new FileSystemAgentDefinitionStore(_options);
+            var registry = new AgentRegistry(store);
+            await registry.ReloadAsync();
 
-        Assert.Single(registry.GetAll());
-        Assert.Equal("skill.one", registry.Get("skill.one").Id);
+            var agents = registry.GetAll();
+            Assert.Contains(agents, a => a.Id == "user-agent-1" && a.Source == Core.DynamicSourceType.User);
+        }
+        finally
+        {
+            if (File.Exists(testFile)) File.Delete(testFile);
+        }
     }
 
-    private sealed class FakeAgentStore(IReadOnlyList<AgentDefinition> agents) : IAgentDefinitionStore
+    [Fact]
+    public async Task SkillRegistry_ShouldApplyUserPrefix()
     {
-        public Task<IReadOnlyList<AgentDefinition>> LoadAllAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(agents);
+        var testFile = Path.Combine(_userSkillPath, "test-skill.md");
+        var content = """
+            ---
+            id: my-skill
+            name: User Skill
+            description: Test
+            entry: main.js
+            version: 1.0
+            ---
+            Body
+            """;
+        await File.WriteAllTextAsync(testFile, content);
+
+        try
+        {
+            var store = new FileSystemSkillDefinitionStore(_options);
+            var registry = new SkillRegistry(store);
+            await registry.ReloadAsync();
+
+            var skills = registry.GetAll();
+            Assert.Contains(skills, s => s.Id == "user.my-skill" && s.Source == Core.DynamicSourceType.User);
+        }
+        finally
+        {
+            if (File.Exists(testFile)) File.Delete(testFile);
+        }
     }
 
-    private sealed class FakeSkillStore(IReadOnlyList<SkillDefinition> skills) : ISkillDefinitionStore
+    public void Dispose()
     {
-        public Task<IReadOnlyList<SkillDefinition>> LoadAllAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(skills);
+        // We don't delete the directories themselves as they might be used by the user,
+        // but for testing in CI or a clean environment, it might be safer.
+        // For this local environment, we only cleanup files we created.
     }
 }

@@ -19,9 +19,11 @@ public sealed class MarkdownSkillParser
     /// 解析单个 skill Markdown 文本。
     /// </summary>
     /// <param name="markdown">完整的 Markdown 内容，必须包含 frontmatter。</param>
+    /// <param name="source">定义来源。</param>
+    /// <param name="sourcePath">定义文件路径。</param>
     /// <returns>解析并校验后的 <see cref="SkillDefinition"/>。</returns>
     /// <exception cref="ValidationException">当 frontmatter 缺失、格式错误或必需字段为空时抛出。</exception>
-    public SkillDefinition Parse(string markdown)
+    public SkillDefinition Parse(string markdown, DynamicSourceType source = DynamicSourceType.BuiltIn, string? sourcePath = null)
     {
         var (frontMatter, body) = MarkdownFrontMatter.Parse(markdown);
         var dto = _deserializer.Deserialize<SkillFrontMatter>(frontMatter)
@@ -38,7 +40,10 @@ public sealed class MarkdownSkillParser
             dto.RequiredMcpServers ?? [],
             dto.Entry ?? string.Empty,
             dto.Version ?? string.Empty,
-            body.Trim());
+            body.Trim(),
+            Source: source,
+            OriginalId: dto.Id,
+            SourcePath: sourcePath);
 
         definition.Validate();
         return definition;

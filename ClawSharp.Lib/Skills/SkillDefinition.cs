@@ -27,7 +27,10 @@ public sealed record SkillDefinition(
     IReadOnlyList<string> RequiredMcpServers,
     string Entry,
     string Version,
-    string Body)
+    string Body,
+    DynamicSourceType Source = DynamicSourceType.BuiltIn,
+    string? OriginalId = null,
+    string? SourcePath = null)
 {
     /// <summary>
     /// 校验 skill 定义是否包含运行时必需字段。

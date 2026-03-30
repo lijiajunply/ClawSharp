@@ -34,6 +34,7 @@ public static class RegistryCommands
 
                 var table = new Table();
                 table.AddColumn("ID");
+                table.AddColumn("Source");
                 table.AddColumn("Name");
                 table.AddColumn("Configured Provider");
                 table.AddColumn("Resolved Provider");
@@ -59,6 +60,7 @@ public static class RegistryCommands
 
                     table.AddRow(
                         agent.Id.EscapeMarkup(),
+                        agent.Source.ToString(),
                         agent.Name.EscapeMarkup(),
                         (agent.Provider ?? "[grey]default[/]").EscapeMarkup(),
                         resolvedProvider.EscapeMarkup(),
@@ -88,15 +90,17 @@ public static class RegistryCommands
 
                 var table = new Table();
                 table.AddColumn("ID");
+                table.AddColumn("Source");
                 table.AddColumn("Name");
                 table.AddColumn("Version");
 
                 foreach (var skill in skills)
                 {
                     table.AddRow(
-                        skill.Id,
-                        skill.Name,
-                        skill.Version);
+                        skill.Id.EscapeMarkup(),
+                        skill.Source.ToString(),
+                        skill.Name.EscapeMarkup(),
+                        skill.Version.EscapeMarkup());
                 }
 
                 AnsiConsole.Write(table);
