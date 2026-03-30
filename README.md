@@ -103,46 +103,53 @@ ClawSharp 现在区分三层概念：
 
 ### CLI 体验
 
-直接运行 `claw` 即可进入 REPL 模式。默认在 `global` ThreadSpace 中开始对话。
+ClawSharp 提供了功能丰富的命令行界面。直接运行 `claw` 即可进入默认的 REPL 对话模式，或者通过子命令管理系统。
 
-**交互特性：**
-- **智能提示**：输入时自动显示灰色的“幽灵文字”建议，按 `Tab` 或 `→` 键快速补全。
-- **持久化历史**：支持上下方向键翻阅历史命令，历史记录跨会话保存于 `.clawsharp/cli_history.txt`。
-- **快捷键**：支持 `Ctrl+U` 快速清空当前行。
+#### REPL 模式
+进入对话后，你可以像在普通聊天应用中一样输入文字，也可以使用斜杠命令进行控制：
 
-支持的斜杠命令：
 - `/help`: 查看帮助
-- `/new`: 开启新会话
-- `/resume`: 恢复上次会话
-- `/cd <path>`: 切换到特定目录的工作空间
-- `/home`: 返回全局空间
+- `/new`: 在当前空间开启新会话
+- `/resume`: 恢复当前空间的上一个会话（支持查看最后几条历史）
+- `/cd <path>`: 切换到特定目录的工作空间（ThreadSpace）
+- `/home`: 返回全局默认空间
 - `/init`: 在当前目录初始化一个 `agent.md` 定义文件
 - `/init-proj`: 基于模板交互式创建新项目脚手架
 - `/clear`: 清屏
 - `/quit, /exit`: 退出 REPL
 
+**交互特性：**
+- **智能提示**：输入时自动显示灰色的“幽灵文字”建议，按 `Tab` 或 `→` 键快速补全。
+- **持久化历史**：支持上下方向键翻阅历史命令，历史记录跨会话保存。
+- **流式输出**：Agent 的回答会以流式打字机效果实时显示。
+
+#### 管理命令
+除了 REPL 内部，你也可以直接从命令行调用子命令：
+
+- `claw chat [agent-id]`: 以指定 Agent 开启对话（默认进入 REPL）
+- `claw list`: 列出当前空间的所有会话
+- `claw history <session-id>`: 以 Markdown 格式美化查看特定会话的完整历史
+- `claw agents`: 查看所有已注册的 Agent 及其解析后的 Provider/Model 状态
+- `claw skills`: 查看所有已注册的 Skill 列表
+- `claw spaces`: 管理 ThreadSpace
+  - `list`: 列出所有工作空间
+  - `add <name> <path>`: 添加新的空间绑定
+  - `show <id/name>`: 查看空间详情及其包含的会话
+- `claw config`: 管理本地配置（存储于 `appsettings.Local.json`）
+  - `list [--all]`: 查看当前生效的配置项（敏感信息会自动打码）
+  - `set <key> [value]`: 设置配置项（不提供 value 时会进入安全输入模式）
+  - `get <key>`: 获取特定配置
+  - `reset`: 重置配置
+
 ## Provider 支持
 
-ClawSharp 当前支持五种 provider 模式：
+ClawSharp 当前支持多种模型 Provider：
 
-1. `stub`
-   用于测试和显式离线模式。
-
-2. `openai-responses`
-   当前推荐的生产路径。使用 OpenAI Responses API，支持：
-   - 流式文本输出
-   - 自定义函数工具调用
-   - 工具结果回传后的继续推理
-
-3. `openai-chat-compatible`
-   用于支持暴露 OpenAI 风格 `chat/completions` API 的兼容服务。
-
-4. `gemini-openai-compatible`
-   用于接入 Gemini 的 OpenAI-compatible endpoint，默认请求路径为 `chat/completions`。
-
-5. `anthropic-messages`
-   用于接入 Claude 的 Anthropic Messages API。
-   当前版本支持流式文本输出，以及 Claude 原生 `tool_use` / `tool_result` 工具回环。
+1. `stub`: 离线测试模式。
+2. `openai-responses`: **推荐路径**。支持 OpenAI 最新的 Responses API，具备原生的流式工具调用回环。
+3. `openai-chat-compatible`: 兼容标准的 `chat/completions` 接口，适用于 DeepSeek, Groq, local LLMs 等。
+4. `gemini-openai-compatible`: 针对 Google Gemini 的 OpenAI 兼容端点优化。
+5. `anthropic-messages`: 支持 Claude 的 Messages API，包含原生的流式输出与工具调用模型。
 
 Provider resolver 实现在 [`ModelProviderResolver`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L174)。
 
@@ -182,30 +189,14 @@ Agent frontmatter 现在支持可选的 `provider` 字段，用来为单个 agen
 
 ## 配置
 
-配置加载顺序如下：
+ClawSharp 使用多层级配置系统：
 
-1. `appsettings.json`
-2. `appsettings.Local.json`
-3. `.env`
-4. 环境变量
-5. 传入 `AddClawSharp` 的运行时 overrides
+1. `appsettings.json`: 默认全局配置。
+2. `appsettings.Local.json`: 本地持久化配置（可通过 `claw config` 修改）。
+3. `.env`: 用于存储 API Key 等敏感信息。
+4. 环境变量。
 
 主配置对象是 [`ClawOptions`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Configuration/ClawOptions.cs#L5)。
-
-重要配置分组包括：
-
-- `Runtime`
-- `Agents`
-- `Projects`
-- `Tools`
-- `Mcp`
-- `Memory`
-- `Embedding`
-- `Sessions`
-- `History`
-- `Providers`
-- `Worker`
-- `WorkspacePolicy`
 
 ### `appsettings.json` 示例
 
@@ -215,8 +206,9 @@ Agent frontmatter 现在支持可选的 `provider` 字段，用来为单个 agen
     "WorkspaceRoot": ".",
     "DataPath": ".clawsharp"
   },
-  "Sessions": {
-    "DatabasePath": ".clawsharp/clawsharp.db"
+  "Databases": {
+    "Sqlite": { "DatabasePath": ".clawsharp/clawsharp.db" },
+    "DuckDb": { "Enabled": true, "DatabasePath": ".clawsharp/analytics.duckdb" }
   },
   "Providers": {
     "DefaultProvider": "openai",
@@ -229,24 +221,10 @@ Agent frontmatter 现在支持可选的 `provider` 字段，用来为单个 agen
         "SupportsResponses": true
       },
       {
-        "Name": "compat",
-        "Type": "openai-chat-compatible",
-        "BaseUrl": "https://your-compatible-endpoint.example",
-        "DefaultModel": "your-model",
-        "SupportsChatCompletions": true
-      },
-      {
-        "Name": "gemini",
-        "Type": "gemini-openai-compatible",
-        "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "DefaultModel": "gemini-2.5-flash",
-        "SupportsChatCompletions": true
-      },
-      {
         "Name": "claude",
         "Type": "anthropic-messages",
         "BaseUrl": "https://api.anthropic.com",
-        "DefaultModel": "claude-sonnet-4-20250514"
+        "DefaultModel": "claude-3-5-sonnet-20241022"
       }
     ]
   }
@@ -257,9 +235,7 @@ Agent frontmatter 现在支持可选的 `provider` 字段，用来为单个 agen
 
 ```dotenv
 Providers__Models__0__ApiKey=your_openai_api_key
-Providers__Models__1__ApiKey=your_compatible_api_key
-Providers__Models__2__ApiKey=your_gemini_api_key
-Providers__Models__3__ApiKey=your_anthropic_api_key
+Providers__Models__1__ApiKey=your_anthropic_api_key
 ```
 
 ### `agent.md` frontmatter 示例

@@ -103,46 +103,53 @@ ClawSharp now separates three layers of workspace concepts:
 
 ### CLI Experience
 
-Simply run `claw` to enter REPL mode. By default, it starts a conversation in the `global` ThreadSpace.
+ClawSharp provides a rich command-line interface. Simply run `claw` to enter the default REPL chat mode, or use subcommands to manage the system.
+
+#### REPL Mode
+Once in a conversation, you can type messages as in any chat app, or use slash commands for control:
+
+- `/help`: Show help
+- `/new`: Start a new session in the current space
+- `/resume`: Resume the last session in the current space (shows a few recent messages)
+- `/cd <path>`: Switch to a specific directory-bound workspace (ThreadSpace)
+- `/home`: Return to the global default space
+- `/init`: Initialize an `agent.md` definition in the current directory
+- `/init-proj`: Interactively scaffold a new project from templates
+- `/clear`: Clear terminal screen
+- `/quit, /exit`: Exit the REPL
 
 **Interactive Features:**
 - **Intelligent Suggestions**: Displays grey "ghost text" suggestions as you type; press `Tab` or `→` to complete.
-- **Persistent History**: Use Up/Down arrows to navigate command history, saved across sessions in `.clawsharp/cli_history.txt`.
-- **Shortcuts**: `Ctrl+U` to quickly clear the current line.
+- **Persistent History**: Navigate through previous commands using Up/Down arrows, saved across sessions.
+- **Streaming Output**: Agent responses are displayed in real-time with a typewriter effect.
 
-Supported slash commands:
-- `/help`: Show help
-- `/new`: Start a new session
-- `/resume`: Resume the last session
-- `/cd <path>`: Switch to a specific directory-bound workspace
-- `/home`: Return to the global space
-- `/init`: Initialize an `agent.md` definition in the current space
-- `/init-proj`: Interactively scaffold a new project from templates
-- `/clear`: Clear screen
-- `/quit, /exit`: Exit the REPL
+#### Management Commands
+Outside of the REPL, you can call subcommands directly from your terminal:
+
+- `claw chat [agent-id]`: Start a conversation with a specific Agent (defaults to REPL)
+- `claw list`: List all sessions in the current space
+- `claw history <session-id>`: View the full history of a session rendered as Markdown
+- `claw agents`: List all registered Agents and their resolved Provider/Model status
+- `claw skills`: List all registered Skills
+- `claw spaces`: Manage ThreadSpaces
+  - `list`: List all workspaces
+  - `add <name> <path>`: Add a new space binding
+  - `show <id/name>`: Show space details and its sessions
+- `claw config`: Manage local configuration (stored in `appsettings.Local.json`)
+  - `list [--all]`: Show effective configuration items (secrets are masked)
+  - `set <key> [value]`: Set a configuration item (omitting value triggers a secure prompt)
+  - `get <key>`: Retrieve a specific setting
+  - `reset`: Reset configuration
 
 ## Provider Support
 
-ClawSharp currently supports five provider modes:
+ClawSharp currently supports several model Providers:
 
-1. `stub`
-   Used for tests and explicit offline mode.
-
-2. `openai-responses`
-   The primary production path. This uses OpenAI's Responses API and supports:
-   - streaming text
-   - custom function-style tool calls
-   - tool result round-trips inside the runtime loop
-
-3. `openai-chat-compatible`
-   A compatibility path for services that expose an OpenAI-style `chat/completions` API.
-
-4. `gemini-openai-compatible`
-   For Gemini's OpenAI-compatible endpoint, with `chat/completions` as the default path.
-
-5. `anthropic-messages`
-   For Claude via Anthropic's Messages API.
-   The current implementation supports both streaming text and Claude-native `tool_use` / `tool_result` loops.
+1. `stub`: Offline testing mode.
+2. `openai-responses`: **Recommended path**. Supports OpenAI's latest Responses API with native streaming tool-call loops.
+3. `openai-chat-compatible`: Compatible with standard `chat/completions` endpoints (DeepSeek, Groq, local LLMs, etc.).
+4. `gemini-openai-compatible`: Optimized for Google Gemini's OpenAI-compatible endpoint.
+5. `anthropic-messages`: Supports Claude via the Anthropic Messages API, including native streaming and tool-call loops.
 
 The provider resolver is implemented in [`ModelProviderResolver`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Providers/ModelProviderContracts.cs#L174).  
 The concrete provider implementations live in:
@@ -181,30 +188,14 @@ Agent frontmatter now supports an optional `provider` field so each agent can ta
 
 ## Configuration
 
-Configuration is loaded in this order:
+ClawSharp uses a multi-layered configuration system:
 
-1. `appsettings.json`
-2. `appsettings.Local.json`
-3. `.env`
-4. environment variables
-5. explicit runtime overrides passed into `AddClawSharp`
+1. `appsettings.json`: Default global configuration.
+2. `appsettings.Local.json`: Local persistent settings (modifiable via `claw config`).
+3. `.env`: Used for secrets like API Keys.
+4. Environment variables.
 
 The main options type is [`ClawOptions`](/Users/luckyfish/Documents/Project/RiderProjects/ClawSharp/ClawSharp.Lib/Configuration/ClawOptions.cs#L5).
-
-Important sections:
-
-- `Runtime`
-- `Agents`
-- `Projects`
-- `Tools`
-- `Mcp`
-- `Memory`
-- `Embedding`
-- `Sessions`
-- `History`
-- `Providers`
-- `Worker`
-- `WorkspacePolicy`
 
 ### Example `appsettings.json`
 
@@ -214,8 +205,9 @@ Important sections:
     "WorkspaceRoot": ".",
     "DataPath": ".clawsharp"
   },
-  "Sessions": {
-    "DatabasePath": ".clawsharp/clawsharp.db"
+  "Databases": {
+    "Sqlite": { "DatabasePath": ".clawsharp/clawsharp.db" },
+    "DuckDb": { "Enabled": true, "DatabasePath": ".clawsharp/analytics.duckdb" }
   },
   "Providers": {
     "DefaultProvider": "openai",
@@ -228,24 +220,10 @@ Important sections:
         "SupportsResponses": true
       },
       {
-        "Name": "compat",
-        "Type": "openai-chat-compatible",
-        "BaseUrl": "https://your-compatible-endpoint.example",
-        "DefaultModel": "your-model",
-        "SupportsChatCompletions": true
-      },
-      {
-        "Name": "gemini",
-        "Type": "gemini-openai-compatible",
-        "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "DefaultModel": "gemini-2.5-flash",
-        "SupportsChatCompletions": true
-      },
-      {
         "Name": "claude",
         "Type": "anthropic-messages",
         "BaseUrl": "https://api.anthropic.com",
-        "DefaultModel": "claude-sonnet-4-20250514"
+        "DefaultModel": "claude-3-5-sonnet-20241022"
       }
     ]
   }
@@ -256,9 +234,7 @@ Important sections:
 
 ```dotenv
 Providers__Models__0__ApiKey=your_openai_api_key
-Providers__Models__1__ApiKey=your_compatible_api_key
-Providers__Models__2__ApiKey=your_gemini_api_key
-Providers__Models__3__ApiKey=your_anthropic_api_key
+Providers__Models__1__ApiKey=your_anthropic_api_key
 ```
 
 ### Example `agent.md` frontmatter
