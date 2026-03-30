@@ -95,13 +95,26 @@ ClawSharp now separates three layers of workspace concepts:
 - `Project`
   - template-driven scaffolding for content directories
 - `ThreadSpace`
-  - a chat/work container bound to a specific folder
+  - a chat/work container bound to a specific folder, or a global container (`global`) without any folder binding
   - a single ThreadSpace can contain multiple sessions
-  - the runtime always guarantees a default `init` ThreadSpace bound to `Runtime.WorkspaceRoot`
+  - the runtime always guarantees a default `global` ThreadSpace for general conversations across projects
 - `session`
   - the concrete conversation execution unit inside a ThreadSpace
 
-For backward compatibility, `StartSessionAsync("planner")` automatically creates the session inside the default `init` ThreadSpace. New callers can explicitly target a ThreadSpace through `StartSessionRequest`.
+### CLI Experience
+
+Simply run `claw` to enter REPL mode. By default, it starts a conversation in the `global` ThreadSpace.
+
+Supported slash commands:
+- `/help`: Show help
+- `/new`: Start a new session
+- `/resume`: Resume the last session
+- `/cd <path>`: Switch to a specific directory-bound workspace
+- `/home`: Return to the global space
+- `/clear`: Clear screen
+- `/quit`: Exit the REPL
+
+The prompt automatically updates based on the current space, e.g., `[global] > ` or `[my-project] > `. Project names are truncated if they are too long.
 
 ## Provider Support
 

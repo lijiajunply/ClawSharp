@@ -27,11 +27,6 @@ internal sealed class AddGlobalThreadSpace : Migration
             column: "bound_folder_path",
             unique: true,
             filter: "bound_folder_path IS NOT NULL");
-            
-        // For nullable, we technically should do a table rebuild for full SQLite compliance,
-        // but for a dev project/migration, changing the metadata in snapshot and 
-        // updating the index is often sufficient if the column was already defined in a way that allows NULLs.
-        // Actually, in the initial migration it was nullable: false.
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

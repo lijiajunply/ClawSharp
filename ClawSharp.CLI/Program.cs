@@ -1,7 +1,6 @@
 using System.CommandLine;
 using ClawSharp.CLI.Commands;
 using ClawSharp.CLI.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var host = ServiceConfigurator.BuildHost(args);

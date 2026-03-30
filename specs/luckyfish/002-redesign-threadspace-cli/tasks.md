@@ -7,9 +7,9 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 [P] Update `ThreadSpaceRecord` in `ClawSharp.Lib/Runtime/ThreadSpaceContracts.cs` (BoundFolderPath nullable, IsInit→IsGlobal)
-- [ ] T002 [P] Update `CreateThreadSpaceRequest` in `ClawSharp.Lib/Runtime/ThreadSpaceContracts.cs` (BoundFolderPath nullable)
-- [ ] T003 [P] Update `ThreadSpaceEntity` in `ClawSharp.Lib/Runtime/Persistence/Entities/ThreadSpaceEntity.cs` (BoundFolderPath nullable, IsInit→IsGlobal)
+- [x] T001 [P] Update `ThreadSpaceRecord` in `ClawSharp.Lib/Runtime/ThreadSpaceContracts.cs` (BoundFolderPath nullable, IsInit→IsGlobal)
+- [x] T002 [P] Update `CreateThreadSpaceRequest` in `ClawSharp.Lib/Runtime/ThreadSpaceContracts.cs` (BoundFolderPath nullable)
+- [x] T003 [P] Update `ThreadSpaceEntity` in `ClawSharp.Lib/Runtime/Persistence/Entities/ThreadSpaceEntity.cs` (BoundFolderPath nullable, IsInit→IsGlobal)
 
 ---
 
@@ -19,12 +19,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Update `ThreadSpaceEntityConfiguration` in `ClawSharp.Lib/Runtime/Persistence/Configurations/ThreadSpaceEntityConfiguration.cs` (Mapping nullable and unique index filter)
-- [ ] T005 Update `RuntimeEntityMapper` in `ClawSharp.Lib/Runtime/Persistence/Mapping/RuntimeEntityMapper.cs` (Mapping IsGlobal)
-- [ ] T006 Create EF Core Migration `20260330010000_AddGlobalThreadSpace.cs` in `ClawSharp.Lib/Runtime/Persistence/Migrations/`
-- [ ] T007 Update `ClawDbContextModelSnapshot.cs` in `ClawSharp.Lib/Runtime/Persistence/Migrations/` to reflect schema changes
-- [ ] T008 Update `ThreadSpaceManager` in `ClawSharp.Lib/Runtime/SqliteStores.cs` (EnsureDefault, Create, GetInit using IsGlobal)
-- [ ] T009 [P] Add `GetGlobalAsync` to `IThreadSpaceRepository` and implement in `EfThreadSpaceRepository.cs`
+- [x] T004 Update `ThreadSpaceEntityConfiguration` in `ClawSharp.Lib/Runtime/Persistence/Configurations/ThreadSpaceEntityConfiguration.cs` (Mapping nullable and unique index filter)
+- [x] T005 Update `RuntimeEntityMapper` in `ClawSharp.Lib/Runtime/Persistence/Mapping/RuntimeEntityMapper.cs` (Mapping IsGlobal)
+- [x] T006 Create EF Core Migration `20260330010000_AddGlobalThreadSpace.cs` in `ClawSharp.Lib/Runtime/Persistence/Migrations/`
+- [x] T007 Update `ClawDbContextModelSnapshot.cs` in `ClawSharp.Lib/Runtime/Persistence/Migrations/` to reflect schema changes
+- [x] T008 Update `ThreadSpaceManager` in `ClawSharp.Lib/Runtime/SqliteStores.cs` (EnsureDefault, Create, GetInit using IsGlobal)
+- [x] T009 [P] Add `GetGlobalAsync` to `IThreadSpaceRepository` and implement in `EfThreadSpaceRepository.cs`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -38,14 +38,14 @@
 
 ### Tests for User Story 1 (OPTIONAL)
 
-- [ ] T010 [P] [US1] Create integration test for Global ThreadSpace auto-creation in `ClawSharp.Lib.Tests/ThreadSpaceManagerTests.cs`
+- [x] T010 [P] [US1] Create integration test for Global ThreadSpace auto-creation in `ClawSharp.Lib.Tests/ThreadSpaceManagerTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Update `Program.cs` to set `rootCommand` handler to `ChatCommand.RunAsync`
-- [ ] T012 [US1] Basic REPL rewrite in `ClawSharp.CLI/Commands/ChatCommand.cs` to initialize Global TS on start
-- [ ] T013 [US1] Implement welcome header, `[global] > ` prompt (blue/white), and truncation logic for prompts in `ClawSharp.CLI/Commands/ChatCommand.cs`
-- [ ] T014 [US1] Implement message loop with stream rendering in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T011 [US1] Update `Program.cs` to set `rootCommand` handler to `ChatCommand.RunAsync`
+- [x] T012 [US1] Basic REPL rewrite in `ClawSharp.CLI/Commands/ChatCommand.cs` to initialize Global TS on start
+- [x] T013 [US1] Implement welcome header, `[global] > ` prompt (blue/white), and truncation logic for prompts in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T014 [US1] Implement message loop with stream rendering in `ClawSharp.CLI/Commands/ChatCommand.cs`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -59,9 +59,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Implement `/resume` logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (ListByThreadSpace and load last session)
-- [ ] T016 [US2] Add `/resume` tip to welcome header when a previous session exists in `ClawSharp.CLI/Commands/ChatCommand.cs`
-- [ ] T017 [US2] Implement `/new` command to start a fresh session in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T015 [US2] Implement `/resume` logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (ListByThreadSpace and load last session)
+- [x] T016 [US2] Add `/resume` tip to welcome header when a previous session exists in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T017 [US2] Implement `/new` command to start a fresh session in `ClawSharp.CLI/Commands/ChatCommand.cs`
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -75,9 +75,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Implement `/cd <path>` logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (Create/Reuse Directory TS)
-- [ ] T019 [US3] Implement `/home` (and `/cd` no args) logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (Switch to Global TS)
-- [ ] T020 [US3] Update prompt dynamically to reflect current ThreadSpace name in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T018 [US3] Implement `/cd <path>` logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (Create/Reuse Directory TS)
+- [x] T019 [US3] Implement `/home` (and `/cd` no args) logic in `ClawSharp.CLI/Commands/ChatCommand.cs` (Switch to Global TS)
+- [x] T020 [US3] Update prompt dynamically to reflect current ThreadSpace name in `ClawSharp.CLI/Commands/ChatCommand.cs`
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -91,9 +91,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T021 [US4] Implement `/help` command with structured table in `ClawSharp.CLI/Commands/ChatCommand.cs`
-- [ ] T022 [US4] Implement unknown slash command handling in `ClawSharp.CLI/Commands/ChatCommand.cs`
-- [ ] T023 [US4] Implement auxiliary commands: `/clear`, `/quit`, `/exit` in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T021 [US4] Implement `/help` command with structured table in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T022 [US4] Implement unknown slash command handling in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [x] T023 [US4] Implement auxiliary commands: `/clear`, `/quit`, `/exit` in `ClawSharp.CLI/Commands/ChatCommand.cs`
 
 **Checkpoint**: UX features are complete
 
@@ -103,10 +103,10 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T024 [P] Update `README_en.md` and `README.md` to reflect new CLI behavior
-- [ ] T025 Run `quickstart.md` validation scenarios for final sign-off
-- [ ] T026 Code cleanup and refactor shared REPL logic in `ChatCommand.cs`
-- [ ] T027 [SC-002] Performance Verification: Measure CLI startup time (Target: < 3s)
+- [x] T024 [P] Update `README_en.md` and `README.md` to reflect new CLI behavior
+- [x] T025 Run `quickstart.md` validation scenarios for final sign-off
+- [x] T026 Code cleanup and refactor shared REPL logic in `ChatCommand.cs`
+- [x] T027 [SC-002] Performance Verification: Measure CLI startup time (Target: < 3s)
 
 ---
 

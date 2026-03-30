@@ -4,6 +4,8 @@ internal interface IThreadSpaceRepository
 {
     Task CreateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default);
 
+    Task<ThreadSpaceRecord?> GetGlobalAsync(CancellationToken cancellationToken = default);
+
     Task<ThreadSpaceRecord?> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default);
 
     Task<ThreadSpaceRecord?> GetByNameAsync(string name, CancellationToken cancellationToken = default);

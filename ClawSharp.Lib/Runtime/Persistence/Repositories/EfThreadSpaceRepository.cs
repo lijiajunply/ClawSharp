@@ -12,6 +12,16 @@ internal sealed class EfThreadSpaceRepository(IDbContextFactory<ClawDbContext> d
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<ThreadSpaceRecord?> GetGlobalAsync(CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var entity = await context.ThreadSpaces.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.IsGlobal, cancellationToken)
+            .ConfigureAwait(false);
+        return entity is null ? null : RuntimeEntityMapper.ToRecord(entity);
+    }
+
     public async Task<ThreadSpaceRecord?> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default)
     {
         initializer.EnsureInitialized();

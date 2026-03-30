@@ -173,6 +173,10 @@ public sealed class SqliteThreadSpaceStore : IThreadSpaceStore
         _repository.CreateAsync(threadSpace, cancellationToken);
 
     /// <inheritdoc />
+    public Task<ThreadSpaceRecord?> GetGlobalAsync(CancellationToken cancellationToken = default) =>
+        _repository.GetGlobalAsync(cancellationToken);
+
+    /// <inheritdoc />
     public Task<ThreadSpaceRecord?> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default) =>
         _repository.GetAsync(threadSpaceId, cancellationToken);
 
@@ -207,7 +211,7 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
     /// <inheritdoc />
     public async Task<ThreadSpaceRecord> EnsureDefaultAsync(CancellationToken cancellationToken = default)
     {
-        var existing = await threadSpaces.GetByNameAsync(GlobalName, cancellationToken).ConfigureAwait(false);
+        var existing = await threadSpaces.GetGlobalAsync(cancellationToken).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;

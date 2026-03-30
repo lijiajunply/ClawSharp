@@ -41,7 +41,13 @@ internal sealed class ClawSqliteDatabaseInitializer(
 
     private void EnsureInitThreadSpace(ClawDbContext context)
     {
-        var existing = context.ThreadSpaces.SingleOrDefault(x => x.Name == GlobalThreadSpaceName);
+        var existing = context.ThreadSpaces.SingleOrDefault(x => x.IsGlobal);
+        if (existing is null)
+        {
+            // Fallback for very old databases that might not have is_global correctly set but have name="init"
+            existing = context.ThreadSpaces.SingleOrDefault(x => x.Name == GlobalThreadSpaceName || x.Name == "init");
+        }
+
         if (existing is null)
         {
             context.ThreadSpaces.Add(new ThreadSpaceEntity
@@ -57,12 +63,27 @@ internal sealed class ClawSqliteDatabaseInitializer(
             return;
         }
 
-        if (existing.IsGlobal)
+        // Migrate existing global/init space to new naming and null path
+        var changed = false;
+        if (existing.Name != GlobalThreadSpaceName)
         {
-            return;
+            existing.Name = GlobalThreadSpaceName;
+            changed = true;
+        }
+        if (!existing.IsGlobal)
+        {
+            existing.IsGlobal = true;
+            changed = true;
+        }
+        if (existing.BoundFolderPath != null)
+        {
+            existing.BoundFolderPath = null;
+            changed = true;
         }
 
-        existing.IsGlobal = true;
-        context.SaveChanges();
+        if (changed)
+        {
+            context.SaveChanges();
+        }
     }
 }

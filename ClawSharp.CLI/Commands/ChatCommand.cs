@@ -59,9 +59,13 @@ public static class ChatCommand
             var session = await runtime.StartSessionAsync(new StartSessionRequest(finalAgentId, currentThreadSpace.ThreadSpaceId));
             var sessionId = session.Record.SessionId;
 
-            AnsiConsole.Write(new Rule("[bold blue]ClawSharp REPL[/]") { Justification = Justify.Left });
-            AnsiConsole.MarkupLine($"[grey]Agent:[/] [green]{finalAgentId.EscapeMarkup()}[/] | [grey]Space:[/] [blue]{currentThreadSpace.Name.EscapeMarkup()}[/]");
-            AnsiConsole.MarkupLine("[grey]Type '/help' for available commands, '/quit' to exit.[/]");
+            ShowWelcomeHeader(finalAgentId, currentThreadSpace.Name);
+            
+            var sessionsInSpace = await kernel.ThreadSpaces.ListSessionsAsync(currentThreadSpace.ThreadSpaceId);
+            if (sessionsInSpace.Count > 1)
+            {
+                AnsiConsole.MarkupLine("[grey]Tip: type /resume to continue last conversation.[/]");
+            }
             AnsiConsole.WriteLine();
 
             while (true)
@@ -92,21 +96,37 @@ public static class ChatCommand
                         case "/new":
                             session = await runtime.StartSessionAsync(new StartSessionRequest(finalAgentId, currentThreadSpace.ThreadSpaceId));
                             sessionId = session.Record.SessionId;
-                            AnsiConsole.MarkupLine("[yellow]Started a new session.[/]");
+                            AnsiConsole.Clear();
+                            AnsiConsole.MarkupLine("[green]New session started.[/]");
                             continue;
                         case "/resume":
                             {
-                                var sessionsInSpace = await kernel.ThreadSpaces.ListSessionsAsync(currentThreadSpace.ThreadSpaceId);
-                                var lastSession = sessionsInSpace.OrderByDescending(s => s.StartedAt).FirstOrDefault();
+                                var availableSessions = await kernel.ThreadSpaces.ListSessionsAsync(currentThreadSpace.ThreadSpaceId);
+                                var lastSession = availableSessions
+                                    .Where(s => s.SessionId != sessionId)
+                                    .OrderByDescending(s => s.StartedAt)
+                                    .FirstOrDefault();
+
                                 if (lastSession != null)
                                 {
                                     session = await kernel.Sessions.GetAsync(lastSession.SessionId);
                                     sessionId = session.Record.SessionId;
-                                    AnsiConsole.MarkupLine($"[green]Resumed session from {lastSession.StartedAt:g}[/]");                                    // Optional: Print last few messages
+                                    AnsiConsole.MarkupLine($"[green]Resumed session started at {lastSession.StartedAt:g}[/]");
+                                    
+                                    var history = await kernel.History.ListAsync(sessionId);
+                                    if (history.Count > 0)
+                                    {
+                                        AnsiConsole.MarkupLine("[grey]Last few messages:[/]");
+                                        foreach (var msg in history.TakeLast(5))
+                                        {
+                                            var summary = msg.Content.Length > 80 ? msg.Content[..77] + "..." : msg.Content;
+                                            AnsiConsole.MarkupLine($"[grey]- {msg.Role}: {summary.EscapeMarkup()}[/]");
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    AnsiConsole.MarkupLine("[red]No previous session found to resume.[/]");
+                                    AnsiConsole.MarkupLine("[yellow]No previous session found to resume.[/]");
                                 }
                             }
                             continue;
@@ -119,54 +139,68 @@ public static class ChatCommand
                                 }
                                 else
                                 {
-                                    var path = Path.GetFullPath(Path.IsPathRooted(cmdArgs) ? cmdArgs : Path.Combine(options.Runtime.WorkspaceRoot, cmdArgs));
+                                    var path = Path.GetFullPath(cmdArgs);
+                                    if (!Directory.Exists(path))
+                                    {
+                                        AnsiConsole.MarkupLine($"[red]Directory not found: {path}[/]");
+                                        continue;
+                                    }
+
                                     currentThreadSpace = await kernel.ThreadSpaces.GetByBoundFolderPathAsync(path) 
                                                          ?? await kernel.ThreadSpaces.CreateAsync(new CreateThreadSpaceRequest(Path.GetFileName(path), path));
                                 }
                                 
                                 session = await runtime.StartSessionAsync(new StartSessionRequest(finalAgentId, currentThreadSpace.ThreadSpaceId));
                                 sessionId = session.Record.SessionId;
-                                AnsiConsole.MarkupLine($"[bold blue]Switched to:[/] [green]{currentThreadSpace.Name.EscapeMarkup()}[/]");
+                                AnsiConsole.MarkupLine($"[bold blue]Switched to space:[/] [green]{currentThreadSpace.Name.EscapeMarkup()}[/]");
                             }
                             continue;
                         default:
-                            AnsiConsole.MarkupLine($"[red]Unknown command: {cmd}. Type /help for assistance.[/]");
+                            AnsiConsole.MarkupLine($"[yellow]Unknown command: {cmd}. Type /help to see available commands.[/]");
                             continue;
                     }
                 }
 
                 await runtime.AppendUserMessageAsync(sessionId, trimmedInput);
-                AnsiConsole.Markup($"{ThemeConfig.AgentPrefix} ");
-
-                var responseBuilder = new StringBuilder();
+                
+                AnsiConsole.Markup("[bold yellow]Agent >[/] ");
                 var hasTextOutput = false;
-                var markdown = new Markdown("");
 
-                await AnsiConsole.Live(markdown)
-                    .AutoClear(false)
-                    .StartAsync(async ctx =>
+                await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
+                {
+                    if (@event.Delta != null)
                     {
-                        await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
-                        {
-                            if (@event.Delta != null)
-                            {
-                                hasTextOutput = true;
-                                responseBuilder.Append(@event.Delta);
-                                markdown.Update(responseBuilder.ToString());
-                                ctx.Refresh();
-                            }
-                        }
-                    });
+                        hasTextOutput = true;
+                        // Use standard Console for high-performance delta streaming to avoid cursor glitches
+                        Console.Write(@event.Delta);
+                    }
+                }
 
                 if (!hasTextOutput)
                 {
                     AnsiConsole.MarkupLine("[grey](No text response from agent)[/]");
                 }
                 AnsiConsole.WriteLine();
+                AnsiConsole.WriteLine(); // Add extra spacing between turns
             }
 
             return 0;
         });
+    }
+
+    private static void ShowWelcomeHeader(string agentId, string threadSpaceName)
+    {
+        var grid = new Grid().AddColumn();
+        grid.AddRow(new Text("ClawSharp v1.0.0", new Style(Color.Blue, decoration: Decoration.Bold)));
+        grid.AddRow(new Markup($"[grey]Agent:[/] [green]{agentId.EscapeMarkup()}[/]   [grey]ThreadSpace:[/] [blue]{threadSpaceName.EscapeMarkup()}[/]"));
+        grid.AddRow(new Text("Type /help for commands", new Style(Color.Grey)));
+
+        var panel = new Panel(grid)
+        {
+            Border = BoxBorder.Rounded,
+            Padding = new Padding(1, 0, 1, 0)
+        };
+        AnsiConsole.Write(panel);
     }
 
     private static string GetPrompt(ThreadSpaceRecord space)
@@ -192,7 +226,7 @@ public static class ChatCommand
         table.AddRow("/cd <path>", "Switch to a directory-bound space");
         table.AddRow("/home", "Switch back to global space");
         table.AddRow("/clear", "Clear terminal screen");
-        table.AddRow("/quit", "Exit the REPL");
+        table.AddRow("/quit, /exit", "Exit the REPL");
         AnsiConsole.Write(table);
     }
 }

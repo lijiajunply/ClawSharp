@@ -29,6 +29,10 @@ public sealed class ThreadSpaceTests : IDisposable
         Assert.Null(first.BoundFolderPath);
         Assert.Equal(first.ThreadSpaceId, second.ThreadSpaceId);
         Assert.Single(all);
+
+        var global = await manager.GetGlobalAsync();
+        Assert.Equal(first.ThreadSpaceId, global.ThreadSpaceId);
+        Assert.True(global.IsGlobal);
     }
 
     [Fact]

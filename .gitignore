@@ -35,3 +35,4 @@ riderModule.iml
 /.clawsharp/
 
 appsettings.Local.json
+.env*

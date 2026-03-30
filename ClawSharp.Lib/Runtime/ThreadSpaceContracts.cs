@@ -58,6 +58,11 @@ public interface IThreadSpaceStore
     Task CreateAsync(ThreadSpaceRecord threadSpace, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 获取全局 ThreadSpace。
+    /// </summary>
+    Task<ThreadSpaceRecord?> GetGlobalAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 按标识读取 ThreadSpace。
     /// </summary>
     Task<ThreadSpaceRecord?> GetAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default);
