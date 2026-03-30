@@ -11,5 +11,7 @@ permissions:
     - system.inspect
     - file_read
     - file_write
+    - network.access
+    - version_control
 ---
 This is the Planner agent. It helps users organize their thoughts and tasks.

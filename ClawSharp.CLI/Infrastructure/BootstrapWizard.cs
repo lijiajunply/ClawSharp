@@ -96,6 +96,43 @@ public static class BootstrapWizard
         AnsiConsole.MarkupLine("[bold green]Configuration generated successfully![/]");
         AnsiConsole.WriteLine();
 
+        // 6. Optional: Playwright Browser Installation (for web_browser tool)
+        if (AnsiConsole.Confirm("Would you like to install [green]Playwright[/] browser drivers now? (Required for [blue]web_browser[/] tool)"))
+        {
+            await AnsiConsole.Status()
+                .StartAsync("Installing [blue]Playwright[/] browser drivers...", async ctx =>
+                {
+                    try
+                    {
+                        var scriptPath = Path.Combine("workspace", "scripts", "install-playwright.sh");
+                        if (File.Exists(scriptPath))
+                        {
+                            using var process = new System.Diagnostics.Process();
+                            process.StartInfo = new System.Diagnostics.ProcessStartInfo("bash", scriptPath)
+                            {
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true
+                            };
+                            process.Start();
+                            await process.WaitForExitAsync();
+                            if (process.ExitCode == 0)
+                            {
+                                AnsiConsole.MarkupLine("[bold green]Playwright browsers installed successfully![/]");
+                            }
+                            else
+                            {
+                                AnsiConsole.MarkupLine("[bold red]Playwright installation failed. Please run the script manually: .specify/scripts/bash/install-playwright.sh[/]");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[bold red]Error running installation script: {ex.Message}[/]");
+                    }
+                });
+        }
+
         return true;
     }
 }
