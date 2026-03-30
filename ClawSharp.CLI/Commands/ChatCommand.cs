@@ -250,14 +250,23 @@ public static class ChatCommand
                 AnsiConsole.Markup("[bold yellow]Agent >[/] ");
                 var hasTextOutput = false;
 
-                await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
+                try
                 {
-                    if (@event.Delta != null)
+                    await foreach (var @event in runtime.RunTurnStreamingAsync(sessionId))
                     {
-                        hasTextOutput = true;
-                        // Use standard Console for high-performance delta streaming to avoid cursor glitches
-                        Console.Write(@event.Delta);
+                        if (@event.Delta != null)
+                        {
+                            hasTextOutput = true;
+                            // Use standard Console for high-performance delta streaming to avoid cursor glitches
+                            Console.Write(@event.Delta);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine($"[red]Error during turn execution:[/] {ex.Message.EscapeMarkup()}");
+                    hasTextOutput = true; // Mark as having output so we don't show the generic "No response" message
                 }
 
                 if (!hasTextOutput)

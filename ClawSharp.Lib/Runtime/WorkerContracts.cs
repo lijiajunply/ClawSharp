@@ -309,6 +309,11 @@ public sealed class LoopbackAgentWorkerSession(AgentLaunchPlan plan, IModelProvi
                 {
                     yield return new WorkerEvent("worker.state.changed", JsonSerializer.SerializeToElement(new { stopReason = chunk.StopReason.ToString() }));
                 }
+
+                if (!string.IsNullOrWhiteSpace(chunk.Error))
+                {
+                    yield return new WorkerEvent("worker.error", JsonSerializer.SerializeToElement(new { message = chunk.Error }));
+                }
             }
 
             if (!hasToolCall)
