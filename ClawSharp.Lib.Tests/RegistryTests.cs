@@ -48,7 +48,7 @@ public class RegistryTests : IDisposable
             await registry.ReloadAsync();
 
             var agents = registry.GetAll();
-            Assert.Contains(agents, a => a.Id == "user-agent-1" && a.Source == Core.DynamicSourceType.User);
+            Assert.Contains(agents, a => a.Id == "user.user-agent-1" && a.Source == Core.DynamicSourceType.User);
         }
         finally
         {
