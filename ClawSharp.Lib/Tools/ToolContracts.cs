@@ -174,7 +174,7 @@ public sealed class WorkspacePolicy
         new()
         {
             Permissions = new ToolPermissionSet(
-                ToolCapability.ShellExecute | ToolCapability.FileRead | ToolCapability.FileWrite | ToolCapability.SystemInspect,
+                ToolCapability.ShellExecute | ToolCapability.FileRead | ToolCapability.FileWrite | ToolCapability.SystemInspect | ToolCapability.NetworkAccess | ToolCapability.VersionControl,
                 [],
                 [],
                 [],
