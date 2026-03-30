@@ -148,6 +148,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolExecutor, SearchTextTool>();
         services.AddSingleton<IToolExecutor, SearchFilesTool>();
         services.AddSingleton<IToolExecutor, FileTreeTool>();
+        services.AddSingleton<IToolExecutor, WebBrowserTool>();
+        services.AddSingleton<IToolExecutor, CsvReadTool>();
+        services.AddSingleton<IToolExecutor, GitOpsTool>();
+        services.AddSingleton<IToolExecutor, PdfReadTool>();
 
         return services;
     }

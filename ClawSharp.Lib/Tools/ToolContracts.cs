@@ -39,7 +39,12 @@ public enum ToolCapability
     /// <summary>
     /// 允许访问网络。
     /// </summary>
-    NetworkAccess = 1 << 4
+    NetworkAccess = 1 << 4,
+
+    /// <summary>
+    /// 允许执行版本控制操作（如 Git）。
+    /// </summary>
+    VersionControl = 1 << 5
 }
 
 /// <summary>
@@ -62,6 +67,7 @@ public static class ToolCapabilityParser
             "file_write" => ToolCapability.FileWrite,
             "system.inspect" => ToolCapability.SystemInspect,
             "network.access" => ToolCapability.NetworkAccess,
+            "version_control" => ToolCapability.VersionControl,
             _ => ToolCapability.None
         };
 
