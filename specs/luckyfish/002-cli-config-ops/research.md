@@ -24,3 +24,14 @@
 **Rationale**: Balances security with usability. Hardcoded patterns are simple to maintain initially.
 **Alternatives considered**: 
 - Metadata-driven secrets: Requires a more complex configuration schema.
+
+## Decision 5: Key Discovery and Validation
+**Decision**: Use reflection on the `ClawOptions` class (and its nested options) to build a flat list of "known/supported" configuration keys.
+**Rationale**: Ensures that `config set` only works on valid keys that the system actually uses, preventing typo-based misconfiguration. This also allows for auto-completion in the CLI later.
+**Alternatives considered**: 
+- Hardcoded list: Maintenance burden when new options are added.
+- Allow any key: Leads to "silent" configuration errors (e.g., setting `Provider:OpenAI:ApiKey` instead of `Providers:Models:0:ApiKey`).
+
+## Decision 6: Terminology Standardization
+**Decision**: Standardize on `appsettings.Local.json` as the primary writable target for CLI configuration.
+**Rationale**: Avoids confusion with the read-only `appsettings.json` which usually contains defaults.

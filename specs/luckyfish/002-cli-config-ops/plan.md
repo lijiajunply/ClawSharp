@@ -24,7 +24,7 @@ This feature adds a robust configuration management system to the ClawSharp CLI.
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 - **Library-First**: ✅ `IConfigManager` implemented in `ClawSharp.Lib`.
-- **Async-First**: ✅ Persistence and reload operations are async.
+- **Async-First**: ✅ Persistence and reload operations use `Task` / `ValueTask`.
 - **Modern .NET**: ✅ Uses .NET 10 and nullable reference types.
 - **Reliable Persistence**: ✅ Persists to `appsettings.Local.json`.
 
@@ -49,19 +49,19 @@ specs/luckyfish/002-cli-config-ops/
 ```text
 ClawSharp.Lib/
 ├── Configuration/
-│   ├── IConfigManager.cs (New)
-│   ├── ConfigManager.cs (New)
+│   ├── IConfigManager.cs (New - Refined with async methods)
+│   ├── ConfigManager.cs (New - Uses reflection for key discovery)
 │   └── [Existing files]
 
 ClawSharp.CLI/
 ├── Commands/
-│   └── ConfigCommands.cs (New)
+│   └── ConfigCommands.cs (New - Uses Spectre.Console for tables and masked prompts)
 ├── Infrastructure/
 │   └── [Existing files]
 └── Program.cs (Updated to register ConfigCommands)
 
 ClawSharp.Lib.Tests/
-└── ConfigurationTests.cs (New)
+└── ConfigurationTests.cs (New - Integration tests verifying persistence and masking)
 ```
 
 **Structure Decision**: Logic is split between the kernel (`ClawSharp.Lib`) for engine-level config management and the UI (`ClawSharp.CLI`) for interaction.
@@ -72,6 +72,7 @@ Findings consolidated in `research.md`. Key decisions:
 - Persistent storage in `appsettings.Local.json`.
 - `IConfigManager` in `ClawSharp.Lib`.
 - `Spectre.Console` for CLI UI and masking.
+- Reflection-based key discovery for `ClawOptions` to enable robust validation and auto-completion.
 
 ## Phase 1: Design & Contracts
 
@@ -90,4 +91,5 @@ Updated `gemini` agent context via `.specify/scripts/bash/update-agent-context.s
 - Implementation of `IConfigManager` in `ClawSharp.Lib`.
 - Unit tests for configuration loading/saving.
 - Implementation of `config` command in `ClawSharp.CLI`.
-- Integration test with `ClawSharp.CLI`.
+- Integration test with `ClawSharp.CLI` to verify **SC-001** (performance) and **SC-002** (real-time updates).
+- Verify **SC-003** (masking) through automated test cases in `ConfigurationTests.cs`.
