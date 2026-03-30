@@ -79,6 +79,10 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IConfiguration>(configuration);
         services.AddSingleton(options);
+        services.AddSingleton<IConfigManager>(sp => new ConfigManager(
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ClawOptions>(),
+            Path.Combine(builder.BasePath, "appsettings.Local.json")));
         services.AddSingleton<IAgentDefinitionStore, FileSystemAgentDefinitionStore>();
         services.AddSingleton<ISkillDefinitionStore, FileSystemSkillDefinitionStore>();
         services.AddSingleton<IAgentRegistry, AgentRegistry>();

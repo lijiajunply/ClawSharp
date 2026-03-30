@@ -16,8 +16,8 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create directory for configuration management in `ClawSharp.Lib/Configuration/`
-- [ ] T002 [P] Initialize test file for configuration in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
+- [x] T001 Create directory for configuration management in `ClawSharp.Lib/Configuration/`
+- [x] T002 [P] Initialize test file for configuration in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
 
 ---
 
@@ -27,11 +27,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Define `IConfigManager` interface in `ClawSharp.Lib/Configuration/IConfigManager.cs` per refined contract (including async methods)
-- [ ] T004 Implement `ConfigManager` skeleton in `ClawSharp.Lib/Configuration/ConfigManager.cs` with reflection-based key discovery logic
-- [ ] T005 Register `IConfigManager` as singleton in `ClawSharp.Lib/Configuration/ServiceCollectionExtensions.cs`
-- [ ] T006 [P] Create `ConfigCommands` skeleton in `ClawSharp.CLI/Commands/ConfigCommands.cs` using `System.CommandLine`
-- [ ] T007 Register `config` command in `ClawSharp.CLI/Program.cs` command registry
+- [x] T003 Define `IConfigManager` interface in `ClawSharp.Lib/Configuration/IConfigManager.cs` per refined contract (including async methods)
+- [x] T004 Implement `ConfigManager` skeleton in `ClawSharp.Lib/Configuration/ConfigManager.cs` with reflection-based key discovery logic
+- [x] T005 Register `IConfigManager` as singleton in `ClawSharp.Lib/Configuration/ServiceCollectionExtensions.cs`
+- [x] T006 [P] Create `ConfigCommands` skeleton in `ClawSharp.CLI/Commands/ConfigCommands.cs` using `System.CommandLine`
+- [x] T007 Register `config` command in `ClawSharp.CLI/Program.cs` command registry
 
 **Checkpoint**: Foundation ready - `claw config` commands can be registered and the manager service is injectable.
 
@@ -45,13 +45,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement `GetAllAsync(reload)` and `Get(key)` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
-- [ ] T009 [US1] Implement `SetAsync(key, value)` with persistence to `appsettings.Local.json` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
-- [ ] T010 [US1] Implement `GetSupportedKeysAsync()` via reflection on `ClawOptions` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
-- [ ] T011 [US1] Implement `config list` command using `Spectre.Console` table in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T012 [US1] Implement `config get <key>` command in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T013 [US1] Implement `config set <key> [value]` command with key validation in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T014 [US1] Add unit tests for `Get`, `SetAsync`, and persistence in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
+- [x] T008 [US1] Implement `GetAllAsync(reload)` and `Get(key)` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
+- [x] T009 [US1] Implement `SetAsync(key, value)` with persistence to `appsettings.Local.json` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
+- [x] T010 [US1] Implement `GetSupportedKeysAsync()` via reflection on `ClawOptions` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
+- [x] T011 [US1] Implement `config list` command using `Spectre.Console` table in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T012 [US1] Implement `config get <key>` command in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T013 [US1] Implement `config set <key> [value]` command with key validation in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T014 [US1] Add unit tests for `Get`, `SetAsync`, and persistence in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
 
 **Checkpoint**: User Story 1 is functional. Basic config management (CRUD) works.
 
@@ -65,10 +65,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement `IsSecret(key)` logic using patterns (`*.ApiKey`, `*.Token`, etc.) in `ClawSharp.Lib/Configuration/ConfigManager.cs`
-- [ ] T016 [US3] Update `config list` to use `********` mask for secret values in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T017 [US3] Update `config set` to trigger interactive masked prompt via `AnsiConsole.Prompt` when value is missing for secret keys in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T018 [US3] Add unit tests for secret masking and `IsSecret` pattern matching in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
+- [x] T015 [US3] Implement `IsSecret(key)` logic using patterns (`*.ApiKey`, `*.Token`, etc.) in `ClawSharp.Lib/Configuration/ConfigManager.cs`
+- [x] T016 [US3] Update `config list` to use `********` mask for secret values in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T017 [US3] Update `config set` to trigger interactive masked prompt via `AnsiConsole.Prompt` when value is missing for secret keys in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T018 [US3] Add unit tests for secret masking and `IsSecret` pattern matching in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
 
 **Checkpoint**: User Story 3 is functional. Secrets are handled securely in the CLI.
 
@@ -82,10 +82,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement `ResetAsync(all, key, force)` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
-- [ ] T020 [US2] Implement `config reset` command with `--all`, `--key`, and `--force` options in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T021 [US2] Add interactive confirmation using `AnsiConsole.Confirm` in `config reset` if `--force` is missing in `ClawSharp.CLI/Commands/ConfigCommands.cs`
-- [ ] T022 [US2] Add unit tests for reset logic and confirmation bypassing in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
+- [x] T019 [US2] Implement `ResetAsync(all, key, force)` in `ClawSharp.Lib/Configuration/ConfigManager.cs`
+- [x] T020 [US2] Implement `config reset` command with `--all`, `--key`, and `--force` options in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T021 [US2] Add interactive confirmation using `AnsiConsole.Confirm` in `config reset` if `--force` is missing in `ClawSharp.CLI/Commands/ConfigCommands.cs`
+- [x] T022 [US2] Add unit tests for reset logic and confirmation bypassing in `ClawSharp.Lib.Tests/ConfigurationTests.cs`
 
 **Checkpoint**: User Story 2 is functional. Configuration can be reset safely.
 
@@ -95,9 +95,9 @@
 
 **Purpose**: Improvements that affect multiple user stories and final verification.
 
-- [ ] T023 [P] Update `GEMINI.md` "Active Technologies" section with configuration management details
-- [ ] T024 [P] Ensure all configuration methods have XML documentation in `ClawSharp.Lib/Configuration/`
-- [ ] T025 Run all tests in `ClawSharp.Lib.Tests/` and verify SC-001 (performance) and SC-002 (real-time updates) manually via `quickstart.md` scenarios
+- [x] T023 [P] Update `GEMINI.md` "Active Technologies" section with configuration management details
+- [x] T024 [P] Ensure all configuration methods have XML documentation in `ClawSharp.Lib/Configuration/`
+- [x] T025 Run all tests in `ClawSharp.Lib.Tests/` and verify SC-001 (performance) and SC-002 (real-time updates) manually via `quickstart.md` scenarios
 
 ---
 
