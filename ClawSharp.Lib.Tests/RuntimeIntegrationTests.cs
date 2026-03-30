@@ -10,6 +10,7 @@ using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
 using System.Net;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Lib.Tests;
 
@@ -327,7 +328,9 @@ data: {"type":"message_stop"}
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
-            new JsonSessionSerializer());
+            new JsonSessionSerializer(),
+            new PermissionResolver(),
+            new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
     private ClawRuntime CreateOpenAiRuntime(IReadOnlyList<string> ssePayloads, out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
@@ -416,7 +419,9 @@ data: {"type":"message_stop"}
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
-            new JsonSessionSerializer());
+            new JsonSessionSerializer(),
+            new PermissionResolver(),
+            new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
     private ClawRuntime CreateAnthropicRuntime(IReadOnlyList<string> ssePayloads, out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
@@ -504,7 +509,9 @@ data: {"type":"message_stop"}
             new McpServerCatalog(options),
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
-            new JsonSessionSerializer());
+            new JsonSessionSerializer(),
+            new PermissionResolver(),
+            new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
     private sealed class FakeAgentRegistry(AgentDefinition agent) : IAgentRegistry

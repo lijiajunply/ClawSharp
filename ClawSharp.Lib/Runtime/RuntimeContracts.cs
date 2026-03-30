@@ -11,6 +11,33 @@ using ClawSharp.Lib.Projects;
 namespace ClawSharp.Lib.Runtime;
 
 /// <summary>
+/// 负责解析 Agent 最终生效权限的核心组件。
+/// </summary>
+public interface IPermissionResolver
+{
+    /// <summary>
+    /// 根据 Agent 定义和工作空间策略计算最终生效的权限集合。
+    /// </summary>
+    ToolPermissionSet Resolve(AgentDefinition agent, WorkspacePolicy policy);
+}
+
+/// <summary>
+/// 负责与用户进行即时权限确认的 UI 抽象。
+/// </summary>
+public interface IPermissionUI
+{
+    /// <summary>
+    /// 向用户发起即时权限提升请求。
+    /// </summary>
+    /// <param name="agentId">发起请求的 Agent。</param>
+    /// <param name="capability">请求的能力位。</param>
+    /// <param name="toolName">关联的工具名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>用户是否批准。</returns>
+    Task<bool> RequestCapabilityAsync(string agentId, ToolCapability capability, string toolName, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// 运行时视角下的 session 快照。
 /// </summary>
 /// <param name="Record">底层 session 记录。</param>
@@ -293,10 +320,14 @@ public sealed class ClawRuntime(
     IMcpServerCatalog serverCatalog,
     ISessionStore sessionStore,
     IAgentWorkerLauncher workerLauncher,
-    ISessionSerializer serializer) : IClawRuntime, IDisposable
+    ISessionSerializer serializer,
+    IPermissionResolver permissionResolver,
+    IServiceProvider serviceProvider) : IClawRuntime, IDisposable
 {
     private readonly Dictionary<string, IAgentWorkerSession> _workers = new(StringComparer.OrdinalIgnoreCase);
     private DefinitionWatcher? _watcher;
+
+    private IPermissionUI? PermissionUI => serviceProvider.GetService(typeof(IPermissionUI)) as IPermissionUI;
 
     /// <inheritdoc />
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -326,14 +357,9 @@ public sealed class ClawRuntime(
     {
         var agent = kernel.Agents.Get(request.AgentId);
         
-        // 关键修复：如果 Agent 没定义权限位，则继承工作空间的全部能力位
-        var agentPermissions = agent.Permissions;
-        if (agentPermissions.Capabilities == ToolCapability.None)
-        {
-            agentPermissions = agentPermissions with { Capabilities = kernel.Options.WorkspacePolicy.Permissions.Capabilities };
-        }
+        // 使用 PermissionResolver 解析最终权限
+        var permissions = permissionResolver.Resolve(agent, kernel.Options.WorkspacePolicy);
         
-        var permissions = agentPermissions.Merge(kernel.Options.WorkspacePolicy.Permissions);
         var provider = kernel.Providers.Resolve(agent);
         var record = await sessionStore.GetAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
                      ?? throw new KeyNotFoundException($"Session '{request.SessionId}' was not found.");
@@ -341,10 +367,23 @@ public sealed class ClawRuntime(
         var session = new RuntimeSession(record, permissions, null);
 
         var skills = agent.Skills.Select(kernel.Skills.Get).ToArray();
+        
+        // 合并 Agent 明确指定的工具和工作空间强制工具
+        var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (agent.HasExplicitTools)
+        {
+            foreach (var t in agent.Tools) toolNames.Add(t);
+        }
+        foreach (var t in kernel.Options.WorkspacePolicy.MandatoryTools) toolNames.Add(t);
+
         var tools = kernel.Tools.GetAuthorizedTools(permissions)
-            .Where(x => !agent.HasExplicitTools || agent.Tools.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
+            .Where(x => toolNames.Count == 0 || toolNames.Contains(x.Name))
             .ToArray();
-        var mcpServers = agent.McpServers.Select(serverCatalog.Get).ToArray();
+        
+        var mcpServers = agent.McpServers
+            .Select(serverCatalog.Get)
+            .Where(s => s.Capabilities == ToolCapability.None || permissions.Capabilities.HasFlag(s.Capabilities))
+            .ToArray();
 
         return new AgentLaunchPlan(session, agent, skills, tools, mcpServers, provider.Target, history);
     }
@@ -572,6 +611,30 @@ public sealed class ClawRuntime(
             return new WorkerToolResult(toolRequest.ToolCallId, ToolInvocationResult.Failure(toolRequest.ToolName, ex.Message));
         }
 
+        // 获取工具定义以检查所需能力
+        var toolDef = kernel.Tools.GetAll().FirstOrDefault(t => t.Name.Equals(toolRequest.ToolName, StringComparison.OrdinalIgnoreCase));
+        var currentPermissions = plan.Session.EffectivePermissions ?? ToolPermissionSet.Empty;
+
+        if (toolDef != null && (toolDef.Capabilities & currentPermissions.Capabilities) != toolDef.Capabilities)
+        {
+            var missing = toolDef.Capabilities & ~currentPermissions.Capabilities;
+            
+            await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "JitElevationRequested", serializer.SerializeToElement(new { tool = toolRequest.ToolName, capability = missing.ToString() }), cancellationToken).ConfigureAwait(false);
+
+            if (PermissionUI != null && await PermissionUI.RequestCapabilityAsync(plan.Agent.Id, missing, toolRequest.ToolName, cancellationToken).ConfigureAwait(false))
+            {
+                // 用户批准，提升权限
+                currentPermissions = currentPermissions with { Capabilities = currentPermissions.Capabilities | missing };
+                await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "JitElevationGranted", serializer.SerializeToElement(new { tool = toolRequest.ToolName, capability = missing.ToString() }), cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // 用户拒绝
+                await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "JitElevationDenied", serializer.SerializeToElement(new { tool = toolRequest.ToolName, capability = missing.ToString() }), cancellationToken).ConfigureAwait(false);
+                return new WorkerToolResult(toolRequest.ToolCallId, ToolInvocationResult.Failure(toolRequest.ToolName, $"Permission denied: Tool requires missing capability '{missing}'."));
+            }
+        }
+
         // 运行时在这里把 worker 请求转换为统一工具上下文，并处理审批状态与历史落盘。
         var context = new ToolExecutionContext(
             plan.Session.Record.WorkspaceRoot,
@@ -579,7 +642,7 @@ public sealed class ClawRuntime(
             plan.Session.Record.SessionId.Value,
             userMessage.TurnId.Value,
             userMessage.MessageId.Value,
-            plan.Session.EffectivePermissions ?? ToolPermissionSet.Empty,
+            currentPermissions,
             Guid.NewGuid().ToString("N"),
             cancellationToken);
         var result = await kernel.Tools.ExecuteAsync(toolRequest.ToolName, context, arguments).ConfigureAwait(false);

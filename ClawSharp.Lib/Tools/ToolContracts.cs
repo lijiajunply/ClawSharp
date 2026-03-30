@@ -167,6 +167,11 @@ public sealed class WorkspacePolicy
     public ToolPermissionSet Permissions { get; init; } = ToolPermissionSet.Empty;
 
     /// <summary>
+    /// 全局强制开启的工具列表。
+    /// </summary>
+    public List<string> MandatoryTools { get; init; } = [];
+
+    /// <summary>
     /// 创建一组偏开发环境的默认权限。
     /// </summary>
     /// <returns>启用常见本地能力的默认策略。</returns>

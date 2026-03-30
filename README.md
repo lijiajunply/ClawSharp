@@ -337,6 +337,30 @@ variables:
 模板文件名与文件内容都支持简单变量替换，例如 `{{project_name}}`、`{{project_type}}`、`{{created_at}}` 以及调用方传入的自定义变量。  
 无论模板是否声明，最终项目都会生成带统一骨架的 `README.md`，用于说明这是什么项目。
 
+## 安全与权限 (Security & Permissions)
+
+ClawSharp 实现了基于 **Capability** 的权限模型和 **Workspace Policy** 安全边界：
+
+- **Capability 掩码**: 每个工具都声明其所需的能力（如 `FileRead`, `ShellExecute`）。
+- **Workspace Policy**: 在 `appsettings.json` 中定义，作为所有 Agent 的“权限天花板”。Agent 声明的权限将与工作空间策略取**交集**。
+- **强制工具 (Mandatory Tools)**: 可以配置全局强制注入的工具，无论 Agent 是否声明，它们都会出现在 Agent 的执行计划中。
+- **按需授权 (Just-In-Time Permissions)**: 当 Agent 尝试使用超出当前权限范围的工具时，系统会通过交互式提示请求用户即时授权（需实现 `IPermissionUI`）。
+
+配置示例 (`appsettings.Local.json`):
+
+```json
+{
+  "ClawSharp": {
+    "WorkspacePolicy": {
+      "Permissions": {
+        "Capabilities": "FileRead, NetworkAccess, VersionControl"
+      },
+      "MandatoryTools": ["audit_logger"]
+    }
+  }
+}
+```
+
 ## 测试
 
 运行测试：

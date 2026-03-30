@@ -2,7 +2,8 @@
 
 **Feature Branch**: `luckyfish/002-agent-runtime-optimization`  
 **Created**: 2026-03-30  
-**Status**: Draft  
+**Status**: Completed
+  
 **Input**: User description: "核心功能增强：Agent 运行时策略优化"
 
 ## User Scenarios & Testing *(mandatory)*

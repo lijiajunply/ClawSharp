@@ -88,6 +88,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
         services.AddSingleton<ISkillRegistry, SkillRegistry>();
         services.AddSingleton<IToolRegistry, ToolRegistry>();
+        services.AddSingleton<IPermissionResolver, PermissionResolver>();
         services.AddSingleton<IEmbeddingProvider, SimpleEmbeddingProvider>();
         services.AddSingleton<IVectorStore, InMemoryVectorStore>();
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();

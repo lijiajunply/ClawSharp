@@ -25,9 +25,9 @@
 
 **Purpose**: Project initialization and base structure for the new permission system.
 
-- [ ] T001 [P] Create `PermissionTests.cs` in `ClawSharp.Lib.Tests/` for TDD
-- [ ] T002 Update `ClawOptions.cs` in `ClawSharp.Lib/Configuration/` to include `WorkspacePolicy` class and `MandatoryTools` list
-- [ ] T003 Update `ToolCapability.cs` (or equivalent) to ensure all required capability bits are defined
+- [x] T001 [P] Create `PermissionTests.cs` in `ClawSharp.Lib.Tests/` for TDD
+- [x] T002 Update `ClawOptions.cs` in `ClawSharp.Lib/Configuration/` to include `WorkspacePolicy` class and `MandatoryTools` list
+- [x] T003 Update `ToolCapability.cs` (or equivalent) to ensure all required capability bits are defined
 
 ---
 
@@ -35,11 +35,11 @@
 
 **Purpose**: Core logic for permission resolution that blocks all user stories.
 
-- [ ] T004 Define `IPermissionResolver` interface in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
-- [ ] T005 Define `IPermissionUI` interface in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
-- [ ] T006 Implement `PermissionResolver` in `ClawSharp.Lib/Runtime/PermissionResolver.cs` (Core logic: Bitmask intersection)
-- [ ] T007 [P] Implement `IntersectPaths` logic in `PermissionResolver.cs` for file roots
-- [ ] T008 [P] Register `IPermissionResolver` in `ClawSharp.Lib/Configuration/ServiceCollectionExtensions.cs`
+- [x] T004 Define `IPermissionResolver` interface in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
+- [x] T005 Define `IPermissionUI` interface in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
+- [x] T006 Implement `PermissionResolver` in `ClawSharp.Lib/Runtime/PermissionResolver.cs` (Core logic: Bitmask intersection)
+- [x] T007 [P] Implement `IntersectPaths` logic in `PermissionResolver.cs` for file roots
+- [x] T008 [P] Register `IPermissionResolver` in `ClawSharp.Lib/Configuration/ServiceCollectionExtensions.cs`
 
 **Checkpoint**: Foundation ready - Logic for intersection can be unit tested.
 
@@ -53,16 +53,16 @@
 
 ### Tests for US1 & US4
 
-- [ ] T009 [US1/4] Write integration test in `PermissionTests.cs` for permission intersection (Agent vs Workspace)
-- [ ] T010 [US1/4] Write unit test for JIT flow triggering when capability is missing
+- [x] T009 [US1/4] Write integration test in `PermissionTests.cs` for permission intersection (Agent vs Workspace)
+- [x] T010 [US1/4] Write unit test for JIT flow triggering when capability is missing
 
 ### Implementation for US1 & US4
 
-- [ ] T011 [US1/4] Update `ClawRuntime.PrepareAgentAsync` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs` to use `IPermissionResolver`
-- [ ] T012 [US1/4] Implement `CliPermissionUI` in `ClawSharp.CLI/Infrastructure/CliPermissionUI.cs` using `Spectre.Console`
-- [ ] T013 [US1/4] Update `ClawRuntime.HandleToolRequestAsync` to detect missing capabilities and invoke `IPermissionUI.RequestCapabilityAsync`
-- [ ] T014 [US1/4] Add `PermissionAudit` events (Requested, Granted, Denied) to `ClawRuntime.cs` using `ISessionEventStore`
-- [ ] T015 [US1/4] Register `CliPermissionUI` in `ClawSharp.CLI/Infrastructure/ServiceConfigurator.cs` (or DI setup)
+- [x] T011 [US1/4] Update `ClawRuntime.PrepareAgentAsync` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs` to use `IPermissionResolver`
+- [x] T012 [US1/4] Implement `CliPermissionUI` in `ClawSharp.CLI/Infrastructure/CliPermissionUI.cs` using `Spectre.Console`
+- [x] T013 [US1/4] Update `ClawRuntime.HandleToolRequestAsync` to detect missing capabilities and invoke `IPermissionUI.RequestCapabilityAsync`
+- [x] T014 [US1/4] Add `PermissionAudit` events (Requested, Granted, Denied) to `ClawRuntime.cs` using `ISessionEventStore`
+- [x] T015 [US1/4] Register `CliPermissionUI` in `ClawSharp.CLI/Infrastructure/ServiceConfigurator.cs` (or DI setup)
 
 **Checkpoint**: MVP Complete - Basic secure execution with interactive JIT prompt is functional.
 
@@ -76,9 +76,9 @@
 
 ### Implementation for US2
 
-- [ ] T016 [US2] Update `ClawRuntime.PrepareAgentAsync` to dynamically filter tools based on the *effective* capability bitmask
-- [ ] T017 [US2] Ensure MCP tools are also filtered by the effective permission set
-- [ ] T018 [US2] Add unit test verifying a newly added tool is visible to an agent with matching capabilities
+- [x] T016 [US2] Update `ClawRuntime.PrepareAgentAsync` to dynamically filter tools based on the *effective* capability bitmask
+- [x] T017 [US2] Ensure MCP tools are also filtered by the effective permission set
+- [x] T018 [US2] Add unit test verifying a newly added tool is visible to an agent with matching capabilities
 
 ---
 
@@ -90,9 +90,9 @@
 
 ### Implementation for US3
 
-- [ ] T019 [US3] Update `ClawRuntime.PrepareAgentAsync` to inject tools from `ClawOptions.WorkspacePolicy.MandatoryTools`
-- [ ] T020 [US3] Add unit test for mandatory tool injection
-- [ ] T021 [US3] Ensure mandatory tools trigger JIT prompts if they require missing capabilities (integrated with US4 logic)
+- [x] T019 [US3] Update `ClawRuntime.PrepareAgentAsync` to inject tools from `ClawOptions.WorkspacePolicy.MandatoryTools`
+- [x] T020 [US3] Add unit test for mandatory tool injection
+- [x] T021 [US3] Ensure mandatory tools trigger JIT prompts if they require missing capabilities (integrated with US4 logic)
 
 ---
 
@@ -100,11 +100,11 @@
 
 **Purpose**: Cleanup and final validation.
 
-- [ ] T022 [P] Update `README.md` or `DOCS` with information on how to configure `WorkspacePolicy`
-- [ ] T023 [P] Add detailed logging for permission denials in `PermissionResolver`
-- [ ] T024 Perform final run of all scenarios in `quickstart.md`
-- [ ] T025 [P] Create a performance benchmark test to verify SC-002 (<5ms permission resolution overhead)
-- [ ] T026 Code cleanup and ensuring all `TODO`s in the new files are addressed
+- [x] T022 [P] Update `README.md` or `DOCS` with information on how to configure `WorkspacePolicy`
+- [x] T023 [P] Add detailed logging for permission denials in `PermissionResolver`
+- [x] T024 Perform final run of all scenarios in `quickstart.md`
+- [x] T025 [P] Create a performance benchmark test to verify SC-002 (<5ms permission resolution overhead)
+- [x] T026 Code cleanup and ensuring all `TODO`s in the new files are addressed
 
 ---
 

@@ -23,6 +23,7 @@ public static class ServiceConfigurator
                 {
                     builder.BasePath = Directory.GetCurrentDirectory();
                 });
+                services.AddSingleton<ClawSharp.Lib.Runtime.IPermissionUI, CliPermissionUI>();
             })
             .Build();
     }
