@@ -19,6 +19,9 @@ namespace ClawSharp.Lib.Agents;
 /// <param name="Permissions">agent 自身声明的工具权限边界。</param>
 /// <param name="Version">agent 定义版本。</param>
 /// <param name="Body">frontmatter 之后的 Markdown 正文。</param>
+/// <param name="Source">定义来源类型。</param>
+/// <param name="OriginalId">原始定义 ID（若来源于动态加载）。</param>
+/// <param name="SourcePath">定义文件路径（若来源于动态加载）。</param>
 public sealed record AgentDefinition(
     string Id,
     string Name,

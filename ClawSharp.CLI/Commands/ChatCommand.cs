@@ -227,7 +227,7 @@ public static class ChatCommand
                                     });
 
                                 var result = await kernel.Projects.CreateProjectAsync(request);
-                                if (result is { IsSuccess: true, Value: var projectResult })
+                                if (result is { IsSuccess: true, Value: { } projectResult })
                                 {
                                     AnsiConsole.MarkupLine($"[green]Project created successfully at:[/] [blue]{projectResult.ProjectRootPath.EscapeMarkup()}[/]");
                                     AnsiConsole.MarkupLine("[grey]Type /cd <path> to switch to the new project space.[/]");

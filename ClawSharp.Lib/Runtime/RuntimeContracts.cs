@@ -286,6 +286,7 @@ public sealed class ClawKernel(
 
 /// <summary>
 /// 默认的 ClawSharp 运行时实现。
+/// </summary>
 public sealed class ClawRuntime(
     IClawKernel kernel,
     McpService mcpService,
@@ -312,6 +313,9 @@ public sealed class ClawRuntime(
         await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 释放运行时资源。
+    /// </summary>
     public void Dispose()
     {
         _watcher?.Dispose();

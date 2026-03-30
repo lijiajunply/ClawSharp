@@ -15,12 +15,22 @@ public sealed class DefinitionWatcher : IDisposable
     private readonly ConcurrentDictionary<string, DateTime> _lastReload = new();
     private static readonly TimeSpan DebounceTime = TimeSpan.FromMilliseconds(500);
 
+    /// <summary>
+    /// 初始化 <see cref="DefinitionWatcher"/> 类的新实例。
+    /// </summary>
+    /// <param name="agents">Agent 注册表。</param>
+    /// <param name="skills">Skill 注册表。</param>
     public DefinitionWatcher(IAgentRegistry agents, ISkillRegistry skills)
     {
         _agents = agents;
         _skills = skills;
     }
 
+    /// <summary>
+    /// 开始监视指定路径下的定义文件。
+    /// </summary>
+    /// <param name="path">要监视的目录路径。</param>
+    /// <param name="isAgent">指定该目录是否包含 agent 定义。</param>
     public void Watch(string path, bool isAgent)
     {
         if (!Directory.Exists(path)) return;
@@ -66,6 +76,9 @@ public sealed class DefinitionWatcher : IDisposable
         });
     }
 
+    /// <summary>
+    /// 释放文件系统监视器资源。
+    /// </summary>
     public void Dispose()
     {
         foreach (var watcher in _watchers)

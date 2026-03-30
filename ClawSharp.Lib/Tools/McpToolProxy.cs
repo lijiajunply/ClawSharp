@@ -11,8 +11,19 @@ public sealed class McpToolProxy : IToolExecutor
     private readonly McpClient _client;
     private readonly string _serverName;
 
+    /// <summary>
+    /// 工具定义。
+    /// </summary>
     public ToolDefinition Definition { get; }
 
+    /// <summary>
+    /// 初始化 <see cref="McpToolProxy"/> 类的新实例。
+    /// </summary>
+    /// <param name="client">关联的 MCP 客户端。</param>
+    /// <param name="serverName">服务器名称。</param>
+    /// <param name="name">工具名称。</param>
+    /// <param name="description">工具描述。</param>
+    /// <param name="inputSchema">输入参数 JSON 架构。</param>
     public McpToolProxy(McpClient client, string serverName, string name, string description, JsonElement? inputSchema)
     {
         _client = client;
@@ -29,6 +40,12 @@ public sealed class McpToolProxy : IToolExecutor
             ToolCapability.None);
     }
 
+    /// <summary>
+    /// 异步调用远程 MCP 工具。
+    /// </summary>
+    /// <param name="context">调用上下文。</param>
+    /// <param name="arguments">调用参数。</param>
+    /// <returns>工具执行结果。</returns>
     public async Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
     {
         try

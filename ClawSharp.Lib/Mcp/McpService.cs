@@ -12,6 +12,11 @@ public sealed class McpService : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, McpClient> _clients = new();
 
+    /// <summary>
+    /// 根据配置文件启动所有已注册的 MCP 服务器。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>表示异步启动操作的任务。</returns>
     public async Task StartAllAsync(CancellationToken cancellationToken = default)
     {
         var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".clawsharp", "mcp.json");
@@ -40,6 +45,11 @@ public sealed class McpService : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 从所有已连接的 MCP 服务器中获取可用工具列表。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>工具执行器集合。</returns>
     public async Task<IReadOnlyList<IToolExecutor>> GetToolsAsync(CancellationToken cancellationToken = default)
     {
         var tools = new List<IToolExecutor>();
@@ -63,6 +73,10 @@ public sealed class McpService : IAsyncDisposable
         return tools;
     }
 
+    /// <summary>
+    /// 异步释放所有 MCP 客户端和传输资源。
+    /// </summary>
+    /// <returns>表示异步释放操作的任务。</returns>
     public async ValueTask DisposeAsync()
     {
         foreach (var client in _clients.Values)
