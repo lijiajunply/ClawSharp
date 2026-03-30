@@ -6,9 +6,9 @@ internal sealed class ThreadSpaceEntity
 
     public required string Name { get; set; }
 
-    public required string BoundFolderPath { get; set; }
+    public string? BoundFolderPath { get; set; }
 
-    public bool IsInit { get; set; }
+    public bool IsGlobal { get; set; }
 
     public DateTimeOffset CreatedAt { get; init; }
 

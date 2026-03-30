@@ -16,4 +16,9 @@ rootCommand.AddCommand(SpaceCommands.Create(host));
 rootCommand.AddCommand(RegistryCommands.CreateAgents(host));
 rootCommand.AddCommand(RegistryCommands.CreateSkills(host));
 
+rootCommand.SetHandler(async () =>
+{
+    await ChatCommand.RunAsync(host, null);
+});
+
 return await rootCommand.InvokeAsync(args);

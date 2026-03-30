@@ -217,14 +217,14 @@ data: {"type":"message_stop"}
     }
 
     [Fact]
-    public async Task Runtime_StartSessionAsync_DefaultsToInitThreadSpace()
+    public async Task Runtime_StartSessionAsync_DefaultsToGlobalThreadSpace()
     {
         var runtime = CreateRuntime(out _, out _, out var threadSpaces);
-        var init = await threadSpaces.GetInitAsync();
+        var global = await threadSpaces.GetGlobalAsync();
 
         var session = await runtime.StartSessionAsync("planner");
 
-        Assert.Equal(init.ThreadSpaceId, session.Record.ThreadSpaceId);
+        Assert.Equal(global.ThreadSpaceId, session.Record.ThreadSpaceId);
         Assert.Equal(_root, session.Record.WorkspaceRoot);
     }
 

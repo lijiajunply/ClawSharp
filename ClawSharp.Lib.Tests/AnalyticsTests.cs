@@ -24,14 +24,15 @@ public sealed class AnalyticsTests : IDisposable
         var historyStore = new SqlitePromptHistoryStore(options);
         var eventStore = new SqliteSessionEventStore(options);
         var dbContextFactory = SqlitePersistenceFactory.CreateDbContextFactory(options);
-        var init = await threadSpaceStore.GetByNameAsync("init");
+        var manager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        var global = await manager.EnsureDefaultAsync();
         var analytics = new DuckDbSessionAnalyticsService(
             options,
             new DuckDbAnalyticsProjector(options, dbContextFactory, SqlitePersistenceFactory.CreateInitializer(options, dbContextFactory), new DuckDbConnectionFactory(options)),
             new DuckDbConnectionFactory(options));
 
-        var sessionA = new SessionRecord(new SessionId("session-a"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
-        var sessionB = new SessionRecord(new SessionId("session-b"), init.ThreadSpaceId, "planner", _root, SessionStatus.Completed, DateTimeOffset.UtcNow);
+        var sessionA = new SessionRecord(new SessionId("session-a"), global.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var sessionB = new SessionRecord(new SessionId("session-b"), global.ThreadSpaceId, "planner", _root, SessionStatus.Completed, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(sessionA);
         await sessionStore.CreateAsync(sessionB);
 

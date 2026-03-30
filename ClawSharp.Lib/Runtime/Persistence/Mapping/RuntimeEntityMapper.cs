@@ -7,13 +7,13 @@ internal static class RuntimeEntityMapper
         ThreadSpaceId = record.ThreadSpaceId.Value,
         Name = record.Name,
         BoundFolderPath = record.BoundFolderPath,
-        IsInit = record.IsInit,
+        IsGlobal = record.IsGlobal,
         CreatedAt = record.CreatedAt,
         ArchivedAt = record.ArchivedAt
     };
 
     public static ThreadSpaceRecord ToRecord(ThreadSpaceEntity entity) =>
-        new(new ThreadSpaceId(entity.ThreadSpaceId), entity.Name, entity.BoundFolderPath, entity.IsInit, entity.CreatedAt, entity.ArchivedAt);
+        new(new ThreadSpaceId(entity.ThreadSpaceId), entity.Name, entity.BoundFolderPath, entity.IsGlobal, entity.CreatedAt, entity.ArchivedAt);
 
     public static SessionEntity ToEntity(SessionRecord record) => new()
     {

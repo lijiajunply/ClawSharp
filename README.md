@@ -95,13 +95,26 @@ ClawSharp 现在区分三层概念：
 - `Project`
   - 用于模板脚手架和内容目录生成
 - `ThreadSpace`
-  - 绑定某个文件夹的聊天/工作容器
+  - 绑定某个文件夹的聊天/工作容器，或者不绑定任何目录的全局容器（`global`）
   - 一个 ThreadSpace 可以承载多个 session
-  - 系统会自动确保存在默认 `init` ThreadSpace，并将其绑定到 `Runtime.WorkspaceRoot`
+  - 系统会自动确保存在默认 `global` ThreadSpace，用于跨项目的通用对话
 - `session`
   - ThreadSpace 内的实际对话执行单元
 
-兼容旧调用时，`StartSessionAsync("planner")` 会自动把 session 放入默认 `init` ThreadSpace。新代码也可以通过 `StartSessionRequest` 显式指定目标 ThreadSpace。
+### CLI 体验
+
+直接运行 `claw` 即可进入 REPL 模式。默认在 `global` ThreadSpace 中开始对话。
+
+支持的斜杠命令：
+- `/help`: 查看帮助
+- `/new`: 开启新会话
+- `/resume`: 恢复上次会话
+- `/cd <path>`: 切换到特定目录的工作空间
+- `/home`: 返回全局空间
+- `/clear`: 清屏
+- `/quit`: 退出
+
+提示符会根据当前空间自动更新，例如 `[global] > ` 或 `[my-project] > `。项目名称过长时会自动截断显示。
 
 ## Provider 支持
 

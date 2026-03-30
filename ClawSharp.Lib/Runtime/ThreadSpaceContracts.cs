@@ -25,24 +25,24 @@ public readonly record struct ThreadSpaceId(string Value)
 public sealed record ThreadSpaceRecord(
     ThreadSpaceId ThreadSpaceId,
     string Name,
-    string BoundFolderPath,
-    bool IsInit,
+    string? BoundFolderPath,
+    bool IsGlobal,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ArchivedAt = null);
 
 /// <summary>
 /// 描述一次 ThreadSpace 创建请求。
 /// </summary>
-public sealed record CreateThreadSpaceRequest(string Name, string BoundFolderPath)
+public sealed record CreateThreadSpaceRequest(string Name, string? BoundFolderPath = null)
 {
     /// <summary>
     /// 校验请求是否包含必要字段。
     /// </summary>
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(BoundFolderPath))
+        if (string.IsNullOrWhiteSpace(Name))
         {
-            throw new ValidationException("ThreadSpace creation request is missing one or more required fields.");
+            throw new ValidationException("ThreadSpace creation request is missing Name.");
         }
     }
 }
@@ -94,14 +94,14 @@ public interface IThreadSpaceStore
 public interface IThreadSpaceManager
 {
     /// <summary>
-    /// 确保默认 <c>init</c> ThreadSpace 存在。
+    /// 确保默认全局 ThreadSpace 存在。
     /// </summary>
     Task<ThreadSpaceRecord> EnsureDefaultAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 获取默认 <c>init</c> ThreadSpace。
+    /// 获取全局 ThreadSpace。
     /// </summary>
-    Task<ThreadSpaceRecord> GetInitAsync(CancellationToken cancellationToken = default);
+    Task<ThreadSpaceRecord> GetGlobalAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 创建一个新的 ThreadSpace。

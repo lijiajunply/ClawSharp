@@ -338,15 +338,15 @@ public sealed class ClawRuntime(
     /// <inheritdoc />
     public async Task<RuntimeSession> StartSessionAsync(string agentId, CancellationToken cancellationToken = default)
     {
-        var init = await kernel.ThreadSpaces.GetInitAsync(cancellationToken).ConfigureAwait(false);
-        return await kernel.Sessions.StartAsync(agentId, init.ThreadSpaceId, init.BoundFolderPath, cancellationToken).ConfigureAwait(false);
+        var global = await kernel.ThreadSpaces.GetGlobalAsync(cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.StartAsync(agentId, global.ThreadSpaceId, global.BoundFolderPath ?? kernel.Options.Runtime.WorkspaceRoot, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<RuntimeSession> StartSessionAsync(StartSessionRequest request, CancellationToken cancellationToken = default)
     {
         var threadSpace = await kernel.ThreadSpaces.GetAsync(request.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
-        return await kernel.Sessions.StartAsync(request.AgentId, threadSpace.ThreadSpaceId, threadSpace.BoundFolderPath, cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.StartAsync(request.AgentId, threadSpace.ThreadSpaceId, threadSpace.BoundFolderPath ?? kernel.Options.Runtime.WorkspaceRoot, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

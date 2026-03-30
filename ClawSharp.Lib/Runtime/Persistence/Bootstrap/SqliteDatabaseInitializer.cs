@@ -8,7 +8,7 @@ internal sealed class ClawSqliteDatabaseInitializer(
     IDbContextFactory<ClawDbContext> dbContextFactory,
     ClawOptions options)
 {
-    private const string InitThreadSpaceName = "init";
+    private const string GlobalThreadSpaceName = "global";
     private static readonly ConcurrentDictionary<string, object> InitializationGates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, bool> InitializedDatabases = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _databasePath = DatabasePathResolver.ResolveSqlitePath(options);
@@ -41,18 +41,15 @@ internal sealed class ClawSqliteDatabaseInitializer(
 
     private void EnsureInitThreadSpace(ClawDbContext context)
     {
-        var workspaceRoot = Path.GetFullPath(options.Runtime.WorkspaceRoot);
-        Directory.CreateDirectory(workspaceRoot);
-
-        var existing = context.ThreadSpaces.SingleOrDefault(x => x.Name == InitThreadSpaceName);
+        var existing = context.ThreadSpaces.SingleOrDefault(x => x.Name == GlobalThreadSpaceName);
         if (existing is null)
         {
             context.ThreadSpaces.Add(new ThreadSpaceEntity
             {
                 ThreadSpaceId = ThreadSpaceId.New().Value,
-                Name = InitThreadSpaceName,
-                BoundFolderPath = workspaceRoot,
-                IsInit = true,
+                Name = GlobalThreadSpaceName,
+                BoundFolderPath = null,
+                IsGlobal = true,
                 CreatedAt = DateTimeOffset.UtcNow,
                 ArchivedAt = null
             });
@@ -60,13 +57,12 @@ internal sealed class ClawSqliteDatabaseInitializer(
             return;
         }
 
-        if (existing.BoundFolderPath == workspaceRoot && existing.IsInit)
+        if (existing.IsGlobal)
         {
             return;
         }
 
-        existing.BoundFolderPath = workspaceRoot;
-        existing.IsInit = true;
+        existing.IsGlobal = true;
         context.SaveChanges();
     }
 }

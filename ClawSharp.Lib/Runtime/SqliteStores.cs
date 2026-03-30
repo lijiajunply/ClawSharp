@@ -202,26 +202,24 @@ public sealed class SqliteThreadSpaceStore : IThreadSpaceStore
 /// </summary>
 public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionStore sessions, Configuration.ClawOptions options) : IThreadSpaceManager
 {
-    private const string InitName = "init";
+    private const string GlobalName = "global";
 
     /// <inheritdoc />
     public async Task<ThreadSpaceRecord> EnsureDefaultAsync(CancellationToken cancellationToken = default)
     {
-        var workspaceRoot = NormalizeBoundFolderPath(options.Runtime.WorkspaceRoot);
-        var existing = await threadSpaces.GetByNameAsync(InitName, cancellationToken).ConfigureAwait(false);
+        var existing = await threadSpaces.GetByNameAsync(GlobalName, cancellationToken).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
-        Directory.CreateDirectory(workspaceRoot);
-        var init = new ThreadSpaceRecord(ThreadSpaceId.New(), InitName, workspaceRoot, true, DateTimeOffset.UtcNow);
-        await threadSpaces.CreateAsync(init, cancellationToken).ConfigureAwait(false);
-        return init;
+        var global = new ThreadSpaceRecord(ThreadSpaceId.New(), GlobalName, null, true, DateTimeOffset.UtcNow);
+        await threadSpaces.CreateAsync(global, cancellationToken).ConfigureAwait(false);
+        return global;
     }
 
     /// <inheritdoc />
-    public async Task<ThreadSpaceRecord> GetInitAsync(CancellationToken cancellationToken = default)
+    public async Task<ThreadSpaceRecord> GetGlobalAsync(CancellationToken cancellationToken = default)
     {
         return await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -233,22 +231,26 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
         await EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         var normalizedName = request.Name.Trim();
-        if (string.Equals(normalizedName, InitName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(normalizedName, GlobalName, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("ThreadSpace name 'init' is reserved.");
+            throw new InvalidOperationException("ThreadSpace name 'global' is reserved.");
         }
-
-        var boundFolderPath = NormalizeAndValidateBoundFolderPath(request.BoundFolderPath);
-        Directory.CreateDirectory(boundFolderPath);
 
         if (await threadSpaces.GetByNameAsync(normalizedName, cancellationToken).ConfigureAwait(false) is not null)
         {
             throw new InvalidOperationException($"ThreadSpace '{normalizedName}' already exists.");
         }
 
-        if (await threadSpaces.GetByBoundFolderPathAsync(boundFolderPath, cancellationToken).ConfigureAwait(false) is not null)
+        string? boundFolderPath = null;
+        if (!string.IsNullOrWhiteSpace(request.BoundFolderPath))
         {
-            throw new InvalidOperationException($"ThreadSpace for '{boundFolderPath}' already exists.");
+            boundFolderPath = NormalizeAndValidateBoundFolderPath(request.BoundFolderPath);
+            Directory.CreateDirectory(boundFolderPath);
+
+            if (await threadSpaces.GetByBoundFolderPathAsync(boundFolderPath, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                throw new InvalidOperationException($"ThreadSpace for '{boundFolderPath}' already exists.");
+            }
         }
 
         var threadSpace = new ThreadSpaceRecord(ThreadSpaceId.New(), normalizedName, boundFolderPath, false, DateTimeOffset.UtcNow);
@@ -289,18 +291,18 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
     public async Task<ThreadSpaceRecord> UpdateAsync(ThreadSpaceId threadSpaceId, string? newName = null, string? newBoundFolderPath = null, CancellationToken cancellationToken = default)
     {
         var existing = await GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
-        if (existing.IsInit)
+        if (existing.IsGlobal)
         {
-            throw new InvalidOperationException("Reserved 'init' ThreadSpace cannot be updated.");
+            throw new InvalidOperationException("Reserved 'global' ThreadSpace cannot be updated.");
         }
 
         var name = existing.Name;
         if (!string.IsNullOrWhiteSpace(newName))
         {
             name = newName.Trim();
-            if (string.Equals(name, InitName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(name, GlobalName, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("ThreadSpace name 'init' is reserved.");
+                throw new InvalidOperationException("ThreadSpace name 'global' is reserved.");
             }
 
             var other = await threadSpaces.GetByNameAsync(name, cancellationToken).ConfigureAwait(false);
@@ -313,7 +315,7 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
         var path = existing.BoundFolderPath;
         if (!string.IsNullOrWhiteSpace(newBoundFolderPath))
         {
-            path = NormalizeAndValidateBoundFolderPath(newBoundFolderPath);
+            path = NormalizeAndValidateBoundFolderPath(newBoundFolderPath!);
             var other = await threadSpaces.GetByBoundFolderPathAsync(path, cancellationToken).ConfigureAwait(false);
             if (other is not null && other.ThreadSpaceId != threadSpaceId)
             {
@@ -331,9 +333,9 @@ public sealed class ThreadSpaceManager(IThreadSpaceStore threadSpaces, ISessionS
     public async Task ArchiveAsync(ThreadSpaceId threadSpaceId, CancellationToken cancellationToken = default)
     {
         var existing = await GetAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);
-        if (existing.IsInit)
+        if (existing.IsGlobal)
         {
-            throw new InvalidOperationException("Reserved 'init' ThreadSpace cannot be archived.");
+            throw new InvalidOperationException("Reserved 'global' ThreadSpace cannot be archived.");
         }
 
         await threadSpaces.ArchiveAsync(threadSpaceId, cancellationToken).ConfigureAwait(false);

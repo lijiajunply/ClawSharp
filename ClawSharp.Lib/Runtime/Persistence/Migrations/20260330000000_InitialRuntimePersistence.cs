@@ -15,7 +15,7 @@ internal sealed class InitialRuntimePersistence : Migration
             {
                 thread_space_id = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                 name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                bound_folder_path = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: false),
+                bound_folder_path = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: true),                
                 is_init = table.Column<bool>(type: "INTEGER", nullable: false),
                 created_at = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
                 archived_at = table.Column<DateTimeOffset>(type: "TEXT", nullable: true)
@@ -116,7 +116,8 @@ internal sealed class InitialRuntimePersistence : Migration
             name: "IX_thread_spaces_bound_folder_path",
             table: "thread_spaces",
             column: "bound_folder_path",
-            unique: true);
+            unique: true,
+            filter: "bound_folder_path IS NOT NULL");
 
         migrationBuilder.CreateIndex(
             name: "IX_thread_spaces_name",

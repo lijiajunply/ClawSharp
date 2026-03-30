@@ -138,9 +138,9 @@ public static class SpaceCommands
                 grid.AddColumn();
                 grid.AddRow("[yellow]ID:[/]", space.ThreadSpaceId.Value);
                 grid.AddRow("[yellow]Name:[/]", space.Name.EscapeMarkup());
-                grid.AddRow("[yellow]Path:[/]", space.BoundFolderPath.EscapeMarkup());
+                grid.AddRow("[yellow]Path:[/]", (space.BoundFolderPath ?? "[global]").EscapeMarkup());
                 grid.AddRow("[yellow]Created:[/]", space.CreatedAt.ToString("F"));
-                grid.AddRow("[yellow]Is Init:[/]", space.IsInit.ToString());
+                grid.AddRow("[yellow]Is Global:[/]", space.IsGlobal.ToString());
                 if (space.ArchivedAt.HasValue)
                 {
                     grid.AddRow("[red]Archived:[/]", space.ArchivedAt.Value.ToString("F"));

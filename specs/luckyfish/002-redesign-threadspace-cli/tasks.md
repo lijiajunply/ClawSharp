@@ -44,7 +44,7 @@
 
 - [ ] T011 [US1] Update `Program.cs` to set `rootCommand` handler to `ChatCommand.RunAsync`
 - [ ] T012 [US1] Basic REPL rewrite in `ClawSharp.CLI/Commands/ChatCommand.cs` to initialize Global TS on start
-- [ ] T013 [US1] Implement welcome header and `[global] > ` prompt in `ClawSharp.CLI/Commands/ChatCommand.cs`
+- [ ] T013 [US1] Implement welcome header, `[global] > ` prompt (blue/white), and truncation logic for prompts in `ClawSharp.CLI/Commands/ChatCommand.cs`
 - [ ] T014 [US1] Implement message loop with stream rendering in `ClawSharp.CLI/Commands/ChatCommand.cs`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
@@ -106,6 +106,7 @@
 - [ ] T024 [P] Update `README_en.md` and `README.md` to reflect new CLI behavior
 - [ ] T025 Run `quickstart.md` validation scenarios for final sign-off
 - [ ] T026 Code cleanup and refactor shared REPL logic in `ChatCommand.cs`
+- [ ] T027 [SC-002] Performance Verification: Measure CLI startup time (Target: < 3s)
 
 ---
 

@@ -172,7 +172,6 @@ internal sealed class ClawDbContextModelSnapshot : ModelSnapshot
                 .HasColumnName("archived_at");
 
             b.Property<string>("BoundFolderPath")
-                .IsRequired()
                 .HasColumnType("TEXT")
                 .HasColumnName("bound_folder_path")
                 .HasMaxLength(1024);
@@ -181,9 +180,9 @@ internal sealed class ClawDbContextModelSnapshot : ModelSnapshot
                 .HasColumnType("TEXT")
                 .HasColumnName("created_at");
 
-            b.Property<bool>("IsInit")
+            b.Property<bool>("IsGlobal")
                 .HasColumnType("INTEGER")
-                .HasColumnName("is_init");
+                .HasColumnName("is_global");
 
             b.Property<string>("Name")
                 .IsRequired()
@@ -194,7 +193,8 @@ internal sealed class ClawDbContextModelSnapshot : ModelSnapshot
             b.HasKey("ThreadSpaceId");
 
             b.HasIndex("BoundFolderPath")
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("bound_folder_path IS NOT NULL");
 
             b.HasIndex("Name")
                 .IsUnique();

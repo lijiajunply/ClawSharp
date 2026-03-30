@@ -13,7 +13,7 @@ public sealed class ThreadSpaceTests : IDisposable
     }
 
     [Fact]
-    public async Task ThreadSpaceManager_EnsuresSingleInitBoundToWorkspaceRoot()
+    public async Task ThreadSpaceManager_EnsuresSingleGlobalThreadSpace()
     {
         var options = CreateOptions("threadspaces.db");
         var store = new SqliteThreadSpaceStore(options);
@@ -24,9 +24,9 @@ public sealed class ThreadSpaceTests : IDisposable
         var second = await manager.EnsureDefaultAsync();
         var all = await manager.ListAsync();
 
-        Assert.Equal("init", first.Name);
-        Assert.True(first.IsInit);
-        Assert.Equal(Path.GetFullPath(_root), first.BoundFolderPath);
+        Assert.Equal("global", first.Name);
+        Assert.True(first.IsGlobal);
+        Assert.Null(first.BoundFolderPath);
         Assert.Equal(first.ThreadSpaceId, second.ThreadSpaceId);
         Assert.Single(all);
     }
@@ -79,8 +79,8 @@ public sealed class ThreadSpaceTests : IDisposable
         var docs = await manager.CreateAsync(new CreateThreadSpaceRequest("docs", Path.Combine(_root, "docs")));
         var notes = await manager.CreateAsync(new CreateThreadSpaceRequest("notes", Path.Combine(_root, "notes")));
 
-        var docsSession = await sessionManager.StartAsync("planner", docs.ThreadSpaceId, docs.BoundFolderPath);
-        await sessionManager.StartAsync("planner", notes.ThreadSpaceId, notes.BoundFolderPath);
+        var docsSession = await sessionManager.StartAsync("planner", docs.ThreadSpaceId, docs.BoundFolderPath ?? _root);
+        await sessionManager.StartAsync("planner", notes.ThreadSpaceId, notes.BoundFolderPath ?? _root);
 
         var sessions = await manager.ListSessionsAsync(docs.ThreadSpaceId);
 
@@ -96,14 +96,14 @@ public sealed class ThreadSpaceTests : IDisposable
         var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
 
-        var init = await threadSpaceStore.GetByNameAsync("init");
-        Assert.NotNull(init);
+        var global = await threadSpaceStore.GetByNameAsync("global");
+        Assert.NotNull(global);
 
-        await sessionStore.CreateAsync(new SessionRecord(new SessionId("compat-session"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
+        await sessionStore.CreateAsync(new SessionRecord(new SessionId("compat-session"), global!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
 
         var loaded = await sessionStore.GetAsync(new SessionId("compat-session"));
         Assert.NotNull(loaded);
-        Assert.Equal(init.ThreadSpaceId, loaded!.ThreadSpaceId);
+        Assert.Equal(global.ThreadSpaceId, loaded!.ThreadSpaceId);
     }
 
     private ClawOptions CreateOptions(string databaseFile) => new()

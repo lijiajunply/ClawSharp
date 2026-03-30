@@ -53,7 +53,7 @@ internal sealed class EfThreadSpaceRepository(IDbContextFactory<ClawDbContext> d
         }
 
         return await query
-            .OrderBy(x => x.IsInit ? 0 : 1)
+            .OrderBy(x => x.IsGlobal ? 0 : 1)
             .ThenBy(x => x.Name)
             .Select(x => RuntimeEntityMapper.ToRecord(x))
             .ToListAsync(cancellationToken)
@@ -69,7 +69,7 @@ internal sealed class EfThreadSpaceRepository(IDbContextFactory<ClawDbContext> d
         {
             entity.Name = threadSpace.Name;
             entity.BoundFolderPath = threadSpace.BoundFolderPath;
-            entity.IsInit = threadSpace.IsInit;
+            entity.IsGlobal = threadSpace.IsGlobal;
             entity.ArchivedAt = threadSpace.ArchivedAt;
             await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

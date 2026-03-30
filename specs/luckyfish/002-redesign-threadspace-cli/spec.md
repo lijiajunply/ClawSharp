@@ -86,13 +86,21 @@
 - **FR-003**: `ThreadSpaceRecord` 的 `BoundFolderPath` MUST 变为可选字段，全局 ThreadSpace 可不携带目录绑定。
 - **FR-004**: 全局 ThreadSpace MUST 通过特殊标志（如 `IsGlobal`）与目录绑定的 ThreadSpace 区分。
 - **FR-005**: REPL 启动时 MUST 显示欢迎头部，包含：应用名称/版本、当前活跃 Agent 名称、当前 ThreadSpace 名称。
-- **FR-006**: 提示符 MUST 以简洁的上下文标识 + 输入指示符呈现（例如 `[global] > ` 或 `[project-name] > `）。
-- **FR-007**: REPL MUST 支持以下斜杠命令：`/help`（显示帮助）、`/new`（新建会话）、`/resume`（恢复上次会话）、`/cd <path>`（切换目录上下文）、`/clear`（清屏）、`/quit` / `/exit`（退出）。
+- **FR-006**: 提示符 MUST 以简洁的上下文标识 + 输入指示符呈现。
+  - **样式示例**: 全局模式为 `[global] > ` (蓝白风格)；项目模式为 `[project-name] > ` (青色风格)。
+  - **截断逻辑**: 若项目名称超过 20 个字符，MUST 截断显示（如 `very-long-project-na...`）。
+- **FR-007**: REPL MUST 支持以下斜杠命令：
+  - `/help`: 显示结构化帮助表格。
+  - `/new`: 在当前 ThreadSpace 下创建新会话。
+  - `/resume`: 加载当前 ThreadSpace 中最近一次活跃会话。
+  - `/cd <path>`: 切换到指定目录绑定的 ThreadSpace。
+  - `/home`: 切换回全局 ThreadSpace（等同于不带参数的 `/cd`）。
+  - `/clear`: 清除屏幕内容。
+  - `/quit` / `/exit`: 干净退出 REPL。
 - **FR-008**: 用户输入 `/new` 时，系统 MUST 在当前 ThreadSpace 下创建新会话，并清空当前显示的对话历史。
 - **FR-009**: 用户输入 `/resume` 时，系统 MUST 加载当前 ThreadSpace 中最近一次活跃会话的消息历史并继续对话。
 - **FR-010**: 用户输入 `/cd <path>` 时，系统 MUST 自动创建或复用与该路径绑定的 ThreadSpace，并切换到该 ThreadSpace 的最近会话（不存在则创建新会话）。
 - **FR-011**: 用户输入未知斜杠命令时，系统 MUST 显示友好提示，不崩溃也不将其当作对话消息发送给 Agent。
-- **FR-012**: `claw chat` 子命令 MUST 保留以维持向后兼容，其行为与直接执行 `claw` 相同。
 
 ### Key Entities
 

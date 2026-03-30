@@ -21,8 +21,8 @@ public static class ListCommand
                 await runtime.InitializeAsync();
 
                 var kernel = host.Services.GetRequiredService<IClawKernel>();
-                var initSpace = await kernel.ThreadSpaces.GetInitAsync();
-                var sessions = await kernel.ThreadSpaces.ListSessionsAsync(initSpace.ThreadSpaceId);
+                var globalSpace = await kernel.ThreadSpaces.GetGlobalAsync();
+                var sessions = await kernel.ThreadSpaces.ListSessionsAsync(globalSpace.ThreadSpaceId);
 
                 var table = new Table();
                 table.AddColumn("Session ID");

@@ -23,9 +23,10 @@ public sealed class SessionStoreTests : IDisposable
         var sessionStore = new SqliteSessionStore(options);
         var historyStore = new SqlitePromptHistoryStore(options);
         var eventStore = new SqliteSessionEventStore(options);
-        var init = await threadSpaceStore.GetByNameAsync("init");
+        var manager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        var global = await manager.EnsureDefaultAsync();
 
-        var session = new SessionRecord(new SessionId("session-a"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var session = new SessionRecord(new SessionId("session-a"), global.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(session);
 
         var turnId = new TurnId("turn-a");
@@ -55,8 +56,9 @@ public sealed class SessionStoreTests : IDisposable
 
         var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
-        var init = await threadSpaceStore.GetByNameAsync("init");
-        await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
+        var manager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        var global = await manager.EnsureDefaultAsync();
+        await sessionStore.CreateAsync(new SessionRecord(new SessionId("legacy-session"), global.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow));
 
         Assert.True(File.Exists(legacyPath));
     }
@@ -68,8 +70,9 @@ public sealed class SessionStoreTests : IDisposable
         var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var historyStore = new SqlitePromptHistoryStore(options);
         var sessionStore = new SqliteSessionStore(options);
-        var init = await threadSpaceStore.GetByNameAsync("init");
-        var session = new SessionRecord(new SessionId("session-blocks"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var manager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        var global = await manager.EnsureDefaultAsync();
+        var session = new SessionRecord(new SessionId("session-blocks"), global.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(session);
 
         var turnId = new TurnId("turn-blocks");
@@ -110,10 +113,10 @@ public sealed class SessionStoreTests : IDisposable
         var sessionStore = provider.GetRequiredService<ISessionStore>();
         var historyStore = provider.GetRequiredService<IPromptHistoryStore>();
         var eventStore = provider.GetRequiredService<ISessionEventStore>();
-        var threadSpaces = provider.GetRequiredService<IThreadSpaceStore>();
+        var threadSpaceManager = provider.GetRequiredService<IThreadSpaceManager>();
 
-        var init = await threadSpaces.GetByNameAsync("init");
-        var session = new SessionRecord(new SessionId("di-session"), init!.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var global = await threadSpaceManager.EnsureDefaultAsync();
+        var session = new SessionRecord(new SessionId("di-session"), global.ThreadSpaceId, "planner", _root, SessionStatus.Created, DateTimeOffset.UtcNow);
         await sessionStore.CreateAsync(session);
         await historyStore.AppendAsync(session.SessionId, new TurnId("di-turn"), PromptMessageRole.User, "hello");
         await eventStore.AppendAsync(session.SessionId, new TurnId("di-turn"), "TurnCompleted", TestHelpers.Json(new { ok = true }));
