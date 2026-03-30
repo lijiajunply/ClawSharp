@@ -143,6 +143,29 @@ public async Task ConfigManager_CanReset()
     Assert.False(File.Exists(localJson));
 }
 
+    [Fact]
+    public async Task ConfigBootstrapper_GeneratesValidJson()
+    {
+        var bootstrapper = new ConfigBootstrapper();
+        var config = new BootstrapConfig
+        {
+            WorkspaceRoot = "/tmp/ws",
+            DataPath = ".data",
+            DefaultProvider = "openai",
+            ProviderType = "openai-responses",
+            ApiKey = "sk-test"
+        };
+
+        var json = bootstrapper.GenerateConfigJson(config);
+        
+        Assert.Contains("\"WorkspaceRoot\": \"/tmp/ws\"", json);
+        Assert.Contains("\"ApiKey\": \"sk-test\"", json);
+
+        var path = Path.Combine(_root, "appsettings.json");
+        await bootstrapper.SaveConfigAsync(path, json);
+        Assert.True(File.Exists(path));
+    }
+
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("Runtime__WorkspaceRoot", null);

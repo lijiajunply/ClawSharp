@@ -1,128 +1,82 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: Configuration Bootstrap Wizard
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
+**Feature Branch**: `luckyfish/002-config-bootstrap`  
+**Created**: 2026-03-30  
 **Status**: Draft  
-**Input**: User description: "$ARGUMENTS"
+**Input**: User description: "当没有 appsettings.json 时，进入 ClawSharp 的初始化环节，通过引导生成全新的配置文件"
 
 ## User Scenarios & Testing *(mandatory)*
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+### User Story 1 - Initial Setup Wizard (Priority: P1)
 
-### User Story 1 - [Brief Title] (Priority: P1)
+As a new user who just installed ClawSharp, I want to be guided through the initial configuration so that I don't have to manually create a JSON file.
 
-[Describe this user journey in plain language]
+**Why this priority**: Essential for the first-run experience and user onboarding.
 
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Independent Test**: Can be tested by deleting `appsettings.json` and running any `claw` command, then following the prompts to generate a new file.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** `appsettings.json` does not exist, **When** I run `claw chat`, **Then** the system should display a welcome message and start an interactive configuration wizard.
+2. **Given** the wizard is active, **When** I provide basic settings (workspace, provider, api key), **Then** the system should generate a valid `appsettings.json` and proceed with the original command.
 
 ---
 
-### User Story 2 - [Brief Title] (Priority: P2)
+### User Story 2 - Skip or Default Wizard (Priority: P2)
 
-[Describe this user journey in plain language]
+As an experienced user, I want to quickly bypass the wizard using default values so that I can get started as fast as possible.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: Improves UX for power users.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: Can be tested by pressing Enter at all prompts in the wizard.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** the wizard is active, **When** I press Enter at all prompts, **Then** the system should generate a configuration with sensible default values.
 
 ---
 
-### User Story 3 - [Brief Title] (Priority: P3)
+### User Story 3 - Interactive Provider Selection (Priority: P2)
 
-[Describe this user journey in plain language]
+As a user, I want to choose my preferred AI provider from a list during setup so that I don't have to remember the exact provider type names.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: Reduces friction and prevents configuration errors.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: Can be tested by selecting a provider from the list in the wizard.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-
----
-
-[Add more user stories as needed, each with an assigned priority]
-
-### Edge Cases
-
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
-
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
+1. **Given** the wizard is at the "Provider" step, **When** I see a selection list of providers (OpenAI, Anthropic, Gemini, etc.), **Then** I should be able to select one using arrow keys.
 
 ## Requirements *(mandatory)*
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
-
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: System MUST detect the absence of `appsettings.json` in the current working directory.
+- **FR-002**: System MUST launch an interactive wizard if `appsettings.json` is missing.
+- **FR-003**: Wizard MUST prompt for `Runtime:WorkspaceRoot` (default: current directory).
+- **FR-004**: Wizard MUST prompt for `Runtime:DataPath` (default: `.clawsharp`).
+- **FR-005**: Wizard MUST provide a selection list for `Providers:DefaultProvider`.
+- **FR-006**: Wizard MUST allow entering an API key for the selected provider (using masked input).
+- **FR-007**: System MUST write the gathered configuration to `appsettings.json` in a pretty-printed format.
+- **FR-008**: System MUST automatically proceed with the execution of the original command after successful configuration generation.
+- **FR-009**: If `appsettings.json` is missing but `appsettings.Local.json` exists, system MUST alert the user and ask if they want to proceed with the wizard or use the existing local configuration.
 
-*Example of marking unclear requirements:*
+### Key Entities
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
-
-### Key Entities *(include if feature involves data)*
-
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
+- **BootstrapWizard**: The CLI component responsible for user interaction.
+- **ConfigurationTemplate**: A template for the default configuration structure.
 
 ## Success Criteria *(mandatory)*
 
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
-
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: A new user can generate a functional configuration file in under 60 seconds.
+- **SC-002**: Generated `appsettings.json` is a valid JSON that can be loaded by the existing `ClawConfigurationLoader`.
+- **SC-003**: No "file not found" errors are shown to the user when starting from scratch.
 
 ## Assumptions
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right assumptions based on reasonable defaults
-  chosen when the feature description did not specify certain details.
--->
-
-- [Assumption about target users, e.g., "Users have stable internet connectivity"]
-- [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
-- [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
-- [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+- The CLI has write permissions in the current working directory.
+- `Spectre.Console` is available for building the wizard UI.
+- Users have at least one AI provider API key or intend to use a stub provider for testing.

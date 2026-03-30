@@ -3,6 +3,13 @@ using ClawSharp.CLI.Commands;
 using ClawSharp.CLI.Infrastructure;
 using Microsoft.Extensions.Hosting;
 
+// 1. 引导检查 (Bootstrap Check)
+if (!await BootstrapWizard.RunAsync())
+{
+    return 1;
+}
+
+// 2. 构建宿主 (Build Host)
 var host = ServiceConfigurator.BuildHost(args);
 
 var rootCommand = new RootCommand("ClawSharp CLI - Local-first AI application kernel");
