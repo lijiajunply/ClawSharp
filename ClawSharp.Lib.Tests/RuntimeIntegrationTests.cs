@@ -1,7 +1,9 @@
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Core;
 using ClawSharp.Lib.Memory;
 using ClawSharp.Lib.Mcp;
+using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Runtime;
 using ClawSharp.Lib.Skills;
@@ -316,7 +318,8 @@ data: {"type":"message_stop"}
             threadSpaceManager,
             historyStore,
             eventStore,
-            resolver);
+            resolver,
+            new FakeProjectScaffolder());
 
         return new ClawRuntime(
             kernel,
@@ -403,7 +406,8 @@ data: {"type":"message_stop"}
             threadSpaceManager,
             historyStore,
             eventStore,
-            resolver);
+            resolver,
+            new FakeProjectScaffolder());
 
         return new ClawRuntime(
             kernel,
@@ -489,7 +493,8 @@ data: {"type":"message_stop"}
             threadSpaceManager,
             historyStore,
             eventStore,
-            resolver);
+            resolver,
+            new FakeProjectScaffolder());
 
         return new ClawRuntime(
             kernel,
@@ -523,6 +528,15 @@ data: {"type":"message_stop"}
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(responder(request));
+    }
+
+    private sealed class FakeProjectScaffolder : IProjectScaffolder
+    {
+        public Task<IReadOnlyList<ProjectTemplateDefinition>> ListTemplatesAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ProjectTemplateDefinition>>(Array.Empty<ProjectTemplateDefinition>());
+
+        public Task<OperationResult<CreateProjectResult>> CreateProjectAsync(CreateProjectRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(OperationResult<CreateProjectResult>.Failure("Fake scaffolder always fails."));
     }
 
     public void Dispose()

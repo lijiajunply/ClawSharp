@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -68,10 +69,21 @@ public static class ChatCommand
             }
             AnsiConsole.WriteLine();
 
+            // Initialize prompt handler with suggestions
+            var promptHandler = new ReplPrompt();
+            promptHandler.AddSuggestions(new[] { "/help", "/new", "/resume", "/cd", "/home", "/clear", "/quit", "/exit", "/init", "/init-proj" });
+            promptHandler.AddSuggestions(kernel.Agents.GetAll().Select(a => a.Id));
+
+            // Load persistent history
+            var historyDir = Path.Combine(options.Runtime.WorkspaceRoot, options.Runtime.DataPath);
+            Directory.CreateDirectory(historyDir);
+            var historyFile = Path.Combine(historyDir, "cli_history.txt");
+            promptHandler.LoadHistory(historyFile);
+
             while (true)
             {
-                var prompt = GetPrompt(currentThreadSpace);
-                var input = AnsiConsole.Ask<string>(prompt);
+                var promptMarkup = GetPrompt(currentThreadSpace);
+                var input = await promptHandler.AskAsync(promptMarkup);
                 if (input == null!) break;
 
                 var trimmedInput = input.Trim();
@@ -155,6 +167,78 @@ public static class ChatCommand
                                 AnsiConsole.MarkupLine($"[bold blue]Switched to space:[/] [green]{currentThreadSpace.Name.EscapeMarkup()}[/]");
                             }
                             continue;
+                        case "/init":
+                            {
+                                var targetDir = currentThreadSpace.BoundFolderPath ?? Directory.GetCurrentDirectory();
+                                var agentFile = Path.Combine(targetDir, "agent.md");
+                                
+                                if (File.Exists(agentFile))
+                                {
+                                    AnsiConsole.MarkupLine($"[yellow]File already exists: {agentFile.EscapeMarkup()}[/]");
+                                    continue;
+                                }
+
+                                string template;
+                                var templatePath = Path.Combine(options.Runtime.WorkspaceRoot, ".specify/templates/agent-file-template.md");
+                                if (File.Exists(templatePath))
+                                {
+                                    template = await File.ReadAllTextAsync(templatePath);
+                                }
+                                else
+                                {
+                                    template = "---\nid: my-agent\nname: My Agent\n---\n\nHello, I am your new agent.";
+                                }
+
+                                await File.WriteAllTextAsync(agentFile, template);
+                                AnsiConsole.MarkupLine($"[green]Created agent definition:[/] [blue]{agentFile.EscapeMarkup()}[/]");
+                                
+                                // Reload registry to pick up the new agent
+                                await runtime.InitializeAsync();
+                            }
+                            continue;
+                        case "/init-proj":
+                            {
+                                var templates = await kernel.Projects.ListTemplatesAsync();
+                                if (templates.Count == 0)
+                                {
+                                    AnsiConsole.MarkupLine("[yellow]No project templates found.[/]");
+                                    continue;
+                                }
+
+                                var selectedTemplate = AnsiConsole.Prompt(
+                                    new SelectionPrompt<ProjectTemplateDefinition>()
+                                        .Title("Select a project template:")
+                                        .AddChoices(templates)
+                                        .UseConverter(t => $"{t.Name} ({t.Id})"));
+
+                                var projectName = AnsiConsole.Ask<string>("Enter project name:", "my-new-project");
+                                var targetDir = currentThreadSpace.BoundFolderPath ?? Directory.GetCurrentDirectory();
+                                var projectPath = Path.Combine(targetDir, projectName);
+
+                                var request = new CreateProjectRequest(
+                                    selectedTemplate.Id,
+                                    projectName,
+                                    projectPath,
+                                    new Dictionary<string, string>
+                                    {
+                                        ["ProjectName"] = projectName,
+                                        ["Author"] = Environment.UserName,
+                                        ["Date"] = DateTime.Now.ToString("yyyy-MM-dd")
+                                    });
+
+                                var result = await kernel.Projects.CreateProjectAsync(request);
+                                if (result is { IsSuccess: true, Value: var projectResult })
+                                {
+                                    AnsiConsole.MarkupLine($"[green]Project created successfully at:[/] [blue]{projectResult.ProjectRootPath.EscapeMarkup()}[/]");
+                                    AnsiConsole.MarkupLine("[grey]Type /cd <path> to switch to the new project space.[/]");
+                                }
+                                else
+                                {
+                                    AnsiConsole.MarkupLine($"[red]Failed to create project: {result.Error?.EscapeMarkup() ?? "Unknown error"}[/]");
+                                }
+
+                            }
+                            continue;
                         default:
                             AnsiConsole.MarkupLine($"[yellow]Unknown command: {cmd}. Type /help to see available commands.[/]");
                             continue;
@@ -226,6 +310,8 @@ public static class ChatCommand
         table.AddRow("/cd <path>", "Switch to a directory-bound space");
         table.AddRow("/home", "Switch back to global space");
         table.AddRow("/clear", "Clear terminal screen");
+        table.AddRow("/init", "Initialize an agent definition (agent.md) in current space");
+        table.AddRow("/init-proj", "Scaffold a new project from templates");
         table.AddRow("/quit, /exit", "Exit the REPL");
         AnsiConsole.Write(table);
     }

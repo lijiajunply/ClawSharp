@@ -105,16 +105,21 @@ ClawSharp now separates three layers of workspace concepts:
 
 Simply run `claw` to enter REPL mode. By default, it starts a conversation in the `global` ThreadSpace.
 
+**Interactive Features:**
+- **Intelligent Suggestions**: Displays grey "ghost text" suggestions as you type; press `Tab` or `→` to complete.
+- **Persistent History**: Use Up/Down arrows to navigate command history, saved across sessions in `.clawsharp/cli_history.txt`.
+- **Shortcuts**: `Ctrl+U` to quickly clear the current line.
+
 Supported slash commands:
 - `/help`: Show help
 - `/new`: Start a new session
 - `/resume`: Resume the last session
 - `/cd <path>`: Switch to a specific directory-bound workspace
 - `/home`: Return to the global space
+- `/init`: Initialize an `agent.md` definition in the current space
+- `/init-proj`: Interactively scaffold a new project from templates
 - `/clear`: Clear screen
-- `/quit`: Exit the REPL
-
-The prompt automatically updates based on the current space, e.g., `[global] > ` or `[my-project] > `. Project names are truncated if they are too long.
+- `/quit, /exit`: Exit the REPL
 
 ## Provider Support
 

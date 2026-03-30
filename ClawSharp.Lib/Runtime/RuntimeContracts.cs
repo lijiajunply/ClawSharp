@@ -6,6 +6,7 @@ using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
 using System.Text.Json;
+using ClawSharp.Lib.Projects;
 
 namespace ClawSharp.Lib.Runtime;
 
@@ -119,6 +120,11 @@ public interface IClawKernel
     /// provider 解析器。
     /// </summary>
     IModelProviderResolver Providers { get; }
+
+    /// <summary>
+    /// 项目脚手架生成器。
+    /// </summary>
+    IProjectScaffolder Projects { get; }
 }
 
 /// <summary>
@@ -238,7 +244,8 @@ public sealed class ClawKernel(
     IThreadSpaceManager threadSpaces,
     IPromptHistoryStore history,
     ISessionEventStore events,
-    IModelProviderResolver providers) : IClawKernel
+    IModelProviderResolver providers,
+    IProjectScaffolder projects) : IClawKernel
 {
     /// <inheritdoc />
     public ClawOptions Options => options;
@@ -272,6 +279,9 @@ public sealed class ClawKernel(
 
     /// <inheritdoc />
     public IModelProviderResolver Providers => providers;
+
+    /// <inheritdoc />
+    public IProjectScaffolder Projects => projects;
 }
 
 /// <summary>
