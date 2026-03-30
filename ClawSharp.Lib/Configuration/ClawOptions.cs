@@ -136,6 +136,32 @@ public sealed class ToolOptions
     /// 工具安全策略配置。
     /// </summary>
     public ToolSecurityOptions Security { get; set; } = new();
+
+    /// <summary>
+    /// 联网搜索工具配置。
+    /// </summary>
+    public SearchOptions Search { get; set; } = new();
+}
+
+/// <summary>
+/// 联网搜索工具的详细配置。
+/// </summary>
+public sealed class SearchOptions
+{
+    /// <summary>
+    /// 搜索提供商，例如 <c>duckduckgo</c> (默认)、<c>google</c>、<c>bing</c>、<c>tavily</c>。
+    /// </summary>
+    public string Provider { get; set; } = "duckduckgo";
+
+    /// <summary>
+    /// 搜索 API Key（如果提供商需要）。
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// 默认搜索结果数量限制，默认为 5。
+    /// </summary>
+    public int DefaultLimit { get; set; } = 5;
 }
 
 /// <summary>

@@ -152,6 +152,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolExecutor, CsvReadTool>();
         services.AddSingleton<IToolExecutor, GitOpsTool>();
         services.AddSingleton<IToolExecutor, PdfReadTool>();
+        services.AddSingleton<IToolExecutor, WebSearchTool>();
 
         return services;
     }
