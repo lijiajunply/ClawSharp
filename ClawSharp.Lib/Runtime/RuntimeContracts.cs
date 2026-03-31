@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Memory;
@@ -473,6 +474,8 @@ public sealed class ClawRuntime(
 
         var assistant = new List<string>();
         var totalToolCalls = 0;
+        ModelUsage? latestUsage = null;
+        var turnTimer = Stopwatch.StartNew();
         bool turnSuccess = false;
 
         try
@@ -502,6 +505,12 @@ public sealed class ClawRuntime(
                     case "worker.tool.completed":
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallCompleted", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
                         yield return new RunTurnStreamEvent(Delta: "[Done]\n");
+                        break;
+                    case "worker.usage.updated":
+                        if (workerEvent.Payload.TryGetProperty("usage", out var usagePayload))
+                        {
+                            latestUsage = ParseUsage(usagePayload);
+                        }
                         break;
                     case "worker.error":
                         var errorMsg = workerEvent.Payload.TryGetProperty("message", out var m) ? m.GetString() : workerEvent.Payload.GetRawText();
@@ -535,6 +544,8 @@ public sealed class ClawRuntime(
                     {
                         content = finalAssistant,
                         toolCalls = totalToolCalls,
+                        usage = latestUsage,
+                        latencyMs = turnTimer.Elapsed.TotalMilliseconds,
                         blocks = string.IsNullOrWhiteSpace(finalAssistant)
                             ? Array.Empty<object>()
                             : new[]
@@ -562,6 +573,49 @@ public sealed class ClawRuntime(
                 await sessionStore.UpdateStatusAsync(sessionId, status, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
             }
         }
+    }
+
+    private static ModelUsage? ParseUsage(JsonElement usagePayload)
+    {
+        var inputTokens = ReadInt32(usagePayload, "InputTokens", "input_tokens", "PromptTokens", "prompt_tokens");
+        var outputTokens = ReadInt32(usagePayload, "OutputTokens", "output_tokens", "CompletionTokens", "completion_tokens");
+        var totalTokens = ReadInt32(usagePayload, "TotalTokens", "total_tokens");
+
+        if (inputTokens == 0 && outputTokens == 0 && totalTokens == 0)
+        {
+            return null;
+        }
+
+        if (totalTokens == 0)
+        {
+            totalTokens = inputTokens + outputTokens;
+        }
+
+        return new ModelUsage(inputTokens, outputTokens, totalTokens);
+    }
+
+    private static int ReadInt32(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (!element.TryGetProperty(propertyName, out var value))
+            {
+                continue;
+            }
+
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
+            {
+                return number;
+            }
+
+            if (value.ValueKind == JsonValueKind.String
+                && int.TryParse(value.GetString(), out number))
+            {
+                return number;
+            }
+        }
+
+        return 0;
     }
 
     /// <inheritdoc />

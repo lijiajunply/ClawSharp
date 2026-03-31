@@ -17,6 +17,7 @@ rootCommand.AddCommand(InitCommand.Create(host));
 rootCommand.AddCommand(ChatCommand.Create(host));
 rootCommand.AddCommand(ListCommand.Create(host));
 rootCommand.AddCommand(HistoryCommand.Create(host));
+rootCommand.AddCommand(StatsCommands.Create(host));
 rootCommand.AddCommand(SpaceCommands.Create(host));
 rootCommand.AddCommand(ConfigCommands.Create(host));
 rootCommand.AddCommand(RegistryCommands.CreateAgents(host));

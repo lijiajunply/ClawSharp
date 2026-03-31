@@ -37,6 +37,8 @@ riderModule.iml
 appsettings.Local.json
 .env*
 .idea/
+.vscode/
 Thumbs.db
 *.tmp
 *.swp
+*.log

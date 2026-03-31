@@ -16,7 +16,7 @@ public sealed class AnalyticsTests : IDisposable
     }
 
     [Fact]
-    public async Task SessionAnalyticsService_RebuildsDuckDbAndReturnsAggregates()
+    public async Task SessionAnalyticsService_RebuildsDuckDbAndReturnsAggregatesAndMetrics()
     {
         var options = CreateOptions(enabled: true);
         var threadSpaceStore = new SqliteThreadSpaceStore(options);
@@ -42,11 +42,32 @@ public sealed class AnalyticsTests : IDisposable
         await historyStore.AppendAsync(sessionB.SessionId, new TurnId("turn-2"), PromptMessageRole.User, "again");
         await historyStore.AppendBlocksAsync(sessionB.SessionId, new TurnId("turn-2"), PromptMessageRole.Tool,
             [new ModelToolResultBlock("call_1", """{"ok":true}""", "system.info")]);
-        await eventStore.AppendAsync(sessionA.SessionId, new TurnId("turn-1"), "TurnCompleted", TestHelpers.Json(new { ok = true }));
-        await eventStore.AppendAsync(sessionB.SessionId, new TurnId("turn-2"), "ToolCallCompleted", TestHelpers.Json(new { ok = true }));
+        await eventStore.AppendAsync(sessionA.SessionId, new TurnId("turn-1"), "TurnCompleted", TestHelpers.Json(new
+        {
+            content = "world",
+            toolCalls = 1,
+            usage = new
+            {
+                InputTokens = 11,
+                OutputTokens = 7,
+                TotalTokens = 18
+            },
+            latencyMs = 245.5
+        }));
+        await eventStore.AppendAsync(sessionB.SessionId, new TurnId("turn-2"), "ToolCallCompleted", TestHelpers.Json(new
+        {
+            toolCallId = "call_1",
+            status = "Success"
+        }));
 
-        var snapshot = await analytics.GetSnapshotAsync();
-        var snapshotAgain = await analytics.GetSnapshotAsync();
+        var rangeStart = DateTimeOffset.UtcNow.AddDays(-1);
+        var rangeEnd = DateTimeOffset.UtcNow.AddDays(1);
+
+        var snapshot = await analytics.GetSnapshotAsync(rangeStart, rangeEnd);
+        var snapshotAgain = await analytics.GetSnapshotAsync(rangeStart, rangeEnd);
+        var tokenTrend = await analytics.GetTokenUsageTrendAsync(rangeStart, rangeEnd);
+        var toolStats = await analytics.GetToolUsageStatsAsync(rangeStart, rangeEnd);
+        var agentPerformance = await analytics.GetAgentPerformanceAsync(rangeStart, rangeEnd);
 
         Assert.Equal(2, snapshot.TotalSessions);
         Assert.Equal(1, snapshot.ActiveSessions);
@@ -71,6 +92,21 @@ public sealed class AnalyticsTests : IDisposable
         Assert.Equal(snapshot.MessagesPerSession, snapshotAgain.MessagesPerSession);
         Assert.Equal(snapshot.BlocksByType, snapshotAgain.BlocksByType);
         Assert.Equal(snapshot.BlocksByRoleAndType, snapshotAgain.BlocksByRoleAndType);
+
+        var tokenMetric = Assert.Single(tokenTrend);
+        Assert.Equal(11, tokenMetric.InputTokens);
+        Assert.Equal(7, tokenMetric.OutputTokens);
+
+        var toolMetric = Assert.Single(toolStats);
+        Assert.Equal("system.info", toolMetric.ToolName);
+        Assert.Equal(1, toolMetric.CallCount);
+        Assert.Equal(1, toolMetric.SuccessCount);
+        Assert.Equal(0, toolMetric.FailureCount);
+
+        var agentMetric = Assert.Single(agentPerformance);
+        Assert.Equal("planner", agentMetric.AgentId);
+        Assert.Equal(245.5, agentMetric.AvgLatencyMs, 1);
+        Assert.Equal(1, agentMetric.RequestCount);
     }
 
     [Fact]
