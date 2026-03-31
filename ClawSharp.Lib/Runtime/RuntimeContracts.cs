@@ -358,12 +358,10 @@ public sealed class ClawRuntime(
         {
             try
             {
-                var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                var playwrightCache = OperatingSystem.IsWindows()
-                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright")
-                    : Path.Combine(userHome, ".cache", "ms-playwright");
-
-                if (!Directory.Exists(playwrightCache) || !Directory.EnumerateDirectories(playwrightCache, "chromium-*").Any())
+                var playwrightCaches = ResolvePlaywrightCachePaths();
+                if (!playwrightCaches.Any(path =>
+                        Directory.Exists(path) &&
+                        Directory.EnumerateDirectories(path, "chromium-*").Any()))
                 {
                     throw new EnvironmentDependencyException(
                         "web_browser",
@@ -384,6 +382,28 @@ public sealed class ClawRuntime(
                 Debug.WriteLine("Hint: 'markitdown' not found. Install it via 'pip install markitdown' for better PDF extraction quality.");
             }
         }
+    }
+
+    private static IReadOnlyList<string> ResolvePlaywrightCachePaths()
+    {
+        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var paths = new List<string>();
+
+        if (OperatingSystem.IsWindows())
+        {
+            paths.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright"));
+        }
+        else
+        {
+            paths.Add(Path.Combine(userHome, ".cache", "ms-playwright"));
+
+            if (OperatingSystem.IsMacOS())
+            {
+                paths.Add(Path.Combine(userHome, "Library", "Caches", "ms-playwright"));
+            }
+        }
+
+        return paths;
     }
 
     /// <summary>

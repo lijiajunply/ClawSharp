@@ -481,4 +481,9 @@ public sealed class ProjectOptions
     /// 项目模板目录。相对路径默认解析到 workspace 根目录下。
     /// </summary>
     public string TemplatesPath { get; set; } = "workspace/project-templates";
+
+    /// <summary>
+    /// SpecKit 根目录。相对路径默认解析到 workspace 根目录下。
+    /// </summary>
+    public string SpecKitPath { get; set; } = ".specify";
 }

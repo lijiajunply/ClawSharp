@@ -78,6 +78,11 @@ public static class ServiceCollectionExtensions
             options.Projects.TemplatesPath = Path.GetFullPath(Path.Combine(options.Runtime.WorkspaceRoot, options.Projects.TemplatesPath));
         }
 
+        if (!Path.IsPathRooted(options.Projects.SpecKitPath))
+        {
+            options.Projects.SpecKitPath = Path.GetFullPath(Path.Combine(options.Runtime.WorkspaceRoot, options.Projects.SpecKitPath));
+        }
+
         services.AddSingleton<IConfiguration>(configuration);
         services.AddSingleton(options);
         services.AddSingleton<IConfigManager>(sp => new ConfigManager(
@@ -135,8 +140,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IModelProviderRegistry, ModelProviderRegistry>();
         services.AddSingleton<IModelProviderResolver, ModelProviderResolver>();
         services.AddSingleton<MarkdownProjectTemplateParser>();
+        services.AddSingleton<ClawSharp.Lib.Markdown.MarkdownSectionParser>();
         services.AddSingleton<IProjectTemplateStore, FileSystemProjectTemplateStore>();
+        services.AddSingleton<ISpecKitProvider, FileSystemSpecKitProvider>();
         services.AddSingleton<IProjectScaffolder, ProjectScaffolder>();
+        services.AddSingleton<IScaffoldAnalyzer, ScaffoldAnalyzer>();
+        services.AddSingleton<IFeatureContextRepository, FeatureContextRepository>();
+        services.AddSingleton<IPlannerAgent, PlannerAgent>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
         services.AddSingleton<IMcpClientManager, McpClientManager>();
         services.AddSingleton<McpService>();

@@ -592,6 +592,10 @@ data: {"type":"message_stop"}
 
         public Task<OperationResult<CreateProjectResult>> CreateProjectAsync(CreateProjectRequest request, CancellationToken cancellationToken = default) =>
             Task.FromResult(OperationResult<CreateProjectResult>.Failure("Fake scaffolder always fails."));
+
+        public Task<OperationResult<ApplySpecKitResult>> ApplySpecKitAsync(string projectRoot, CancellationToken cancellationToken = default) =>
+            Task.FromResult(OperationResult<ApplySpecKitResult>.Success(
+                new ApplySpecKitResult(projectRoot, Array.Empty<string>(), Array.Empty<string>())));
     }
 
     public void Dispose()

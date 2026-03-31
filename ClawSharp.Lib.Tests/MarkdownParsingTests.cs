@@ -113,4 +113,30 @@ Console.WriteLine("hello");
 
         Assert.False(MarkdownCodeFenceDetector.ContainsFencedCodeBlock(markdown));
     }
+
+    [Fact]
+    public void MarkdownSectionParser_ExtractsNestedSectionBody()
+    {
+        const string markdown = """
+# Title
+
+## Summary
+Hello
+
+### Source Code
+
+```text
+demo.txt
+```
+
+## Next
+Done
+""";
+
+        var parser = new MarkdownSectionParser();
+
+        Assert.True(parser.TryGetSection(markdown, "Summary", out var section));
+        Assert.Contains("Hello", section);
+        Assert.DoesNotContain("Done", section);
+    }
 }

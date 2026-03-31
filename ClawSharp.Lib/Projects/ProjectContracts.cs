@@ -188,6 +188,13 @@ public interface IProjectScaffolder
     Task<OperationResult<CreateProjectResult>> CreateProjectAsync(
         CreateProjectRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 将 SpecKit 治理结构应用到指定项目目录。
+    /// </summary>
+    Task<OperationResult<ApplySpecKitResult>> ApplySpecKitAsync(
+        string projectRoot,
+        CancellationToken cancellationToken = default);
 }
 
 internal static partial class ProjectTemplateRenderer

@@ -8,7 +8,8 @@ namespace ClawSharp.Lib.Projects;
 /// </summary>
 public sealed class ProjectScaffolder(
     IProjectTemplateStore templateStore,
-    ClawOptions options) : IProjectScaffolder
+    ClawOptions options,
+    ISpecKitProvider specKitProvider) : IProjectScaffolder
 {
     /// <inheritdoc />
     public Task<IReadOnlyList<ProjectTemplateDefinition>> ListTemplatesAsync(
@@ -80,6 +81,15 @@ public sealed class ProjectScaffolder(
             await File.WriteAllTextAsync(readmePath, readmeContent, cancellationToken).ConfigureAwait(false);
             createdFiles.Add(readmePath);
 
+            var specKitResult = await ApplySpecKitAsync(projectRoot, cancellationToken).ConfigureAwait(false);
+            if (!specKitResult.IsSuccess)
+            {
+                return OperationResult<CreateProjectResult>.Failure(specKitResult.Error ?? "Failed to apply SpecKit.");
+            }
+
+            createdDirectories.AddRange(specKitResult.Value?.CreatedDirectories ?? []);
+            createdFiles.AddRange(specKitResult.Value?.CreatedFiles ?? []);
+
             return OperationResult<CreateProjectResult>.Success(
                 new CreateProjectResult(
                     template.Id,
@@ -95,6 +105,11 @@ public sealed class ProjectScaffolder(
             return OperationResult<CreateProjectResult>.Failure(ex.Message);
         }
     }
+
+    public Task<OperationResult<ApplySpecKitResult>> ApplySpecKitAsync(
+        string projectRoot,
+        CancellationToken cancellationToken = default) =>
+        specKitProvider.ApplyAsync(projectRoot, cancellationToken);
 
     private static IReadOnlyDictionary<string, string> BuildVariables(CreateProjectRequest request,
         ProjectTemplateDefinition template)

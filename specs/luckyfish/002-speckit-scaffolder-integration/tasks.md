@@ -12,9 +12,9 @@
 
 **Purpose**: 项目基础结构初始化与工具配置
 
-- [ ] T001 [P] 创建功能所需的目录结构 (specs/luckyfish/002-speckit-scaffolder-integration/contracts/)
-- [ ] T002 在 ClawSharp.Lib 中添加 YamlDotNet 依赖以便解析元数据
-- [ ] T003 [P] 配置测试环境，准备 xUnit 集成测试基础类
+- [X] T001 [P] 创建功能所需的目录结构 (specs/luckyfish/002-speckit-scaffolder-integration/contracts/)
+- [X] T002 在 ClawSharp.Lib 中添加 YamlDotNet 依赖以便解析元数据
+- [X] T003 [P] 配置测试环境，准备 xUnit 集成测试基础类
 
 ---
 
@@ -22,10 +22,10 @@
 
 **Purpose**: 核心基础设施，必须在任何用户故事实施前完成
 
-- [ ] T004 实现 `MarkdownSectionParser` 基础工具类，用于解析 Markdown 区块
-- [ ] T005 [P] 定义 `SpecKitDefinition` 和 `FeatureMetadata` 数据模型类
-- [ ] T006 在 `ClawOptions` 中增加 SpecKit 的配置路径
-- [ ] T007 实现 `FeatureContextRepository` 以便在 SQLite 中记录功能开发进度
+- [X] T004 实现 `MarkdownSectionParser` 基础工具类，用于解析 Markdown 区块
+- [X] T005 [P] 定义 `SpecKitDefinition` 和 `FeatureMetadata` 数据模型类
+- [X] T006 在 `ClawOptions` 中增加 SpecKit 的配置路径
+- [X] T007 实现 `FeatureContextRepository` 以便在 SQLite 中记录功能开发进度
 
 **Checkpoint**: 基础架构就绪 - 用户故事可以开始并行实施
 
@@ -39,11 +39,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 定义 `ISpecKitProvider` 接口及其在 `ClawSharp.Lib/Projects/SpecKitProvider.cs` 中的实现
-- [ ] T009 [P] [US1] 编写 SpecKit 资源嵌入逻辑（从 DLL 资源或固定目录读取模板）
-- [ ] T010 增强 `ClawSharp.Lib/Projects/IProjectScaffolder.cs` 接口，添加 `ApplySpecKitAsync` 方法
-- [ ] T011 [US1] 在 `ProjectScaffolder.cs` 的 `CreateProjectAsync` 流程末尾集成 SpecKit 注入
-- [ ] T012 [US1] 编写集成测试 `ClawSharp.Lib.Tests/ProjectScaffoldingTests.cs` 验证 SpecKit 注入逻辑
+- [X] T008 定义 `ISpecKitProvider` 接口及其在 `ClawSharp.Lib/Projects/SpecKitProvider.cs` 中的实现
+- [X] T009 [P] [US1] 编写 SpecKit 资源嵌入逻辑（从 DLL 资源或固定目录读取模板）
+- [X] T010 增强 `ClawSharp.Lib/Projects/IProjectScaffolder.cs` 接口，添加 `ApplySpecKitAsync` 方法
+- [X] T011 [US1] 在 `ProjectScaffolder.cs` 的 `CreateProjectAsync` 流程末尾集成 SpecKit 注入
+- [X] T012 [US1] 编写集成测试 `ClawSharp.Lib.Tests/ProjectScaffoldingTests.cs` 验证 SpecKit 注入逻辑
 
 **Checkpoint**: 用户故事 1 已完成，新创建的项目现在自动具备 SpecKit 治理能力
 
@@ -57,12 +57,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [P] [US2] 实现 `IScaffoldAnalyzer` 接口，用于对比 `plan.md` 与磁盘状态
-- [ ] T014 [US2] 编写 `ScaffoldAnalyzer` 逻辑，解析 `### Source Code` 区块提取文件清单
-- [ ] T015 [P] [US2] 实现 `IPlannerAgent` 及其在 `ClawSharp.Lib/Agents/PlannerAgent.cs` 中的自举逻辑
-- [ ] T016 [US2] 集成 Git 操作工具类，支持自动创建分支 `luckyfish/ID-ShortName`
-- [ ] T017 [US2] 实现占位文件生成逻辑，根据计划中的文件类型生成 C# 类或 Markdown
-- [ ] T018 [US2] 实现 `tasks.md` 自动生成逻辑，从 `plan.md` 提取里程碑
+- [X] T013 [P] [US2] 实现 `IScaffoldAnalyzer` 接口，用于对比 `plan.md` 与磁盘状态
+- [X] T014 [US2] 编写 `ScaffoldAnalyzer` 逻辑，解析 `### Source Code` 区块提取文件清单
+- [X] T015 [P] [US2] 实现 `IPlannerAgent` 及其在 `ClawSharp.Lib/Agents/PlannerAgent.cs` 中的自举逻辑
+- [X] T016 [US2] 集成 Git 操作工具类，支持自动创建分支 `luckyfish/ID-ShortName`
+- [X] T017 [US2] 实现占位文件生成逻辑，根据计划中的文件类型生成 C# 类或 Markdown
+- [X] T018 [US2] 实现 `tasks.md` 自动生成逻辑，从 `plan.md` 提取里程碑
 
 **Checkpoint**: 用户故事 2 已完成，Planner Agent 现在可以驱动物理脚手架的生成
 
@@ -76,11 +76,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [P] [US3] 创建 `ClawSharp.CLI/Commands/SpecKitCommands.cs` 并注册 `/speckit` 根命令
-- [ ] T020 [US3] 实现 `/speckit init` 子命令，调用现有的 `create-new-feature.sh` 逻辑
-- [ ] T021 [US3] 实现 `/speckit scaffold` 子命令，与 `IPlannerAgent` 交互
-- [ ] T022 [US3] 使用 `Spectre.Console` 实现交互式确认界面（显示建议的变更列表并等待确认）
-- [ ] T023 [US3] 集成文件监听钩子，当 `plan.md` 保存时在 CLI 中主动触发交互提示
+- [X] T019 [P] [US3] 创建 `ClawSharp.CLI/Commands/SpecKitCommands.cs` 并注册 `/speckit` 根命令
+- [X] T020 [US3] 实现 `/speckit init` 子命令，调用现有的 `create-new-feature.sh` 逻辑
+- [X] T021 [US3] 实现 `/speckit scaffold` 子命令，与 `IPlannerAgent` 交互
+- [X] T022 [US3] 使用 `Spectre.Console` 实现交互式确认界面（显示建议的变更列表并等待确认）
+- [X] T023 [US3] 集成文件监听钩子，当 `plan.md` 保存时在 CLI 中主动触发交互提示
 
 **Checkpoint**: 所有用户故事均已完成，SpecKit 工作流已完全集成到 CLI
 
@@ -88,9 +88,9 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T024 更新 `quickstart.md` 验证自举流程的完整性
-- [ ] T025 [P] 编写最终集成测试，模拟从初始化到功能脚手架生成的完整生命周期
-- [ ] T026 优化 `MarkdownSectionParser` 的异常处理和边缘情况处理
+- [X] T024 更新 `quickstart.md` 验证自举流程的完整性
+- [X] T025 [P] 编写最终集成测试，模拟从初始化到功能脚手架生成的完整生命周期
+- [X] T026 优化 `MarkdownSectionParser` 的异常处理和边缘情况处理
 
 ---
 

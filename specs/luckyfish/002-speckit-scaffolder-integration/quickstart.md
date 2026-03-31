@@ -16,9 +16,9 @@
 
 ## 4. 自举脚手架 (Self-Scaffolding)
 1. 确认 `plan.md` 中的 `### Source Code` 部分包含你要创建的文件。
-2. 保存 `plan.md`。
-3. 当 CLI 提示“是否执行脚手架生成？”时，输入 `y`。
-4. **结果**：系统自动创建 Git 分支、对应文件夹、占位代码文件，并生成 `tasks.md`。
+2. 运行 `speckit scaffold path/to/plan.md` 预览建议变更，或运行 `speckit watch path/to/plan.md` 进入监听模式。
+3. 当 CLI 提示“是否执行脚手架生成？”时，输入 `y`；若在自动化场景中可改用 `speckit scaffold --yes path/to/plan.md`。
+4. **结果**：系统自动创建 Git 分支、对应文件夹、占位代码文件，并在 `tasks.md` 中同步 Planner 生成的任务区块。
 
 ## 5. 实施阶段 (Implementation Phase)
-按照 `tasks.md` 中的任务进行编码，并使用 `speckit.tasks` 更新进度。
+按照 `tasks.md` 中的任务进行编码，并在完成后把相应项目标记为已完成。

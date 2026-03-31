@@ -40,7 +40,7 @@ public static class ChatCommand
             var finalAgentId = ResolveAgentId(agentId, kernel, options);
             var session = await runtime.StartSessionAsync(new StartSessionRequest(finalAgentId, currentThreadSpace.ThreadSpaceId));
 
-            var state = new ReplState(runtime, kernel, options)
+            var state = new ReplState(host, runtime, kernel, options)
             {
                 AgentId = finalAgentId,
                 CurrentThreadSpace = currentThreadSpace,
@@ -146,6 +146,7 @@ public static class ChatCommand
             "/cd" or "/home" => await HandleThreadSpaceSwitchAsync(state, command, arguments),
             "/init" => await HandleInitAsync(state),
             "/init-proj" => await HandleInitProjectAsync(state),
+            "/speckit" => await HandleSpecKitAsync(state, arguments),
             "/paste" => await HandlePasteAsync(),
             "/edit" => await HandleEditAsync(),
             _ => HandleUnknownCommand(command)
@@ -376,6 +377,13 @@ public static class ChatCommand
         return CommandDispatchResult.Handled();
     }
 
+    private static async Task<CommandDispatchResult> HandleSpecKitAsync(ReplState state, string arguments)
+    {
+        var workingDirectory = state.CurrentThreadSpace.BoundFolderPath ?? Directory.GetCurrentDirectory();
+        await SpecKitCommands.HandleReplAsync(state.Host, workingDirectory, arguments);
+        return CommandDispatchResult.Handled();
+    }
+
     private static async Task<CommandDispatchResult> HandlePasteAsync()
     {
         AnsiConsole.MarkupLine("[grey]Paste mode: enter content, then submit with a single '.' line.[/]");
@@ -584,6 +592,7 @@ public static class ChatCommand
         table.AddRow("/clear", "Clear terminal screen");
         table.AddRow("/init", "Initialize an agent definition (agent.md) in current space");
         table.AddRow("/init-proj", "Scaffold a new project from templates");
+        table.AddRow("/speckit", "Run SpecKit feature workflows");
         table.AddRow("/quit, /exit", "Exit the REPL");
         AnsiConsole.Write(table);
     }
@@ -591,8 +600,9 @@ public static class ChatCommand
     private static string ShortId(SessionId sessionId) =>
         sessionId.Value.Length <= 8 ? sessionId.Value : sessionId.Value[..8];
 
-    private sealed class ReplState(IClawRuntime runtime, IClawKernel kernel, ClawOptions options)
+    private sealed class ReplState(IHost host, IClawRuntime runtime, IClawKernel kernel, ClawOptions options)
     {
+        public IHost Host { get; } = host;
         public IClawRuntime Runtime { get; } = runtime;
         public IClawKernel Kernel { get; } = kernel;
         public ClawOptions Options { get; } = options;

@@ -129,6 +129,7 @@ directories:
         Assert.Contains("项目类型：`paper`", readme);
         Assert.Contains("用于整理量子计算论文和实验记录。", readme);
         Assert.Contains("## 研究背景", readme);
+        Assert.Contains(Path.Combine(projectRoot, ".specify", "templates", "spec-template.md"), result.Value.CreatedFiles);
     }
 
     [Fact]
@@ -222,7 +223,7 @@ directories:
         };
 
         var store = new FileSystemProjectTemplateStore(options, new MarkdownProjectTemplateParser());
-        return new ProjectScaffolder(store, options);
+        return new ProjectScaffolder(store, options, new FakeSpecKitProvider());
     }
 
     private void CreatePaperTemplate()
@@ -297,6 +298,27 @@ variables:
         if (Directory.Exists(_root))
         {
             Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    private sealed class FakeSpecKitProvider : ISpecKitProvider
+    {
+        public Task<SpecKitDefinition> GetDefinitionAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new SpecKitDefinition(
+                [new ProjectFileTemplate(Path.Combine(".specify", "templates", "spec-template.md"), "# Spec Template\n")],
+                [],
+                []));
+
+        public Task<OperationResult<ApplySpecKitResult>> ApplyAsync(string projectRoot, CancellationToken cancellationToken = default)
+        {
+            var targetPath = Path.Combine(projectRoot, ".specify", "templates", "spec-template.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+            File.WriteAllText(targetPath, "# Spec Template\n");
+            return Task.FromResult(OperationResult<ApplySpecKitResult>.Success(
+                new ApplySpecKitResult(
+                    projectRoot,
+                    [Path.Combine(projectRoot, ".specify"), Path.Combine(projectRoot, ".specify", "templates")],
+                    [targetPath])));
         }
     }
 }
