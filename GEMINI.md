@@ -67,6 +67,8 @@ ClawSharp is a local-first AI application kernel built with C# for .NET 10. It p
 - SQLite (Operational data), DuckDB (Analytics) (luckyfish/002-agent-runtime-optimization)
 - C# 14 / .NET 10 + `ClawSharp.Lib`, `Spectre.Console`, `Microsoft.Extensions.DependencyInjection` (luckyfish/002-cli-repl-upgrade)
 - SQLite (via EF Core) for sessions and message history. (luckyfish/002-cli-repl-upgrade)
+- C# 14 / .NET 10 + `Microsoft.Extensions.DependencyInjection`, `Spectre.Console`, `System.CommandLine`, `YamlDotNet` (luckyfish/002-speckit-scaffolder-integration)
+- SQLite (用于会话和功能上下文持久化) (luckyfish/002-speckit-scaffolder-integration)
 
 ## Recent Changes
 - 001-cli-interface-implementation: Added C# 14 / .NET 10 + ClawSharp.Lib, Microsoft.Extensions.DependencyInjection, Spectre.Console (for rich UI/REPL), System.CommandLine (for argument parsing)
