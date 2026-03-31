@@ -29,7 +29,10 @@ public sealed class FileSystemSkillDefinitionStore(ClawOptions options) : ISkill
         var userPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".skills");
         if (Directory.Exists(userPath))
         {
-            var userDefinitions = Directory.EnumerateFiles(userPath, "*.md", SearchOption.TopDirectoryOnly)
+            var userFiles = Directory.EnumerateFiles(userPath, "*.md", SearchOption.TopDirectoryOnly)
+                .Concat(Directory.EnumerateFiles(userPath, "SKILL.md", SearchOption.AllDirectories));
+            var userDefinitions = userFiles
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(path => _parser.Parse(File.ReadAllText(path), DynamicSourceType.User, path));
             definitions.AddRange(userDefinitions);
         }

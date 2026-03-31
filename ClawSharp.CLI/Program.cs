@@ -22,6 +22,7 @@ rootCommand.AddCommand(SpaceCommands.Create(host));
 rootCommand.AddCommand(ConfigCommands.Create(host));
 rootCommand.AddCommand(RegistryCommands.CreateAgents(host));
 rootCommand.AddCommand(RegistryCommands.CreateSkills(host));
+rootCommand.AddCommand(HubCommands.Create(host));
 
 rootCommand.SetHandler(async () =>
 {

@@ -59,6 +59,11 @@ public sealed class ClawOptions
     public ProviderOptions Providers { get; set; } = new();
 
     /// <summary>
+    /// ClawHub 远程技能目录配置。
+    /// </summary>
+    public HubOptions Hub { get; set; } = new();
+
+    /// <summary>
     /// 外部 worker 进程配置。
     /// </summary>
     public WorkerOptions Worker { get; set; } = new();
@@ -347,6 +352,32 @@ public sealed class ProviderOptions
     /// 可用 provider 配置列表。
     /// </summary>
     public List<ModelProviderOptions> Models { get; set; } = [];
+}
+
+/// <summary>
+/// ClawHub 配置。
+/// </summary>
+public sealed class HubOptions
+{
+    /// <summary>
+    /// 是否启用 ClawHub 集成。
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// ClawHub API 基础地址。
+    /// </summary>
+    public string BaseUrl { get; set; } = "https://hub.claw.dev";
+
+    /// <summary>
+    /// 远程请求超时时间，单位秒。
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// Skill 安装根目录。支持使用 ~ 表示用户主目录。
+    /// </summary>
+    public string InstallRoot { get; set; } = "~/.skills";
 }
 
 /// <summary>

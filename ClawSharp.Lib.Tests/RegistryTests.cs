@@ -86,6 +86,52 @@ public class RegistryTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task SkillStore_ShouldLoadFlatAndDirectorySkillsFromUserHome()
+    {
+        var flatFile = Path.Combine(_userSkillPath, $"flat-{Guid.NewGuid():N}.md");
+        var directoryName = $"dir-skill-{Guid.NewGuid():N}";
+        var directoryPath = Path.Combine(_userSkillPath, directoryName);
+        var nestedFile = Path.Combine(directoryPath, "SKILL.md");
+
+        await File.WriteAllTextAsync(flatFile, """
+            ---
+            id: flat-skill
+            name: Flat Skill
+            description: Flat
+            entry: main.js
+            version: 1.0
+            ---
+            Flat body
+            """);
+
+        Directory.CreateDirectory(directoryPath);
+        await File.WriteAllTextAsync(nestedFile, """
+            ---
+            id: nested-skill
+            name: Nested Skill
+            description: Nested
+            entry: scripts/run.sh
+            version: 1.0
+            ---
+            Nested body
+            """);
+
+        try
+        {
+            var store = new FileSystemSkillDefinitionStore(_options);
+            var skills = await store.LoadAllAsync();
+
+            Assert.Contains(skills, s => s.OriginalId == "flat-skill");
+            Assert.Contains(skills, s => s.OriginalId == "nested-skill");
+        }
+        finally
+        {
+            if (File.Exists(flatFile)) File.Delete(flatFile);
+            if (Directory.Exists(directoryPath)) Directory.Delete(directoryPath, recursive: true);
+        }
+    }
+
     public void Dispose()
     {
         // We don't delete the directories themselves as they might be used by the user,

@@ -1,6 +1,7 @@
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Memory;
 using ClawSharp.Lib.Mcp;
+using ClawSharp.Lib.Hub;
 using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
@@ -83,6 +84,9 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<ClawOptions>(),
             Path.Combine(builder.BasePath, "appsettings.Local.json")));
+        services.AddSingleton<IHubClient, HubClient>();
+        services.AddSingleton<IHubManifestValidator, HubManifestValidator>();
+        services.AddSingleton<IHubInstaller, HubInstaller>();
         services.AddSingleton<IAgentDefinitionStore, FileSystemAgentDefinitionStore>();
         services.AddSingleton<ISkillDefinitionStore, FileSystemSkillDefinitionStore>();
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
