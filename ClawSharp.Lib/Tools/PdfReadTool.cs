@@ -56,7 +56,8 @@ public sealed class PdfReadTool : IToolExecutor
                 if (pageNum >= 1 && pageNum <= document.NumberOfPages)
                 {
                     var page = document.GetPage(pageNum);
-                    results.Add(new { page = pageNum, text = page.Text });
+                    var pageText = ExtractStructuredText(page);
+                    results.Add(new { page = pageNum, text = pageText });
                 }
             }
 
@@ -66,5 +67,65 @@ public sealed class PdfReadTool : IToolExecutor
         {
             return Task.FromResult(ToolInvocationResult.Failure(Definition.Name, $"Failed to read PDF: {ex.Message}"));
         }
+    }
+
+    private static string ExtractStructuredText(UglyToad.PdfPig.Content.Page page)
+    {
+        var words = page.GetWords().ToList();
+        if (words.Count == 0) return string.Empty;
+
+        // Group words by their vertical position (Bottom) with a small tolerance (e.g., 2.0 units)
+        var lines = new List<List<UglyToad.PdfPig.Content.Word>>();
+        foreach (var word in words.OrderByDescending(w => w.BoundingBox.Bottom).ThenBy(w => w.BoundingBox.Left))
+        {
+            var added = false;
+            foreach (var line in lines)
+            {
+                // If the word's vertical center is close to the line's vertical center, it's the same line
+                var lineBottom = line.Average(w => w.BoundingBox.Bottom);
+                if (Math.Abs(word.BoundingBox.Bottom - lineBottom) < 2.0)
+                {
+                    line.Add(word);
+                    added = true;
+                    break;
+                }
+            }
+
+            if (!added)
+            {
+                lines.Add(new List<UglyToad.PdfPig.Content.Word> { word });
+            }
+        }
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var line in lines.OrderByDescending(l => l.Average(w => w.BoundingBox.Bottom)))
+        {
+            var sortedLine = line.OrderBy(w => w.BoundingBox.Left).ToList();
+            for (int i = 0; i < sortedLine.Count; i++)
+            {
+                var word = sortedLine[i];
+                sb.Append(word.Text);
+                
+                if (i < sortedLine.Count - 1)
+                {
+                    var nextWord = sortedLine[i + 1];
+                    var gap = nextWord.BoundingBox.Left - word.BoundingBox.Right;
+                    
+                    // Add spaces based on gap width. Heuristic: 
+                    // if gap > 3x the space between normal words, it might be a new column
+                    if (gap > 5.0) 
+                    {
+                        sb.Append("  "); // Extra space for potential columns
+                    }
+                    else if (gap > 0.5)
+                    {
+                        sb.Append(" ");
+                    }
+                }
+            }
+            sb.AppendLine();
+        }
+
+        return sb.ToString().Trim();
     }
 }

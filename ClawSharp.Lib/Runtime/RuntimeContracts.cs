@@ -8,6 +8,7 @@ using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
 using System.Text.Json;
 using ClawSharp.Lib.Projects;
+using ClawSharp.Lib.Core;
 
 namespace ClawSharp.Lib.Runtime;
 
@@ -343,6 +344,41 @@ public sealed class ClawRuntime(
         _watcher.Watch(Path.Combine(userHome, ".skills"), isAgent: false);
 
         await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        // Check for Playwright environment if it is used by any registered tools
+        if (kernel.Tools.GetAll().Any(t => t.Name == "web_browser"))
+        {
+            await CheckPlaywrightEnvironmentAsync().ConfigureAwait(false);
+        }
+    }
+
+    private async Task CheckPlaywrightEnvironmentAsync()
+    {
+        try
+        {
+            // We don't want to launch a browser here as it's slow.
+            // A simple way is to check if the browser cache directory exists.
+            var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var playwrightCache = OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright")
+                : Path.Combine(userHome, ".cache", "ms-playwright");
+
+            if (!Directory.Exists(playwrightCache) || !Directory.EnumerateDirectories(playwrightCache, "chromium-*").Any())
+            {
+                throw new EnvironmentDependencyException(
+                    "web_browser",
+                    "Playwright Chromium browser is missing. This is required for the 'web_browser' tool.",
+                    "dotnet run --project ClawSharp.Lib -- playwright install chromium");
+            }
+        }
+        catch (EnvironmentDependencyException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error checking Playwright environment: {ex.Message}");
+        }
     }
 
     /// <summary>

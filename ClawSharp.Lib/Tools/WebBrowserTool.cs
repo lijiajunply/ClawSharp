@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Playwright;
+using ClawSharp.Lib.Core;
 
 namespace ClawSharp.Lib.Tools;
 
@@ -37,9 +38,18 @@ public sealed class WebBrowserTool : IToolExecutor
         {
             using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
             
-            // NOTE: In a real production scenario, we'd probably reuse the browser instance or pool.
-            // For now, we launch per request to ensure isolation.
-            var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            IBrowser browser;
+            try
+            {
+                browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            }
+            catch (Microsoft.Playwright.PlaywrightException ex) when (ex.Message.Contains("Executable doesn't exist"))
+            {
+                throw new EnvironmentDependencyException(Definition.Name, 
+                    "Playwright browsers are not installed. This is required for the 'web_browser' tool.",
+                    "dotnet run --project ClawSharp.Lib -- playwright install chromium");
+            }
+            
             var page = await browser.NewPageAsync();
 
             var timeoutSeconds = context.Permissions.TimeoutSeconds ?? 60;

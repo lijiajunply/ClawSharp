@@ -520,7 +520,7 @@ public static class ChatCommand
         catch (Exception ex)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[red]Error during turn execution:[/] {ex.Message.EscapeMarkup()}");
+            CliErrorHandler.Handle(ex);
             hasTextOutput = true;
         }
 
