@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Providers;
 using ClawSharp.Lib.Tools;

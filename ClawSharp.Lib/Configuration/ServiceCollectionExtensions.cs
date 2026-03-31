@@ -98,6 +98,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
         services.AddSingleton<ISkillRegistry, SkillRegistry>();
         services.AddSingleton<IToolRegistry, ToolRegistry>();
+        services.AddSingleton<IAgentToolProvider, FileSystemAgentToolProvider>();
+        services.AddSingleton<IPermissionScopeManager, PermissionScopeManager>();
         services.AddSingleton<IPermissionResolver, PermissionResolver>();
 
         // Embedding Provider 注册

@@ -414,7 +414,7 @@ data: {"type":"message_stop"}
             options,
             new FakeAgentRegistry(agents),
             new FakeSkillRegistry(),
-            new ToolRegistry([new SystemInfoTool(), new ShellRunTool()]),
+            new ToolRegistry([new SystemInfoTool(), new ShellRunTool()], Array.Empty<IAgentToolProvider>(), new PermissionScopeManager()),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             mcpManager,
             sessionManager,
@@ -432,6 +432,7 @@ data: {"type":"message_stop"}
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
             new PermissionResolver(),
+            new PermissionScopeManager(),
             new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
@@ -507,7 +508,7 @@ data: {"type":"message_stop"}
             options,
             new FakeAgentRegistry([agent]),
             new FakeSkillRegistry(),
-            new ToolRegistry([new SystemInfoTool()]),
+            new ToolRegistry([new SystemInfoTool()], Array.Empty<IAgentToolProvider>(), new PermissionScopeManager()),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             mcpManager,
             sessionManager,
@@ -525,6 +526,7 @@ data: {"type":"message_stop"}
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
             new PermissionResolver(),
+            new PermissionScopeManager(),
             new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
@@ -599,7 +601,7 @@ data: {"type":"message_stop"}
             options,
             new FakeAgentRegistry([agent]),
             new FakeSkillRegistry(),
-            new ToolRegistry([new SystemInfoTool()]),
+            new ToolRegistry([new SystemInfoTool()], Array.Empty<IAgentToolProvider>(), new PermissionScopeManager()),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
             mcpManager,
             sessionManager,
@@ -617,6 +619,7 @@ data: {"type":"message_stop"}
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
             new PermissionResolver(),
+            new PermissionScopeManager(),
             new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 

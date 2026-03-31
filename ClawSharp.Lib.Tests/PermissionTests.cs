@@ -58,7 +58,7 @@ public sealed class PermissionTests
             new StubTool("t1", ToolCapability.FileRead),
             new StubTool("t2", ToolCapability.ShellExecute)
         };
-        var registry = new ToolRegistry(executors);
+        var registry = new ToolRegistry(executors, Array.Empty<IAgentToolProvider>(), new PermissionScopeManager());
 
         var permissions = new ToolPermissionSet(ToolCapability.FileRead, [], [], []);
         var authorized = registry.GetAuthorizedTools(permissions);
@@ -75,7 +75,7 @@ public sealed class PermissionTests
             new StubTool("t1", ToolCapability.None),
             new StubTool("mandatory_logger", ToolCapability.None)
         };
-        var registry = new ToolRegistry(executors);
+        var registry = new ToolRegistry(executors, Array.Empty<IAgentToolProvider>(), new PermissionScopeManager());
 
         var agentTools = new[] { "t1" };
         var mandatoryTools = new[] { "mandatory_logger" };

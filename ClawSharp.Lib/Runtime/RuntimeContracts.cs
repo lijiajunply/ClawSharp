@@ -234,7 +234,13 @@ public interface IClawKernel
 /// </summary>
 /// <param name="Delta">增量文本内容；仅在部分消息时存在。</param>
 /// <param name="FinalResult">最终结果；仅在流结束时存在。</param>
-public sealed record RunTurnStreamEvent(string? Delta = null, RunTurnResult? FinalResult = null);
+/// <param name="EventType">自定义事件类型。</param>
+/// <param name="EventPayload">自定义事件负载。</param>
+public sealed record RunTurnStreamEvent(
+    string? Delta = null, 
+    RunTurnResult? FinalResult = null, 
+    string? EventType = null, 
+    System.Text.Json.JsonElement? EventPayload = null);
 
 /// <summary>
 /// ClawSharp 对外暴露的主运行时接口。
@@ -296,18 +302,20 @@ public interface IClawRuntime
     /// 执行 session 的下一次 turn。
     /// </summary>
     /// <param name="sessionId">session 标识。</param>
+    /// <param name="delegation">委派上下文。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>本次 turn 的最终结果。</returns>
     /// <exception cref="InvalidOperationException">当缺少用户消息或 worker 返回错误时抛出。</exception>
-    Task<RunTurnResult> RunTurnAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+    Task<RunTurnResult> RunTurnAsync(SessionId sessionId, DelegationContext? delegation = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 以流式方式执行 session 的下一次 turn。
     /// </summary>
     /// <param name="sessionId">session 标识。</param>
+    /// <param name="delegation">委派上下文。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>异步流事件。</returns>
-    IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, DelegationContext? delegation = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取一个 session 的完整历史视图，包括消息与事件。
@@ -403,6 +411,7 @@ public sealed class ClawRuntime(
     IAgentWorkerLauncher workerLauncher,
     ISessionSerializer serializer,
     IPermissionResolver permissionResolver,
+    IPermissionScopeManager permissionScopeManager,
     IServiceProvider serviceProvider) : IClawRuntime, IDisposable
 {
     private readonly Dictionary<string, IAgentWorkerSession> _workers = new(StringComparer.OrdinalIgnoreCase);
@@ -615,10 +624,10 @@ public sealed class ClawRuntime(
     }
 
     /// <inheritdoc />
-    public async Task<RunTurnResult> RunTurnAsync(SessionId sessionId, CancellationToken cancellationToken = default)
+    public async Task<RunTurnResult> RunTurnAsync(SessionId sessionId, DelegationContext? delegation = null, CancellationToken cancellationToken = default)
     {
         RunTurnResult? result = null;
-        await foreach (var @event in RunTurnStreamingAsync(sessionId, cancellationToken).ConfigureAwait(false))
+        await foreach (var @event in RunTurnStreamingAsync(sessionId, delegation, cancellationToken).ConfigureAwait(false))
         {
             if (@event.FinalResult != null)
             {
@@ -630,9 +639,35 @@ public sealed class ClawRuntime(
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<RunTurnStreamEvent> RunTurnStreamingAsync(SessionId sessionId, DelegationContext? delegation = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (delegation != null)
+        {
+            // Enforce max depth (FR-006)
+            if (delegation.CallStack.Count >= kernel.Options.Orchestration.MaxDelegationDepth)
+            {
+                throw new InvalidOperationException($"Max delegation depth reached ({kernel.Options.Orchestration.MaxDelegationDepth}). Check for infinite loops.");
+            }
+
+            // Enforce permission scope if set
+            if (delegation.Permissions != null)
+            {
+                permissionScopeManager.SetScope(delegation.Permissions);
+            }
+        }
+
         var session = await kernel.Sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
+
+        if (delegation != null)
+        {
+            // Circular delegation detection (SC-004)
+            var callCount = delegation.CallStack.Count(x => x.Equals(session.Record.AgentId, StringComparison.OrdinalIgnoreCase));
+            if (callCount >= 2) // Allow one re-entry but break on the second one (matching "within 3 iterations" loosely or strictly)
+            {
+                throw new InvalidOperationException($"Circular delegation detected: Agent '{session.Record.AgentId}' has already been called {callCount} times in the current chain.");
+            }
+        }
+
         var messages = await kernel.History.ListAsync(sessionId, cancellationToken).ConfigureAwait(false);
         var lastUser = messages.LastOrDefault(x => x.Role == PromptMessageRole.User)
                        ?? throw new InvalidOperationException("A user message is required before running a turn.");
@@ -712,7 +747,7 @@ public sealed class ClawRuntime(
         {
             await foreach (var workerEvent in worker.RunTurnAsync(
                                request,
-                               toolRequest => HandleToolRequestAsync(plan, lastUser, toolRequest, cancellationToken),
+                               toolRequest => HandleToolRequestAsync(plan, lastUser, toolRequest, delegation, cancellationToken),
                                cancellationToken).ConfigureAwait(false))
             {
                 switch (workerEvent.EventType)
@@ -730,7 +765,10 @@ public sealed class ClawRuntime(
                     case "worker.tool.requested":
                         totalToolCalls++;
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallRequested", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
-                        yield return new RunTurnStreamEvent(Delta: $"\n[Calling tool: {workerEvent.Payload.GetProperty("name").GetString()}]... ");
+                        var toolName = workerEvent.Payload.GetProperty("name").GetString();
+                        var isAgent = kernel.Agents.GetAll().Any(a => a.Id.Equals(toolName, StringComparison.OrdinalIgnoreCase) || a.Name.Equals(toolName, StringComparison.OrdinalIgnoreCase));
+                        var label = isAgent ? "Delegating to agent" : "Calling tool";
+                        yield return new RunTurnStreamEvent(Delta: $"\n[{label}: {toolName}]... ");
                         break;
                     case "worker.tool.completed":
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallCompleted", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
@@ -918,6 +956,7 @@ public sealed class ClawRuntime(
         AgentLaunchPlan plan,
         PromptMessage userMessage,
         WorkerToolRequest toolRequest,
+        DelegationContext? delegation,
         CancellationToken cancellationToken)
     {
         JsonElement arguments;
@@ -964,7 +1003,8 @@ public sealed class ClawRuntime(
             userMessage.MessageId.Value,
             currentPermissions,
             Guid.NewGuid().ToString("N"),
-            cancellationToken);
+            cancellationToken,
+            delegation);
         var result = await kernel.Tools.ExecuteAsync(toolRequest.ToolName, context, arguments).ConfigureAwait(false);
         if (result.Status == ToolInvocationStatus.ApprovalRequired)
         {

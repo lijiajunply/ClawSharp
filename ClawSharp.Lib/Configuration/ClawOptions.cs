@@ -74,9 +74,35 @@ public sealed class ClawOptions
     public ProjectOptions Projects { get; set; } = new();
 
     /// <summary>
+    /// 多 Agent 编排与委派配置。
+    /// </summary>
+    public OrchestrationOptions Orchestration { get; set; } = new();
+
+    /// <summary>
     /// workspace 级默认权限策略；会在运行时与 agent 权限取交集。
     /// </summary>
     public WorkspacePolicy WorkspacePolicy { get; set; } = WorkspacePolicy.CreateDefault();
+}
+
+/// <summary>
+/// 多 Agent 编排与委派配置。
+/// </summary>
+public sealed class OrchestrationOptions
+{
+    /// <summary>
+    /// 最大委派深度，防止无限递归。默认为 5。
+    /// </summary>
+    public int MaxDelegationDepth { get; set; } = 5;
+
+    /// <summary>
+    /// 默认编排策略，例如 "sequential", "parallel"。默认为 "sequential"。
+    /// </summary>
+    public string DefaultStrategy { get; set; } = "sequential";
+
+    /// <summary>
+    /// 是否自动将工作区中的所有 Agent 发现为可调用的工具。默认为 true。
+    /// </summary>
+    public bool AutoDiscoverAgents { get; set; } = true;
 }
 
 /// <summary>

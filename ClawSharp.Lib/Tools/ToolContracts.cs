@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Core;
 
 namespace ClawSharp.Lib.Tools;
@@ -216,6 +217,7 @@ public sealed record ToolDefinition(
 /// <param name="Permissions">本次调用生效的权限集合。</param>
 /// <param name="TraceId">用于追踪调用链的 trace 标识。</param>
 /// <param name="CancellationToken">调用取消令牌。</param>
+/// <param name="Delegation">委派上下文。</param>
 public sealed record ToolExecutionContext(
     string WorkspaceRoot,
     string AgentId,
@@ -224,7 +226,8 @@ public sealed record ToolExecutionContext(
     string? MessageId,
     ToolPermissionSet Permissions,
     string TraceId,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    DelegationContext? Delegation = null);
 
 /// <summary>
 /// 表示工具调用的最终状态。
@@ -359,39 +362,55 @@ public interface IToolRegistry
 /// <summary>
 /// 默认的工具注册表实现。
 /// </summary>
-/// <param name="executors">要注册的工具执行器集合。</param>
-public sealed class ToolRegistry(IEnumerable<IToolExecutor> executors) : IToolRegistry
+/// <param name="executors">要注册的静态工具执行器集合。</param>
+/// <param name="dynamicProviders">动态工具提供者集合。</param>
+/// <param name="permissionScopeManager">工具权限范围管理器。</param>
+public sealed class ToolRegistry(
+    IEnumerable<IToolExecutor> executors, 
+    IEnumerable<IAgentToolProvider> dynamicProviders,
+    IPermissionScopeManager permissionScopeManager) : IToolRegistry
 {
-    private readonly Dictionary<string, IToolExecutor> _executors =
+    private readonly Dictionary<string, IToolExecutor> _staticExecutors =
         executors.ToDictionary(x => x.Definition.Name, StringComparer.OrdinalIgnoreCase);
 
+    private IEnumerable<IToolExecutor> AllExecutors => 
+        _staticExecutors.Values.Concat(dynamicProviders.SelectMany(p => p.DiscoverAgentTools()));
+
     /// <inheritdoc />
-    public IReadOnlyCollection<ToolDefinition> GetAll() => _executors.Values.Select(x => x.Definition).ToArray();
+    public IReadOnlyCollection<ToolDefinition> GetAll() => 
+        AllExecutors.Select(x => x.Definition).ToArray();
 
     /// <inheritdoc />
     public IReadOnlyCollection<ToolDefinition> GetAuthorizedTools(ToolPermissionSet permissions)
     {
-        return _executors.Values
+        return AllExecutors
             .Select(x => x.Definition)
-            .Where(x => x.Capabilities == ToolCapability.None || permissions.Capabilities.HasFlag(x.Capabilities))
+            .Where(x => (x.Capabilities == ToolCapability.None || permissions.Capabilities.HasFlag(x.Capabilities)) &&
+                        permissionScopeManager.CanInvokeTool(x.Name))
             .ToArray();
     }
 
     /// <inheritdoc />
-    public Task<ToolInvocationResult> ExecuteAsync(string toolName, ToolExecutionContext context, JsonElement arguments)
+    public async Task<ToolInvocationResult> ExecuteAsync(string toolName, ToolExecutionContext context, JsonElement arguments)
     {
-        if (!_executors.TryGetValue(toolName, out var executor))
+        var executor = AllExecutors.FirstOrDefault(x => x.Definition.Name.Equals(toolName, StringComparison.OrdinalIgnoreCase));
+        if (executor == null)
         {
             throw new KeyNotFoundException($"Tool '{toolName}' was not found.");
+        }
+
+        if (!permissionScopeManager.CanInvokeTool(toolName))
+        {
+            return ToolInvocationResult.Denied(toolName, "Tool is not in the current permission scope.");
         }
 
         if (executor.Definition.Capabilities != ToolCapability.None &&
             !context.Permissions.Capabilities.HasFlag(executor.Definition.Capabilities))
         {
-            return Task.FromResult(ToolInvocationResult.Denied(toolName, "Capability denied."));
+            return ToolInvocationResult.Denied(toolName, "Capability denied.");
         }
 
-        return executor.ExecuteAsync(context, arguments);
+        return await executor.ExecuteAsync(context, arguments).ConfigureAwait(false);
     }
 }
 
