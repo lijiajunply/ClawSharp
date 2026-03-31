@@ -147,6 +147,12 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         }
     }
 
+    /// <summary>
+    /// 根据作用域删除内存块。
+    /// </summary>
+    /// <param name="scope">作用域</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>Task</returns>
     public async Task DeleteByScopeAsync(string scope, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
@@ -197,6 +203,13 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         }
     }
 
+    /// <summary>
+    /// 根据查询参数进行查询。
+    /// </summary>
+    /// <param name="query">查询参数</param>
+    /// <param name="embedding">嵌入向量</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>查询结果列表</returns>
     public async Task<IReadOnlyList<MemorySearchResult>> QueryAsync(MemoryQuery query, EmbeddingVector embedding, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
@@ -235,6 +248,9 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         return results;
     }
 
+    /// <summary>
+    /// 释放资源，关闭数据库连接。
+    /// </summary>
     public void Dispose()
     {
         _connection.Dispose();
