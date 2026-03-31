@@ -4,7 +4,7 @@ using UglyToad.PdfPig;
 namespace ClawSharp.Lib.Tools;
 
 /// <summary>
-/// A tool that extracts text from PDF documents.
+/// A tool that extracts text from PDF documents, optionally using MarkItDown for high-quality Markdown.
 /// </summary>
 public sealed class PdfReadTool : IToolExecutor
 {
@@ -26,7 +26,7 @@ public sealed class PdfReadTool : IToolExecutor
         ToolCapability.FileRead);
 
     /// <inheritdoc />
-    public Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
+    public async Task<ToolInvocationResult> ExecuteAsync(ToolExecutionContext context, JsonElement arguments)
     {
         var path = arguments.GetProperty("path").GetString() ?? string.Empty;
         var specificPages = arguments.TryGetProperty("pages", out var p) ? p.EnumerateArray().Select(x => x.GetInt32()).ToArray() : null;
@@ -34,17 +34,27 @@ public sealed class PdfReadTool : IToolExecutor
         var check = ToolSecurity.EnsurePathAllowed(context.WorkspaceRoot, path, context.Permissions.AllowedReadRoots, write: false);
         if (!check.IsSuccess)
         {
-            return Task.FromResult(ToolSecurity.CreateApprovalOrDenied(Definition, context, check.Error!, new { path }));
+            return ToolSecurity.CreateApprovalOrDenied(Definition, context, check.Error!, new { path });
         }
 
         var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(context.WorkspaceRoot, path));
         if (!File.Exists(fullPath))
         {
-            return Task.FromResult(ToolInvocationResult.Failure(Definition.Name, $"File not found: {path}"));
+            return ToolInvocationResult.Failure(Definition.Name, $"File not found: {path}");
         }
 
         try
         {
+            // Optional: Use markitdown for high-quality Markdown conversion if available
+            if (ToolSecurity.CommandExists("markitdown"))
+            {
+                var markdown = await RunMarkItDownAsync(fullPath, context.CancellationToken);
+                if (!string.IsNullOrWhiteSpace(markdown))
+                {
+                    return ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, content = markdown, method = "markitdown" }));
+                }
+            }
+
             using var document = PdfDocument.Open(fullPath);
             var results = new List<object>();
 
@@ -61,11 +71,39 @@ public sealed class PdfReadTool : IToolExecutor
                 }
             }
 
-            return Task.FromResult(ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, pages = results })));
+            return ToolInvocationResult.Success(Definition.Name, ToolSecurity.Json(new { path = fullPath, pages = results }));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(ToolInvocationResult.Failure(Definition.Name, $"Failed to read PDF: {ex.Message}"));
+            return ToolInvocationResult.Failure(Definition.Name, $"Failed to read PDF: {ex.Message}");
+        }
+    }
+
+    private static async Task<string?> RunMarkItDownAsync(string fullPath, CancellationToken ct)
+    {
+        try
+        {
+            using var process = new System.Diagnostics.Process();
+            process.StartInfo = new System.Diagnostics.ProcessStartInfo("markitdown", $"\"{fullPath}\"")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            process.Start();
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+
+            if (process.ExitCode == 0)
+            {
+                return await process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -111,11 +149,9 @@ public sealed class PdfReadTool : IToolExecutor
                     var nextWord = sortedLine[i + 1];
                     var gap = nextWord.BoundingBox.Left - word.BoundingBox.Right;
                     
-                    // Add spaces based on gap width. Heuristic: 
-                    // if gap > 3x the space between normal words, it might be a new column
                     if (gap > 5.0) 
                     {
-                        sb.Append("  "); // Extra space for potential columns
+                        sb.Append("  "); 
                     }
                     else if (gap > 0.5)
                     {

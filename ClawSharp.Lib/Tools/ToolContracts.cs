@@ -444,6 +444,29 @@ internal static class ToolSecurity
 
     public static JsonElement Json(object value) => JsonSerializer.SerializeToElement(value);
 
+    public static bool CommandExists(string command)
+    {
+        var shell = OperatingSystem.IsWindows() ? "where" : "command -v";
+        try
+        {
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo(shell, command)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            process.Start();
+            process.WaitForExit();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static async Task<string> ReadStandardOutputAsync(Process process, int maxLength, CancellationToken cancellationToken)
     {
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);

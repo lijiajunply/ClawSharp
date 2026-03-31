@@ -345,39 +345,44 @@ public sealed class ClawRuntime(
 
         await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        // Check for Playwright environment if it is used by any registered tools
-        if (kernel.Tools.GetAll().Any(t => t.Name == "web_browser"))
-        {
-            await CheckPlaywrightEnvironmentAsync().ConfigureAwait(false);
-        }
+        // Check for environment dependencies if they are used by any registered tools
+        await CheckEnvironmentDependenciesAsync().ConfigureAwait(false);
     }
 
-    private async Task CheckPlaywrightEnvironmentAsync()
+    private async Task CheckEnvironmentDependenciesAsync()
     {
-        try
-        {
-            // We don't want to launch a browser here as it's slow.
-            // A simple way is to check if the browser cache directory exists.
-            var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var playwrightCache = OperatingSystem.IsWindows()
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright")
-                : Path.Combine(userHome, ".cache", "ms-playwright");
+        var tools = kernel.Tools.GetAll();
 
-            if (!Directory.Exists(playwrightCache) || !Directory.EnumerateDirectories(playwrightCache, "chromium-*").Any())
+        // 1. Playwright Check (Required for web_browser)
+        if (tools.Any(t => t.Name == "web_browser"))
+        {
+            try
             {
-                throw new EnvironmentDependencyException(
-                    "web_browser",
-                    "Playwright Chromium browser is missing. This is required for the 'web_browser' tool.",
-                    "dotnet run --project ClawSharp.Lib -- playwright install chromium");
+                var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var playwrightCache = OperatingSystem.IsWindows()
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright")
+                    : Path.Combine(userHome, ".cache", "ms-playwright");
+
+                if (!Directory.Exists(playwrightCache) || !Directory.EnumerateDirectories(playwrightCache, "chromium-*").Any())
+                {
+                    throw new EnvironmentDependencyException(
+                        "web_browser",
+                        "Playwright Chromium browser is missing. This is required for the 'web_browser' tool.",
+                        "dotnet run --project ClawSharp.Lib -- playwright install chromium");
+                }
             }
+            catch (EnvironmentDependencyException) { throw; }
+            catch (Exception ex) { Debug.WriteLine($"Error checking Playwright: {ex.Message}"); }
         }
-        catch (EnvironmentDependencyException)
+
+        // 2. MarkItDown Check (Optional for pdf_read)
+        if (tools.Any(t => t.Name == "pdf_read"))
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error checking Playwright environment: {ex.Message}");
+            if (!ToolSecurity.CommandExists("markitdown"))
+            {
+                // We don't throw here because it's optional, but we can log a hint
+                Debug.WriteLine("Hint: 'markitdown' not found. Install it via 'pip install markitdown' for better PDF extraction quality.");
+            }
         }
     }
 
