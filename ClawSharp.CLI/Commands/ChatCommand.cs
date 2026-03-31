@@ -511,6 +511,9 @@ public static class ChatCommand
 
         try
         {
+            // 简单的提示，表明正在进行知识检索（如果是自动化 RAG）
+            AnsiConsole.Markup("[grey](Searching memory...)[/] \r");
+
             await foreach (var @event in state.Runtime.RunTurnStreamingAsync(state.SessionId))
             {
                 if (@event.Delta is not null)

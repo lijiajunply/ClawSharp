@@ -62,6 +62,11 @@ public interface IEmbeddingProvider
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>与输入顺序对应的向量集合。</returns>
     Task<IReadOnlyList<EmbeddingVector>> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 向量维度。
+    /// </summary>
+    int Dimensions { get; }
 }
 
 /// <summary>
@@ -165,6 +170,9 @@ public sealed class DefaultMemoryScopeResolver : IMemoryScopeResolver
 /// <param name="options">embedding 维度配置来源。</param>
 public sealed class SimpleEmbeddingProvider(ClawOptions options) : IEmbeddingProvider
 {
+    /// <inheritdoc />
+    public int Dimensions => options.Embedding.Dimensions;
+
     /// <inheritdoc />
     public Task<IReadOnlyList<EmbeddingVector>> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default)
     {

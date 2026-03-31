@@ -216,10 +216,15 @@ public sealed class McpOptions
 }
 
 /// <summary>
-/// 控制文档切块行为的配置。
+/// 控制记忆存储与 RAG 检索行为的配置。
 /// </summary>
 public sealed class MemoryOptions
 {
+    /// <summary>
+    /// 向量存储实现类型。例如 <c>simple</c> (内存)、<c>sqlite-vss</c>。
+    /// </summary>
+    public string VectorStoreType { get; set; } = "sqlite-vss";
+
     /// <summary>
     /// 单个记忆块的最大字符数。默认值为 500。
     /// </summary>
@@ -229,6 +234,11 @@ public sealed class MemoryOptions
     /// 相邻记忆块之间的重叠字符数。默认值为 50。
     /// </summary>
     public int ChunkOverlap { get; set; } = 50;
+
+    /// <summary>
+    /// 自动化 RAG 检索时返回的最大上下文片段数量。默认值为 5。
+    /// </summary>
+    public int TopK { get; set; } = 5;
 }
 
 /// <summary>
@@ -237,12 +247,18 @@ public sealed class MemoryOptions
 public sealed class EmbeddingOptions
 {
     /// <summary>
+    /// embedding 类型。例如 <c>cloud</c> (OpenAI)、<c>local</c> (ONNX)。
+    /// </summary>
+    public string Type { get; set; } = "cloud";
+
+    /// <summary>
     /// embedding provider 名称。默认实现使用 <c>simple</c>，可设为 <c>openai</c>。
     /// </summary>
     public string Provider { get; set; } = "simple";
 
     /// <summary>
     /// 使用的具体模型名。对于 OpenAI，默认为 <c>text-embedding-3-small</c>。
+    /// 对于本地模型，指定模型标识符或路径。
     /// </summary>
     public string Model { get; set; } = "text-embedding-3-small";
 

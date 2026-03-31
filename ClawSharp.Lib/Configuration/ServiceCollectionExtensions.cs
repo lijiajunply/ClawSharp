@@ -85,6 +85,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IConfiguration>(configuration);
         services.AddSingleton(options);
+        services.AddHttpClient();
         services.AddSingleton<IConfigManager>(sp => new ConfigManager(
             sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<ClawOptions>(),
@@ -98,12 +99,35 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillRegistry, SkillRegistry>();
         services.AddSingleton<IToolRegistry, ToolRegistry>();
         services.AddSingleton<IPermissionResolver, PermissionResolver>();
+
+        // Embedding Provider 注册
         services.AddSingleton<SimpleEmbeddingProvider>();
-        services.AddSingleton<IEmbeddingProvider>(sp => new OpenAiEmbeddingProvider(
-            sp.GetRequiredService<ClawOptions>(),
-            sp.GetRequiredService<IProviderHttpClientFactory>(),
-            sp.GetRequiredService<SimpleEmbeddingProvider>()));
-        services.AddSingleton<IVectorStore, SqliteVectorStore>();
+        services.AddSingleton<OpenAiEmbeddingProvider>();
+        services.AddSingleton<LocalEmbeddingProvider>();
+        services.AddSingleton<IEmbeddingProvider>(sp =>
+        {
+            var opt = sp.GetRequiredService<ClawOptions>();
+            return opt.Embedding.Type.ToLowerInvariant() switch
+            {
+                "local" => sp.GetRequiredService<LocalEmbeddingProvider>(),
+                "cloud" when opt.Embedding.Provider.Equals("openai", StringComparison.OrdinalIgnoreCase) => sp.GetRequiredService<OpenAiEmbeddingProvider>(),
+                _ => sp.GetRequiredService<SimpleEmbeddingProvider>()
+            };
+        });
+
+        // Vector Store 注册
+        services.AddSingleton<InMemoryVectorStore>();
+        services.AddSingleton<SqliteVssVectorStore>();
+        services.AddSingleton<IVectorStore>(sp =>
+        {
+            var opt = sp.GetRequiredService<ClawOptions>();
+            return opt.Memory.VectorStoreType.ToLowerInvariant() switch
+            {
+                "sqlite-vss" => sp.GetRequiredService<SqliteVssVectorStore>(),
+                _ => sp.GetRequiredService<InMemoryVectorStore>()
+            };
+        });
+
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();
         services.AddSingleton<IMemoryIndex, MemoryIndex>();
         services.AddDbContextFactory<ClawDbContext>(dbContextOptions =>

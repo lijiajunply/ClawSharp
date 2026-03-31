@@ -9,6 +9,7 @@ using ClawSharp.Lib.Tools;
 using System.Text.Json;
 using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Lib.Runtime;
 
@@ -517,27 +518,30 @@ public sealed class ClawRuntime(
         
         // --- 自动化 RAG 注入开始 ---
         var augmentedContext = string.Empty;
-        try 
+        try
         {
-            // 默认从 Workspace 级别检索 (基于当前绑定的目录)
-            var workspaceScope = $"workspace:{session.Record.WorkspaceRoot}";
+            // 确定检索命名空间：默认使用当前 Session 的命名空间，
+            // 这样可以确保检索的是与当前对话或 Agent 相关的私有记忆 (FR-007)
+            var scopeResolver = serviceProvider.GetRequiredService<IMemoryScopeResolver>();
+            var sessionScope = scopeResolver.Session(session.Record.ThreadSpaceId.Value, sessionId.Value);
+
+            var topK = kernel.Options.Memory.TopK > 0 ? kernel.Options.Memory.TopK : 5;
             var memoryResults = await kernel.Memory.SearchAsync(
-                new MemoryQuery(workspaceScope, lastUser.Content, TopK: 5), 
+                new MemoryQuery(sessionScope, lastUser.Content, TopK: topK),
                 cancellationToken).ConfigureAwait(false);
 
             if (memoryResults.Count > 0)
             {
-                augmentedContext = "\n[Background Knowledge from Memory]:\n" + 
+                augmentedContext = "\n[Relevant Background Knowledge]:\n" +
                     string.Join("\n---\n", memoryResults.Select(r => r.Content));
             }
         }
         catch (Exception ex)
         {
-            // RAG 失败不应中断对话，仅记录日志
-            Debug.WriteLine($"RAG Retrieval failed: {ex.Message}");
+            // RAG 失败不应中断对话
+            System.Diagnostics.Debug.WriteLine($"RAG Retrieval failed: {ex.Message}");
         }
         // --- 自动化 RAG 注入结束 ---
-
         foreach (var mcpServer in plan.McpServers)
         {
             await kernel.Mcp.ConnectAsync(mcpServer.Name, cancellationToken).ConfigureAwait(false);

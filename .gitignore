@@ -35,10 +35,11 @@ riderModule.iml
 /.clawsharp/
 
 appsettings.Local.json
+appsettings.json
 .env*
 .idea/
 .vscode/
-Thumbs.db
+*.db
 *.tmp
 *.swp
 *.log
