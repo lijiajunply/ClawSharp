@@ -13,6 +13,10 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
     private readonly SqliteConnection _connection;
     private bool _initialized;
 
+    /// <summary>
+    /// 创建一个基于 SQLite-VSS 的持久化向量存储实现。
+    /// </summary>
+    /// <param name="options">配置选项</param>
     public SqliteVssVectorStore(ClawOptions options)
     {
         _options = options;
@@ -41,17 +45,15 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         await _connection.OpenAsync(ct);
 
         // 加载 vss 扩展
-        // 注意：在实际部署中，可能需要根据平台指定不同的扩展名 (vss0.dll, vss0.so, vss0.dylib)
         try
         {
-            _connection.LoadExtension("/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/sqlite_vss/vss0");
+            // vector0 必须在 vss0 之前加载
+            LoadNativeExtension("vector0");
+            LoadNativeExtension("vss0");
         }
         catch (SqliteException ex)
         {
-            // 如果加载失败，记录警告并回退（或者抛出异常，取决于系统严谨性）
-            // 在此示例中，我们假设 vss0 在 PATH 中或已正确部署
             Console.WriteLine($"Warning: Failed to load sqlite-vss extension: {ex.Message}");
-            // 如果必须使用 vss 且加载失败，建议在这里抛出异常或记录关键错误
         }
 
         // 初始化表
@@ -75,6 +77,31 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         _initialized = true;
     }
 
+    private void LoadNativeExtension(string name)
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var ext = System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) ? ".dll" :
+                  System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX) ? ".dylib" : ".so";
+
+        // 尝试在当前执行目录加载
+        var probePath = Path.Combine(baseDir, name + ext);
+        if (File.Exists(probePath))
+        {
+            _connection.LoadExtension(probePath);
+            return;
+        }
+
+        // 回退到系统路径加载
+        _connection.LoadExtension(name);
+    }
+
+    /// <summary>
+    /// 批量插入或更新内存块。
+    /// </summary>
+    /// <param name="chunks">内存块列表</param>
+    /// <param name="embeddings">嵌入向量列表</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>Task</returns>
     public async Task UpsertAsync(IReadOnlyList<MemoryChunk> chunks, IReadOnlyList<EmbeddingVector> embeddings, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
