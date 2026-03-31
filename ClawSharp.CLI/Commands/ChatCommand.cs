@@ -146,6 +146,7 @@ public static class ChatCommand
             "/cd" or "/home" => await HandleThreadSpaceSwitchAsync(state, command, arguments),
             "/init" => await HandleInitAsync(state),
             "/init-proj" => await HandleInitProjectAsync(state),
+            "/reload" => await HandleReloadAsync(state),
             "/speckit" => await HandleSpecKitAsync(state, arguments),
             "/paste" => await HandlePasteAsync(),
             "/edit" => await HandleEditAsync(),
@@ -377,6 +378,13 @@ public static class ChatCommand
         return CommandDispatchResult.Handled();
     }
 
+    private static async Task<CommandDispatchResult> HandleReloadAsync(ReplState state)
+    {
+        await state.Runtime.ReloadAsync();
+        AnsiConsole.MarkupLine("[green]Runtime definitions and MCP pools reloaded.[/]");
+        return CommandDispatchResult.Handled();
+    }
+
     private static async Task<CommandDispatchResult> HandleSpecKitAsync(ReplState state, string arguments)
     {
         var workingDirectory = state.CurrentThreadSpace.BoundFolderPath ?? Directory.GetCurrentDirectory();
@@ -508,6 +516,7 @@ public static class ChatCommand
         AnsiConsole.Markup("[bold yellow]Agent >[/] ");
         var hasTextOutput = false;
         string? finalAssistantMessage = null;
+        PerformanceMetrics? performance = null;
 
         try
         {
@@ -525,6 +534,7 @@ public static class ChatCommand
                 if (@event.FinalResult is not null)
                 {
                     finalAssistantMessage = @event.FinalResult.AssistantMessage;
+                    performance = @event.FinalResult.Performance;
                 }
             }
         }
@@ -544,6 +554,17 @@ public static class ChatCommand
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[grey]Rendered Markdown:[/]");
             AnsiConsole.Write(new Markdown(finalAssistantMessage ?? string.Empty));
+        }
+
+        if (performance is not null)
+        {
+            var cacheStatus = performance.AgentLaunchPlanCacheHit ? "[green]hit[/]" : "[yellow]miss[/]";
+            var mcpStatus = performance.TotalMcpConnections == 0
+                ? "[grey]n/a[/]"
+                : performance.McpHandshakeAvoided
+                    ? $"[green]{performance.ReusedMcpConnections}/{performance.TotalMcpConnections} reused[/]"
+                    : "[yellow]cold[/]";
+            AnsiConsole.MarkupLine($"[grey]Turn summary:[/] plan cache {cacheStatus}, MCP {mcpStatus}");
         }
 
         AnsiConsole.WriteLine();
@@ -595,6 +616,7 @@ public static class ChatCommand
         table.AddRow("/clear", "Clear terminal screen");
         table.AddRow("/init", "Initialize an agent definition (agent.md) in current space");
         table.AddRow("/init-proj", "Scaffold a new project from templates");
+        table.AddRow("/reload", "Reload agent/skill definitions and reset MCP pools");
         table.AddRow("/speckit", "Run SpecKit feature workflows");
         table.AddRow("/quit, /exit", "Exit the REPL");
         AnsiConsole.Write(table);

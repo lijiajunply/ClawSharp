@@ -6,8 +6,17 @@ using ClawSharp.Lib.Runtime;
 
 namespace ClawSharp.Lib.Agents;
 
+/// <summary>
+/// 负责执行脚手架计划的代理。
+/// </summary>
 public interface IPlannerAgent
 {
+    /// <summary>
+    /// 根据分析后的脚手架计划创建目录、文件和任务内容。
+    /// </summary>
+    /// <param name="plan">要执行的脚手架计划。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>执行结果。</returns>
     Task<OperationResult> ExecuteScaffoldAsync(ScaffoldPlan plan, CancellationToken cancellationToken = default);
 }
 

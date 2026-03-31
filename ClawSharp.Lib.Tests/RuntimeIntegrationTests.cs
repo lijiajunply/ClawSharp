@@ -246,6 +246,59 @@ data: {"type":"message_stop"}
     }
 
     [Fact]
+    public async Task Runtime_PrepareAgentAsync_UsesLaunchPlanCacheOnSecondCall()
+    {
+        var runtime = CreateRuntime(out _, out _);
+        await runtime.InitializeAsync();
+
+        var session = await runtime.StartSessionAsync("planner");
+        var first = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", session.Record.SessionId));
+        var second = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", session.Record.SessionId));
+
+        Assert.False(first.CacheHit);
+        Assert.True(second.CacheHit);
+    }
+
+    [Fact]
+    public async Task Runtime_ReloadAsync_ClearsLaunchPlanCache()
+    {
+        var runtime = CreateRuntime(out _, out _);
+        await runtime.InitializeAsync();
+
+        var session = await runtime.StartSessionAsync("planner");
+        _ = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", session.Record.SessionId));
+        var cached = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", session.Record.SessionId));
+
+        Assert.True(cached.CacheHit);
+
+        await runtime.ReloadAsync();
+
+        var afterReload = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", session.Record.SessionId));
+        Assert.False(afterReload.CacheHit);
+    }
+
+    [Fact]
+    public async Task Runtime_PrepareAgentAsync_IsolatesCacheByAgentId()
+    {
+        var planner = CreateAgent("planner", ["system_info", "shell_run"]);
+        var reviewer = CreateAgent("reviewer", ["system_info"]);
+        var runtime = CreateRuntime([planner, reviewer], out _, out _);
+        await runtime.InitializeAsync();
+
+        var plannerSession = await runtime.StartSessionAsync("planner");
+        var reviewerSession = await runtime.StartSessionAsync("reviewer");
+
+        _ = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", plannerSession.Record.SessionId));
+        var plannerCached = await runtime.PrepareAgentAsync(new AgentLaunchRequest("planner", plannerSession.Record.SessionId));
+        var reviewerFirst = await runtime.PrepareAgentAsync(new AgentLaunchRequest("reviewer", reviewerSession.Record.SessionId));
+        var reviewerCached = await runtime.PrepareAgentAsync(new AgentLaunchRequest("reviewer", reviewerSession.Record.SessionId));
+
+        Assert.True(plannerCached.CacheHit);
+        Assert.False(reviewerFirst.CacheHit);
+        Assert.True(reviewerCached.CacheHit);
+    }
+
+    [Fact]
     public async Task ThreadSpace_ListSessions_CanSelectExistingSessionAndReplayHistory()
     {
         var runtime = CreateRuntime(out _, out _, out var threadSpaces);
@@ -294,6 +347,23 @@ data: {"type":"message_stop"}
 
     private ClawRuntime CreateRuntime(out IPromptHistoryStore historyStore, out ISessionEventStore eventStore, out IThreadSpaceManager threadSpaceManager)
     {
+        return CreateRuntime([CreateAgent("planner", ["system_info", "shell_run"])], out historyStore, out eventStore, out threadSpaceManager);
+    }
+
+    private ClawRuntime CreateRuntime(
+        IReadOnlyCollection<AgentDefinition> agents,
+        out IPromptHistoryStore historyStore,
+        out ISessionEventStore eventStore)
+    {
+        return CreateRuntime(agents, out historyStore, out eventStore, out _);
+    }
+
+    private ClawRuntime CreateRuntime(
+        IReadOnlyCollection<AgentDefinition> agents,
+        out IPromptHistoryStore historyStore,
+        out ISessionEventStore eventStore,
+        out IThreadSpaceManager threadSpaceManager)
+    {
         var options = new ClawOptions
         {
             Runtime = new RuntimeOptions { WorkspaceRoot = _root },
@@ -335,31 +405,18 @@ data: {"type":"message_stop"}
         var sessionManager = new SessionManager(sessionStore);
         threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
 
-        var agent = new AgentDefinition(
-            "planner",
-            "Planner",
-            "desc",
-            "",
-            "stub-model",
-            "You are helpful",
-            ["system_info", "shell_run"],
-            [],
-            "workspace",
-            [],
-            new ToolPermissionSet(ToolCapability.SystemInspect | ToolCapability.ShellExecute, [], [], [], false, false, 10, 1024),
-            "v1",
-            "");
-
         var provider = new StubModelProvider();
         var registry = new ModelProviderRegistry([provider]);
         var resolver = new ModelProviderResolver(options, registry);
+        var mcpCatalog = new McpServerCatalog(options);
+        var mcpManager = new McpClientManager(mcpCatalog, options);
         var kernel = new ClawKernel(
             options,
-            new FakeAgentRegistry(agent),
+            new FakeAgentRegistry(agents),
             new FakeSkillRegistry(),
             new ToolRegistry([new SystemInfoTool(), new ShellRunTool()]),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
-            new McpClientManager(new McpServerCatalog(options)),
+            mcpManager,
             sessionManager,
             threadSpaceManager,
             historyStore,
@@ -369,8 +426,8 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
-            new McpService(),
-            new McpServerCatalog(options),
+            new McpService(options, mcpManager),
+            mcpCatalog,
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
@@ -444,13 +501,15 @@ data: {"type":"message_stop"}
         var provider = new OpenAiResponsesModelProvider(options, new ProviderTestsProxyFactory(handler));
         var registry = new ModelProviderRegistry([provider, new StubModelProvider()]);
         var resolver = new ModelProviderResolver(options, registry);
+        var mcpCatalog = new McpServerCatalog(options);
+        var mcpManager = new McpClientManager(mcpCatalog, options);
         var kernel = new ClawKernel(
             options,
-            new FakeAgentRegistry(agent),
+            new FakeAgentRegistry([agent]),
             new FakeSkillRegistry(),
             new ToolRegistry([new SystemInfoTool()]),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
-            new McpClientManager(new McpServerCatalog(options)),
+            mcpManager,
             sessionManager,
             threadSpaceManager,
             historyStore,
@@ -460,8 +519,8 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
-            new McpService(),
-            new McpServerCatalog(options),
+            new McpService(options, mcpManager),
+            mcpCatalog,
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
@@ -534,13 +593,15 @@ data: {"type":"message_stop"}
         var provider = new AnthropicMessagesModelProvider(options, new ProviderTestsProxyFactory(handler));
         var registry = new ModelProviderRegistry([provider, new StubModelProvider()]);
         var resolver = new ModelProviderResolver(options, registry);
+        var mcpCatalog = new McpServerCatalog(options);
+        var mcpManager = new McpClientManager(mcpCatalog, options);
         var kernel = new ClawKernel(
             options,
-            new FakeAgentRegistry(agent),
+            new FakeAgentRegistry([agent]),
             new FakeSkillRegistry(),
             new ToolRegistry([new SystemInfoTool()]),
             new MemoryIndex(options, new SimpleEmbeddingProvider(options), new InMemoryVectorStore()),
-            new McpClientManager(new McpServerCatalog(options)),
+            mcpManager,
             sessionManager,
             threadSpaceManager,
             historyStore,
@@ -550,8 +611,8 @@ data: {"type":"message_stop"}
 
         return new ClawRuntime(
             kernel,
-            new McpService(),
-            new McpServerCatalog(options),
+            new McpService(options, mcpManager),
+            mcpCatalog,
             sessionStore,
             new DefaultAgentWorkerLauncher(options, new StdioJsonRpcAgentWorkerClient(), registry),
             new JsonSessionSerializer(),
@@ -559,11 +620,27 @@ data: {"type":"message_stop"}
             new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider());
     }
 
-    private sealed class FakeAgentRegistry(AgentDefinition agent) : IAgentRegistry
+    private static AgentDefinition CreateAgent(string id, IReadOnlyList<string> tools) =>
+        new(
+            id,
+            char.ToUpperInvariant(id[0]) + id[1..],
+            "desc",
+            "",
+            "stub-model",
+            "You are helpful",
+            tools,
+            [],
+            "workspace",
+            [],
+            new ToolPermissionSet(ToolCapability.SystemInspect | ToolCapability.ShellExecute, [], [], [], false, false, 10, 1024),
+            "v1",
+            "");
+
+    private sealed class FakeAgentRegistry(IReadOnlyCollection<AgentDefinition> agents) : IAgentRegistry
     {
         public Task ReloadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public IReadOnlyCollection<AgentDefinition> GetAll() => [agent];
-        public AgentDefinition Get(string id) => agent;
+        public IReadOnlyCollection<AgentDefinition> GetAll() => agents;
+        public AgentDefinition Get(string id) => agents.Single(agent => agent.Id == id);
     }
 
     private sealed class FakeSkillRegistry : ISkillRegistry

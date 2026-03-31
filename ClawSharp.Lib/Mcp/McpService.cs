@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Tools;
@@ -10,7 +9,22 @@ namespace ClawSharp.Lib.Mcp;
 /// </summary>
 public sealed class McpService : IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<string, McpClient> _clients = new();
+    private readonly ClawOptions _options;
+    private readonly McpClientManager _manager;
+    private readonly List<McpClient> _prewarmedClients = [];
+    private readonly SemaphoreSlim _startGate = new(1, 1);
+    private PeriodicTimer? _cleanupTimer;
+    private Task? _cleanupLoop;
+    private bool _started;
+
+    /// <summary>
+    /// 初始化 <see cref="McpService"/> 类的新实例。
+    /// </summary>
+    public McpService(ClawOptions options, McpClientManager manager)
+    {
+        _options = options;
+        _manager = manager;
+    }
 
     /// <summary>
     /// 根据配置文件启动所有已注册的 MCP 服务器。
@@ -19,6 +33,8 @@ public sealed class McpService : IAsyncDisposable
     /// <returns>表示异步启动操作的任务。</returns>
     public async Task StartAllAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureCleanupLoopStartedAsync(cancellationToken).ConfigureAwait(false);
+
         var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".clawsharp", "mcp.json");
         if (!File.Exists(configPath)) return;
 
@@ -34,7 +50,7 @@ public sealed class McpService : IAsyncDisposable
             {
                 await transport.StartAsync(cancellationToken).ConfigureAwait(false);
                 await client.InitializeAsync(cancellationToken).ConfigureAwait(false);
-                _clients[name] = client;
+                _prewarmedClients.Add(client);
             }
             catch (Exception ex)
             {
@@ -53,7 +69,21 @@ public sealed class McpService : IAsyncDisposable
     public async Task<IReadOnlyList<IToolExecutor>> GetToolsAsync(CancellationToken cancellationToken = default)
     {
         var tools = new List<IToolExecutor>();
-        foreach (var (serverName, client) in _clients)
+        var clients = _prewarmedClients
+            .Select(client => (serverName: "prewarmed", client))
+            .ToList();
+
+        foreach (var session in _manager.GetConnectedSessions())
+        {
+            if (session is not McpClientBackedSession backedSession)
+            {
+                continue;
+            }
+
+            clients.Add((session.ServerName, backedSession.Client));
+        }
+
+        foreach (var (serverName, client) in clients)
         {
             var response = await client.CallAsync("tools/list", null, cancellationToken).ConfigureAwait(false);
             if (response.Error != null || response.Result == null) continue;
@@ -74,15 +104,95 @@ public sealed class McpService : IAsyncDisposable
     }
 
     /// <summary>
+    /// 强制清理 MCP 连接池。
+    /// </summary>
+    public Task ResetAsync(CancellationToken cancellationToken = default) =>
+        _manager.DisconnectAllAsync(cancellationToken);
+
+    private async Task EnsureCleanupLoopStartedAsync(CancellationToken cancellationToken)
+    {
+        if (_started)
+        {
+            return;
+        }
+
+        await _startGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_started)
+            {
+                return;
+            }
+
+            var period = TimeSpan.FromSeconds(Math.Max(1, Math.Min(_options.Mcp.Pool.IdleTtlSeconds, 60)));
+            _cleanupTimer = new PeriodicTimer(period);
+            _cleanupLoop = Task.Run(async () =>
+            {
+                try
+                {
+                    while (_cleanupTimer is not null && await _cleanupTimer.WaitForNextTickAsync().ConfigureAwait(false))
+                    {
+                        await _manager.CleanupIdleAsync().ConfigureAwait(false);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }, CancellationToken.None);
+            _started = true;
+        }
+        finally
+        {
+            _startGate.Release();
+        }
+    }
+
+    /// <summary>
     /// 异步释放所有 MCP 客户端和传输资源。
     /// </summary>
     /// <returns>表示异步释放操作的任务。</returns>
     public async ValueTask DisposeAsync()
     {
-        foreach (var client in _clients.Values)
+        if (_cleanupTimer is not null)
+        {
+            _cleanupTimer.Dispose();
+        }
+
+        if (_cleanupLoop is not null)
+        {
+            try
+            {
+                await _cleanupLoop.ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
+
+        foreach (var client in _prewarmedClients)
         {
             await client.DisposeAsync();
         }
-        _clients.Clear();
+
+        _prewarmedClients.Clear();
+        await _manager.DisconnectAllAsync().ConfigureAwait(false);
+        _startGate.Dispose();
     }
+}
+
+internal sealed class McpClientBackedSession(string serverName, McpClient client) : IMcpSession
+{
+    public string ServerName { get; } = serverName;
+
+    public bool IsConnected => true;
+
+    public IReadOnlyCollection<McpToolDescriptor> Tools { get; } = [];
+
+    public IReadOnlyCollection<McpResourceDescriptor> Resources { get; } = [];
+
+    public IReadOnlyCollection<McpPromptDescriptor> Prompts { get; } = [];
+
+    public McpClient Client { get; } = client;
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

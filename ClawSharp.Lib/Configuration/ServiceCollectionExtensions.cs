@@ -176,7 +176,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFeatureContextRepository, FeatureContextRepository>();
         services.AddSingleton<IPlannerAgent, PlannerAgent>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
-        services.AddSingleton<IMcpClientManager, McpClientManager>();
+        services.AddSingleton<McpClientManager>();
+        services.AddSingleton<IMcpClientManager>(serviceProvider => serviceProvider.GetRequiredService<McpClientManager>());
         services.AddSingleton<McpService>();
         services.AddSingleton<IAgentWorkerClient, StdioJsonRpcAgentWorkerClient>();
         services.AddSingleton<IAgentWorkerLauncher, DefaultAgentWorkerLauncher>();

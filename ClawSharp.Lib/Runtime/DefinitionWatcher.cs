@@ -16,6 +16,11 @@ public sealed class DefinitionWatcher : IDisposable
     private static readonly TimeSpan DebounceTime = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
+    /// 当定义文件变更并完成重新加载后触发。
+    /// </summary>
+    public event Action<DefinitionChangedEvent>? DefinitionChanged;
+
+    /// <summary>
     /// 初始化 <see cref="DefinitionWatcher"/> 类的新实例。
     /// </summary>
     /// <param name="agents">Agent 注册表。</param>
@@ -41,15 +46,15 @@ public sealed class DefinitionWatcher : IDisposable
             EnableRaisingEvents = true
         };
 
-        watcher.Changed += (s, e) => OnChanged(isAgent);
-        watcher.Created += (s, e) => OnChanged(isAgent);
-        watcher.Deleted += (s, e) => OnChanged(isAgent);
-        watcher.Renamed += (s, e) => OnChanged(isAgent);
+        watcher.Changed += (_, e) => OnChanged(isAgent, e.FullPath);
+        watcher.Created += (_, e) => OnChanged(isAgent, e.FullPath);
+        watcher.Deleted += (_, e) => OnChanged(isAgent, e.FullPath);
+        watcher.Renamed += (_, e) => OnChanged(isAgent, e.FullPath);
 
         _watchers.Add(watcher);
     }
 
-    private void OnChanged(bool isAgent)
+    private void OnChanged(bool isAgent, string fullPath)
     {
         var key = isAgent ? "agent" : "skill";
         var now = DateTime.UtcNow;
@@ -68,6 +73,8 @@ public sealed class DefinitionWatcher : IDisposable
             {
                 if (isAgent) await _agents.ReloadAsync();
                 else await _skills.ReloadAsync();
+
+                DefinitionChanged?.Invoke(new DefinitionChangedEvent(isAgent, fullPath));
             }
             catch (Exception ex)
             {
@@ -88,3 +95,10 @@ public sealed class DefinitionWatcher : IDisposable
         _watchers.Clear();
     }
 }
+
+/// <summary>
+/// 定义文件变更事件。
+/// </summary>
+/// <param name="IsAgent">是否为 Agent 定义。</param>
+/// <param name="FullPath">发生变更的文件路径。</param>
+public sealed record DefinitionChangedEvent(bool IsAgent, string FullPath);

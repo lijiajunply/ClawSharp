@@ -49,6 +49,9 @@ public sealed record HubSkillPackage(
 /// </summary>
 public enum InstallTarget
 {
+    /// <summary>
+    /// 安装到当前用户主目录下的 skills 目录。
+    /// </summary>
     UserHome
 }
 
@@ -57,10 +60,29 @@ public enum InstallTarget
 /// </summary>
 public interface IHubClient
 {
+    /// <summary>
+    /// 搜索 ClawHub 上可用的 skills。
+    /// </summary>
+    /// <param name="query">可选的搜索关键字；为空时返回默认结果。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>匹配的 skill 摘要列表。</returns>
     Task<IReadOnlyList<HubSkillSummary>> SearchSkillsAsync(string? query, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 获取指定 skill 的详细信息。
+    /// </summary>
+    /// <param name="skillId">skill 标识。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>skill 详细信息。</returns>
     Task<HubSkillDetail> GetSkillAsync(string skillId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 下载指定版本的 skill 安装包。
+    /// </summary>
+    /// <param name="skillId">skill 标识。</param>
+    /// <param name="version">要下载的版本号。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>下载得到的安装包内容。</returns>
     Task<HubSkillPackage> DownloadSkillPackageAsync(string skillId, string version, CancellationToken cancellationToken = default);
 }
 
@@ -69,6 +91,14 @@ public interface IHubClient
 /// </summary>
 public interface IHubInstaller
 {
+    /// <summary>
+    /// 将 skill 安装包解压并安装到指定目标位置。
+    /// </summary>
+    /// <param name="package">待安装的安装包。</param>
+    /// <param name="target">安装目标。</param>
+    /// <param name="force">是否在已存在时强制覆盖。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>安装后的本地 skill 信息。</returns>
     Task<InstalledHubSkill> InstallAsync(HubSkillPackage package, InstallTarget target, bool force = false, CancellationToken cancellationToken = default);
 }
 
@@ -77,6 +107,12 @@ public interface IHubInstaller
 /// </summary>
 public interface IHubManifestValidator
 {
+    /// <summary>
+    /// 校验安装包文件并解析其中的 <c>SKILL.md</c> 定义。
+    /// </summary>
+    /// <param name="files">安装包展开后的文件集合。</param>
+    /// <param name="packageFileName">安装包文件名。</param>
+    /// <returns>解析出的 skill 定义。</returns>
     SkillDefinition Validate(IReadOnlyDictionary<string, byte[]> files, string packageFileName);
 }
 
@@ -101,17 +137,27 @@ public sealed class HubClient : IHubClient
         PropertyNameCaseInsensitive = true
     };
 
+    /// <summary>
+    /// 使用全局配置创建默认的 ClawHub 客户端。
+    /// </summary>
+    /// <param name="options">应用配置。</param>
     public HubClient(ClawOptions options)
         : this(options.Hub, () => CreateDefaultHttpClient(options.Hub))
     {
     }
 
+    /// <summary>
+    /// 使用指定 Hub 配置和 HTTP 客户端工厂创建 ClawHub 客户端。
+    /// </summary>
+    /// <param name="options">Hub 配置。</param>
+    /// <param name="httpClientFactory">HTTP 客户端工厂。</param>
     public HubClient(HubOptions options, Func<HttpClient> httpClientFactory)
     {
         _options = options;
         _httpClientFactory = httpClientFactory;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<HubSkillSummary>> SearchSkillsAsync(string? query, CancellationToken cancellationToken = default)
     {
         using var client = _httpClientFactory();
@@ -123,6 +169,7 @@ public sealed class HubClient : IHubClient
         return payload?.Select(dto => dto.ToSummary()).ToArray() ?? [];
     }
 
+    /// <inheritdoc />
     public async Task<HubSkillDetail> GetSkillAsync(string skillId, CancellationToken cancellationToken = default)
     {
         using var client = _httpClientFactory();
@@ -135,6 +182,7 @@ public sealed class HubClient : IHubClient
         return payload.ToDetail();
     }
 
+    /// <inheritdoc />
     public async Task<HubSkillPackage> DownloadSkillPackageAsync(string skillId, string version, CancellationToken cancellationToken = default)
     {
         using var client = _httpClientFactory();
@@ -229,6 +277,7 @@ public sealed class HubManifestValidator : IHubManifestValidator
 {
     private readonly MarkdownSkillParser _parser = new();
 
+    /// <inheritdoc />
     public SkillDefinition Validate(IReadOnlyDictionary<string, byte[]> files, string packageFileName)
     {
         var skillEntry = files.FirstOrDefault(x => string.Equals(Path.GetFileName(x.Key), "SKILL.md", StringComparison.OrdinalIgnoreCase));
@@ -251,6 +300,12 @@ public sealed class HubInstaller : IHubInstaller
     private readonly IHubManifestValidator _validator;
     private readonly ISkillRegistry _skills;
 
+    /// <summary>
+    /// 使用全局配置、包校验器和 skill 注册表创建安装器。
+    /// </summary>
+    /// <param name="options">应用配置。</param>
+    /// <param name="validator">安装包校验器。</param>
+    /// <param name="skills">skill 注册表。</param>
     public HubInstaller(ClawOptions options, IHubManifestValidator validator, ISkillRegistry skills)
     {
         _options = options.Hub;
@@ -258,6 +313,7 @@ public sealed class HubInstaller : IHubInstaller
         _skills = skills;
     }
 
+    /// <inheritdoc />
     public async Task<InstalledHubSkill> InstallAsync(HubSkillPackage package, InstallTarget target, bool force = false, CancellationToken cancellationToken = default)
     {
         var files = ExtractFiles(package);

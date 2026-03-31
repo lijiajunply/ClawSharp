@@ -134,6 +134,13 @@ public interface IMcpClientManager
     Task<IMcpSession> ConnectAsync(string serverName, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 释放一个 MCP 会话，以便回收到连接池中复用。
+    /// </summary>
+    /// <param name="serverName">server 名称。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task ReleaseAsync(string serverName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 断开一个 MCP 会话。
     /// </summary>
     /// <param name="serverName">server 名称。</param>
@@ -151,6 +158,58 @@ public interface IMcpClientManager
 /// </summary>
 public interface IMcpHost
 {
+}
+
+/// <summary>
+/// MCP 连接状态。
+/// </summary>
+public enum McpConnectionStatus
+{
+    /// <summary>
+    /// 连接已建立并可正常使用。
+    /// </summary>
+    Connected = 0,
+
+    /// <summary>
+    /// 连接因错误而不可用。
+    /// </summary>
+    Faulted = 1,
+
+    /// <summary>
+    /// 连接已关闭。
+    /// </summary>
+    Closed = 2
+}
+
+/// <summary>
+/// MCP 连接池中的一条租约记录。
+/// </summary>
+public sealed class McpClientPoolEntry
+{
+    /// <summary>
+    /// server 标识。
+    /// </summary>
+    public required string ServerId { get; init; }
+
+    /// <summary>
+    /// 复用的会话对象。
+    /// </summary>
+    public required IMcpSession Session { get; init; }
+
+    /// <summary>
+    /// 当前连接状态。
+    /// </summary>
+    public McpConnectionStatus Status { get; set; } = McpConnectionStatus.Connected;
+
+    /// <summary>
+    /// 最后一次被访问的时间。
+    /// </summary>
+    public DateTimeOffset LastActivityAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// 当前被租用的次数。
+    /// </summary>
+    public int LeaseCount { get; set; }
 }
 
 /// <summary>
@@ -206,47 +265,193 @@ public sealed class McpServerCatalog(ClawOptions options) : IMcpServerCatalog
 /// <summary>
 /// 默认的 MCP 客户端管理器。
 /// </summary>
-/// <param name="catalog">server 配置目录。</param>
-public sealed class McpClientManager(IMcpServerCatalog catalog) : IMcpClientManager
+public sealed class McpClientManager : IMcpClientManager
 {
-    private readonly ConcurrentDictionary<string, IMcpSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IMcpServerCatalog _catalog;
+    private readonly ClawOptions _options;
+    private readonly Func<McpServerDefinition, CancellationToken, Task<IMcpSession>> _sessionFactory;
+    private readonly ConcurrentDictionary<string, McpClientPoolEntry> _pool = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 初始化 <see cref="McpClientManager"/> 类的新实例。
+    /// </summary>
+    public McpClientManager(
+        IMcpServerCatalog catalog,
+        ClawOptions options,
+        Func<McpServerDefinition, CancellationToken, Task<IMcpSession>>? sessionFactory = null)
+    {
+        _catalog = catalog;
+        _options = options;
+        _sessionFactory = sessionFactory ?? ProcessBackedMcpSession.StartAsync;
+    }
 
     /// <inheritdoc />
     public async Task<IMcpSession> ConnectAsync(string serverName, CancellationToken cancellationToken = default)
     {
-        if (_sessions.TryGetValue(serverName, out var existing))
+        var gate = _locks.GetOrAdd(serverName, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            return existing;
+            if (_pool.TryGetValue(serverName, out var existing) && IsHealthy(existing))
+            {
+                existing.LeaseCount++;
+                existing.LastActivityAt = DateTimeOffset.UtcNow;
+                existing.Status = McpConnectionStatus.Connected;
+                return existing.Session;
+            }
+
+            await DisconnectInternalAsync(serverName).ConfigureAwait(false);
+            await EnsureCapacityAsync(serverName).ConfigureAwait(false);
+
+            var definition = _catalog.Get(serverName);
+            var session = await _sessionFactory(definition, cancellationToken).ConfigureAwait(false);
+            _pool[serverName] = new McpClientPoolEntry
+            {
+                ServerId = serverName,
+                Session = session,
+                Status = McpConnectionStatus.Connected,
+                LastActivityAt = DateTimeOffset.UtcNow,
+                LeaseCount = 1
+            };
+
+            return session;
+        }
+        catch
+        {
+            if (_pool.TryGetValue(serverName, out var entry))
+            {
+                entry.Status = McpConnectionStatus.Faulted;
+            }
+
+            throw;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task ReleaseAsync(string serverName, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_pool.TryGetValue(serverName, out var entry))
+        {
+            return;
         }
 
-        var definition = catalog.Get(serverName);
-        var session = await ProcessBackedMcpSession.StartAsync(definition, cancellationToken).ConfigureAwait(false);
-        _sessions[serverName] = session;
-        return session;
+        if (!entry.Session.IsConnected)
+        {
+            entry.Status = McpConnectionStatus.Faulted;
+            await DisconnectAsync(serverName).ConfigureAwait(false);
+            return;
+        }
+
+        entry.LeaseCount = Math.Max(0, entry.LeaseCount - 1);
+        entry.LastActivityAt = DateTimeOffset.UtcNow;
     }
 
     /// <inheritdoc />
     public async Task DisconnectAsync(string serverName)
     {
-        if (_sessions.TryRemove(serverName, out var session))
+        var gate = _locks.GetOrAdd(serverName, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            await session.DisposeAsync().ConfigureAwait(false);
+            await DisconnectInternalAsync(serverName).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 
     /// <inheritdoc />
-    public IReadOnlyCollection<IMcpSession> GetConnectedSessions() => _sessions.Values.ToArray();
+    public IReadOnlyCollection<IMcpSession> GetConnectedSessions() => _pool.Values
+        .Where(entry => entry.Status == McpConnectionStatus.Connected && entry.Session.IsConnected)
+        .Select(entry => entry.Session)
+        .ToArray();
+
+    /// <summary>
+    /// 清理所有空闲或失效的连接。
+    /// </summary>
+    public async Task CleanupIdleAsync(CancellationToken cancellationToken = default)
+    {
+        var idleThreshold = TimeSpan.FromSeconds(Math.Max(1, _options.Mcp.Pool.IdleTtlSeconds));
+        var now = DateTimeOffset.UtcNow;
+        var staleServers = _pool.Values
+            .Where(entry =>
+                !entry.Session.IsConnected ||
+                entry.Status == McpConnectionStatus.Faulted ||
+                (entry.LeaseCount == 0 && now - entry.LastActivityAt >= idleThreshold))
+            .Select(entry => entry.ServerId)
+            .ToArray();
+
+        foreach (var serverName in staleServers)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await DisconnectAsync(serverName).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// 断开当前池中的全部连接。
+    /// </summary>
+    public async Task DisconnectAllAsync(CancellationToken cancellationToken = default)
+    {
+        var serverNames = _pool.Keys.ToArray();
+        foreach (var serverName in serverNames)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await DisconnectAsync(serverName).ConfigureAwait(false);
+        }
+    }
+
+    private bool IsHealthy(McpClientPoolEntry entry) =>
+        entry.Status == McpConnectionStatus.Connected && entry.Session.IsConnected;
+
+    private async Task EnsureCapacityAsync(string requestedServerName)
+    {
+        var maxPoolSize = Math.Max(1, _options.Mcp.Pool.MaxPoolSize);
+        if (_pool.Count < maxPoolSize)
+        {
+            return;
+        }
+
+        var evictionCandidate = _pool.Values
+            .Where(entry => entry.LeaseCount == 0 && !entry.ServerId.Equals(requestedServerName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(entry => entry.LastActivityAt)
+            .FirstOrDefault();
+
+        if (evictionCandidate is null)
+        {
+            throw new InvalidOperationException("MCP connection pool is full and has no idle connections to evict.");
+        }
+
+        await DisconnectInternalAsync(evictionCandidate.ServerId).ConfigureAwait(false);
+    }
+
+    private async Task DisconnectInternalAsync(string serverName)
+    {
+        if (_pool.TryRemove(serverName, out var entry))
+        {
+            entry.Status = McpConnectionStatus.Closed;
+            await entry.Session.DisposeAsync().ConfigureAwait(false);
+        }
+    }
 }
 
 internal sealed class ProcessBackedMcpSession : IMcpSession
 {
     private readonly Process _process;
+    private bool _disposed;
 
     private ProcessBackedMcpSession(McpServerDefinition definition, Process process)
     {
         ServerName = definition.Name;
         _process = process;
-        IsConnected = true;
         Tools = [];
         Resources = [];
         Prompts = [];
@@ -254,7 +459,7 @@ internal sealed class ProcessBackedMcpSession : IMcpSession
 
     public string ServerName { get; }
 
-    public bool IsConnected { get; private set; }
+    public bool IsConnected => !_disposed && !_process.HasExited;
 
     public IReadOnlyCollection<McpToolDescriptor> Tools { get; }
 
@@ -338,7 +543,7 @@ internal sealed class ProcessBackedMcpSession : IMcpSession
 
     public async ValueTask DisposeAsync()
     {
-        IsConnected = false;
+        _disposed = true;
         if (!_process.HasExited)
         {
             _process.Kill(entireProcessTree: true);

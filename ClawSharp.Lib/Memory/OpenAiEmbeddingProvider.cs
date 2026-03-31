@@ -15,14 +15,28 @@ public sealed class OpenAiEmbeddingProvider : IEmbeddingProvider
     private readonly ClawOptions _options;
     private readonly HttpClient _httpClient;
 
+    /// <summary>
+    /// 使用应用配置和 HTTP 客户端工厂创建 OpenAI 向量提供器。
+    /// </summary>
+    /// <param name="options">应用配置。</param>
+    /// <param name="httpClientFactory">HTTP 客户端工厂。</param>
     public OpenAiEmbeddingProvider(ClawOptions options, IHttpClientFactory httpClientFactory)
     {
         _options = options;
         _httpClient = httpClientFactory.CreateClient();
     }
 
+    /// <summary>
+    /// 当前配置的输出向量维度。
+    /// </summary>
     public int Dimensions => _options.Embedding.Dimensions;
     
+    /// <summary>
+    /// 调用 OpenAI Embeddings API 为输入文本批量生成向量。
+    /// </summary>
+    /// <param name="texts">待嵌入的文本集合。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>按输入顺序排列的向量列表。</returns>
     public async Task<IReadOnlyList<EmbeddingVector>> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default)
     {
         if (texts.Count == 0) return Array.Empty<EmbeddingVector>();

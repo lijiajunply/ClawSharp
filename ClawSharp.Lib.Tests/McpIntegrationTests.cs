@@ -55,6 +55,79 @@ public class McpIntegrationTests
         Assert.Equal("hello", result.Payload.GetProperty("content").GetString());
     }
 
+    [Fact]
+    public async Task McpClientManager_ReusesReleasedSession()
+    {
+        var options = new ClawOptions();
+        options.Mcp.Servers.Add(new McpServerDefinition { Name = "mock", Command = "mock" });
+        var createdSessions = 0;
+        var manager = new McpClientManager(
+            new McpServerCatalog(options),
+            options,
+            (_, _) =>
+            {
+                createdSessions++;
+                return Task.FromResult<IMcpSession>(new FakeMcpSession("mock"));
+            });
+
+        var first = await manager.ConnectAsync("mock");
+        await manager.ReleaseAsync("mock");
+        var second = await manager.ConnectAsync("mock");
+
+        Assert.Same(first, second);
+        Assert.Equal(1, createdSessions);
+    }
+
+    [Fact]
+    public async Task McpClientManager_CleansUpIdleSessionsAfterTtl()
+    {
+        var options = new ClawOptions();
+        options.Mcp.Pool.IdleTtlSeconds = 1;
+        options.Mcp.Servers.Add(new McpServerDefinition { Name = "mock", Command = "mock" });
+        var session = new FakeMcpSession("mock");
+        var manager = new McpClientManager(
+            new McpServerCatalog(options),
+            options,
+            (_, _) => Task.FromResult<IMcpSession>(session));
+
+        _ = await manager.ConnectAsync("mock");
+        await manager.ReleaseAsync("mock");
+        await Task.Delay(TimeSpan.FromSeconds(1.2));
+        await manager.CleanupIdleAsync();
+
+        Assert.Empty(manager.GetConnectedSessions());
+        Assert.True(session.DisposeCount > 0);
+    }
+
+    [Fact]
+    public async Task McpClientManager_RecreatesFaultedSession()
+    {
+        var options = new ClawOptions();
+        options.Mcp.Servers.Add(new McpServerDefinition { Name = "mock", Command = "mock" });
+        var createdSessions = 0;
+        var sessions = new Queue<FakeMcpSession>([
+            new FakeMcpSession("mock"),
+            new FakeMcpSession("mock")
+        ]);
+        var manager = new McpClientManager(
+            new McpServerCatalog(options),
+            options,
+            (_, _) =>
+            {
+                createdSessions++;
+                return Task.FromResult<IMcpSession>(sessions.Dequeue());
+            });
+
+        var first = (FakeMcpSession)await manager.ConnectAsync("mock");
+        await manager.ReleaseAsync("mock");
+        first.IsAlive = false;
+
+        var second = await manager.ConnectAsync("mock");
+
+        Assert.NotSame(first, second);
+        Assert.Equal(2, createdSessions);
+    }
+
     private class MockTransport : McpStdioTransport
     {
         private readonly Queue<McpResponse> _responses = new();
@@ -76,6 +149,30 @@ public class McpIntegrationTests
                 }
             }
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeMcpSession(string serverName) : IMcpSession
+    {
+        public string ServerName { get; } = serverName;
+
+        public bool IsConnected => IsAlive;
+
+        public bool IsAlive { get; set; } = true;
+
+        public int DisposeCount { get; private set; }
+
+        public IReadOnlyCollection<McpToolDescriptor> Tools { get; } = [];
+
+        public IReadOnlyCollection<McpResourceDescriptor> Resources { get; } = [];
+
+        public IReadOnlyCollection<McpPromptDescriptor> Prompts { get; } = [];
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCount++;
+            IsAlive = false;
+            return ValueTask.CompletedTask;
         }
     }
 }

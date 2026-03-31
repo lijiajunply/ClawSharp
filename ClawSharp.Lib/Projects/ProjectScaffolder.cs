@@ -106,6 +106,12 @@ public sealed class ProjectScaffolder(
         }
     }
 
+    /// <summary>
+    /// 在新建项目目录中应用 SpecKit 结构与初始化文件。
+    /// </summary>
+    /// <param name="projectRoot">项目根目录。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>应用结果。</returns>
     public Task<OperationResult<ApplySpecKitResult>> ApplySpecKitAsync(
         string projectRoot,
         CancellationToken cancellationToken = default) =>

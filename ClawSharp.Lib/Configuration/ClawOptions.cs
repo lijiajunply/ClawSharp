@@ -213,6 +213,27 @@ public sealed class McpOptions
     /// 可用 MCP server 定义列表。
     /// </summary>
     public List<McpServerDefinition> Servers { get; set; } = [];
+
+    /// <summary>
+    /// MCP 连接池配置。
+    /// </summary>
+    public McpPoolOptions Pool { get; set; } = new();
+}
+
+/// <summary>
+/// MCP 连接池详细配置。
+/// </summary>
+public sealed class McpPoolOptions
+{
+    /// <summary>
+    /// 空闲连接的回收阈值（秒）。默认 10 分钟。
+    /// </summary>
+    public int IdleTtlSeconds { get; set; } = 600;
+
+    /// <summary>
+    /// 连接池允许保留的最大连接数。
+    /// </summary>
+    public int MaxPoolSize { get; set; } = 8;
 }
 
 /// <summary>

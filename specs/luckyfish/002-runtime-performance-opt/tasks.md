@@ -10,15 +10,15 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 [P] Extend `PerformanceMetrics` schema in `ClawSharp.Lib/Runtime/AnalyticsServices.cs` to include cache/pooling fields
-- [ ] T002 [P] Add `McpPoolOptions` to `ClawSharp.Lib/Configuration/ClawOptions.cs` (TTL, MaxPoolSize)
+- [X] T001 [P] Extend `PerformanceMetrics` schema in `ClawSharp.Lib/Runtime/AnalyticsServices.cs` to include cache/pooling fields
+- [X] T002 [P] Add `McpPoolOptions` to `ClawSharp.Lib/Configuration/ClawOptions.cs` (TTL, MaxPoolSize)
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T003 Define `AgentLaunchPlanCacheEntry` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
-- [ ] T004 Define `McpClientPoolEntry` in `ClawSharp.Lib/Mcp/McpContracts.cs`
-- [ ] T005 [P] Add `ReloadAsync` method signature to `IClawRuntime` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
-- [ ] T006 [P] Add `ReleaseAsync` method signature to `IMcpClientManager` in `ClawSharp.Lib/Mcp/McpContracts.cs`
+- [X] T003 Define `AgentLaunchPlanCacheEntry` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
+- [X] T004 Define `McpClientPoolEntry` in `ClawSharp.Lib/Mcp/McpContracts.cs`
+- [X] T005 [P] Add `ReloadAsync` method signature to `IClawRuntime` in `ClawSharp.Lib/Runtime/RuntimeContracts.cs`
+- [X] T006 [P] Add `ReleaseAsync` method signature to `IMcpClientManager` in `ClawSharp.Lib/Mcp/McpContracts.cs`
 
 ## Phase 3: User Story 1 - 启动加速 (Priority: P1) 🎯 MVP
 
@@ -26,11 +26,11 @@
 
 **Independent Test**: Run a session, send two messages; second message must show log "Cache hit for AgentLaunchPlan".
 
-- [ ] T007 [US1] Implement `ConcurrentDictionary` based cache in `ClawSharp.Lib/Runtime/ClawRuntime.cs`
-- [ ] T008 [US1] Update `PrepareAgentAsync` in `ClawSharp.Lib/Runtime/ClawRuntime.cs` to check cache before parsing
-- [ ] T009 [US1] Subscribe `ClawRuntime` to `DefinitionWatcher` events to evict cache on file change
-- [ ] T010 [US1] Add unit tests for `AgentLaunchPlan` cache hit/miss in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
-- [ ] T010b [US1] Verify cache isolation between different AgentIds in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
+- [X] T007 [US1] Implement `ConcurrentDictionary` based cache in `ClawSharp.Lib/Runtime/ClawRuntime.cs`
+- [X] T008 [US1] Update `PrepareAgentAsync` in `ClawSharp.Lib/Runtime/ClawRuntime.cs` to check cache before parsing
+- [X] T009 [US1] Subscribe `ClawRuntime` to `DefinitionWatcher` events to evict cache on file change
+- [X] T010 [US1] Add unit tests for `AgentLaunchPlan` cache hit/miss in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
+- [X] T010b [US1] Verify cache isolation between different AgentIds in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
 
 ## Phase 4: User Story 2 - MCP 长连接 (Priority: P1)
 
@@ -38,10 +38,10 @@
 
 **Independent Test**: Call an MCP tool twice; second call must skip "Initializing MCP client" log and finish < 50ms.
 
-- [ ] T011 [US2] Implement `McpClientPool` logic in `ClawSharp.Lib/Mcp/McpService.cs`
-- [ ] T012 [US2] Update `ConnectAsync` in `ClawSharp.Lib/Mcp/McpService.cs` to fetch from pool (including fallback for faulted clients)
-- [ ] T013 [US2] Implement `ReleaseAsync` in `ClawSharp.Lib/Mcp/McpService.cs` to return client to pool
-- [ ] T014 [US2] Add integration test for MCP connection reuse in `ClawSharp.Lib.Tests/McpIntegrationTests.cs`
+- [X] T011 [US2] Implement `McpClientPool` logic in `ClawSharp.Lib/Mcp/McpService.cs`
+- [X] T012 [US2] Update `ConnectAsync` in `ClawSharp.Lib/Mcp/McpService.cs` to fetch from pool (including fallback for faulted clients)
+- [X] T013 [US2] Implement `ReleaseAsync` in `ClawSharp.Lib/Mcp/McpService.cs` to return client to pool
+- [X] T014 [US2] Add integration test for MCP connection reuse in `ClawSharp.Lib.Tests/McpIntegrationTests.cs`
 
 ## Phase 5: User Story 3 - 资源回收 & 手动刷新 (Priority: P2)
 
@@ -49,16 +49,16 @@
 
 **Independent Test**: Set TTL to 1s, wait, verify connection closed; Run `/reload` and verify all caches cleared.
 
-- [ ] T015 [US3] Implement background cleanup timer for idle connections in `ClawSharp.Lib/Mcp/McpService.cs`
-- [ ] T016 [US3] Implement `ReloadAsync` in `ClawSharp.Lib/Runtime/ClawRuntime.cs` to clear all internal caches
-- [ ] T017 [US3] Implement `ReloadCommand` in `ClawSharp.CLI/Commands/SpecKitCommands.cs` to expose `/reload`
-- [ ] T018 [US3] Add unit tests for cache eviction and TTL cleanup in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
+- [X] T015 [US3] Implement background cleanup timer for idle connections in `ClawSharp.Lib/Mcp/McpService.cs`
+- [X] T016 [US3] Implement `ReloadAsync` in `ClawSharp.Lib/Runtime/ClawRuntime.cs` to clear all internal caches
+- [X] T017 [US3] Implement `ReloadCommand` in `ClawSharp.CLI/Commands/SpecKitCommands.cs` to expose `/reload`
+- [X] T018 [US3] Add unit tests for cache eviction and TTL cleanup in `ClawSharp.Lib.Tests/RuntimeIntegrationTests.cs`
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T019 [P] Update `ClawSharp.CLI` UI to display cache hit/miss status in turn summary (optional polish)
-- [ ] T020 [P] Final code review and refactor to ensure Principle III (Async-First) compliance
-- [ ] T021 Run `specs/luckyfish/002-runtime-performance-opt/quickstart.md` validation scenarios
+- [X] T019 [P] Update `ClawSharp.CLI` UI to display cache hit/miss status in turn summary (optional polish)
+- [X] T020 [P] Final code review and refactor to ensure Principle III (Async-First) compliance
+- [X] T021 Run `specs/luckyfish/002-runtime-performance-opt/quickstart.md` validation scenarios
 
 ## Dependencies & Execution Order
 

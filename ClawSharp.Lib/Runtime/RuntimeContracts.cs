@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Memory;
@@ -72,6 +74,8 @@ public sealed record AgentLaunchRequest(string AgentId, SessionId SessionId);
 /// <param name="McpServers">需要连接的 MCP server 列表。</param>
 /// <param name="ProviderTarget">已解析的 provider 目标。</param>
 /// <param name="History">当前 session 的历史消息。</param>
+/// <param name="CacheHit">本次计划是否命中缓存。</param>
+/// <param name="DefinitionHash">参与缓存判定的定义哈希。</param>
 public sealed record AgentLaunchPlan(
     RuntimeSession Session,
     AgentDefinition Agent,
@@ -79,7 +83,55 @@ public sealed record AgentLaunchPlan(
     IReadOnlyList<ToolDefinition> Tools,
     IReadOnlyList<McpServerDefinition> McpServers,
     ResolvedModelTarget ProviderTarget,
-    IReadOnlyList<PromptMessage> History);
+    IReadOnlyList<PromptMessage> History,
+    bool CacheHit = false,
+    string? DefinitionHash = null);
+
+/// <summary>
+/// 表示缓存中的静态 agent 启动计划。
+/// </summary>
+public sealed class AgentLaunchPlanCacheEntry
+{
+    /// <summary>
+    /// Agent 标识。
+    /// </summary>
+    public required string AgentId { get; init; }
+
+    /// <summary>
+    /// 当前定义的稳定哈希。
+    /// </summary>
+    public required string DefinitionHash { get; init; }
+
+    /// <summary>
+    /// 缓存的 Agent 定义。
+    /// </summary>
+    public required AgentDefinition Agent { get; init; }
+
+    /// <summary>
+    /// 解析出的 Skill 列表。
+    /// </summary>
+    public required IReadOnlyList<SkillDefinition> Skills { get; init; }
+
+    /// <summary>
+    /// 授权后的工具列表。
+    /// </summary>
+    public required IReadOnlyList<ToolDefinition> Tools { get; init; }
+
+    /// <summary>
+    /// 运行前需要连接的 MCP server 列表。
+    /// </summary>
+    public required IReadOnlyList<McpServerDefinition> McpServers { get; init; }
+
+    /// <summary>
+    /// 解析出的模型目标。
+    /// </summary>
+    public required ResolvedModelTarget ProviderTarget { get; init; }
+
+    /// <summary>
+    /// 最后一次命中时间。
+    /// </summary>
+    public DateTimeOffset LastUsedAt { get; set; } = DateTimeOffset.UtcNow;
+}
 
 /// <summary>
 /// 表示一次 turn 运行完成后的摘要结果。
@@ -89,7 +141,27 @@ public sealed record AgentLaunchPlan(
 /// <param name="AssistantMessage">assistant 最终回复文本。</param>
 /// <param name="Status">turn 完成后的 session 状态。</param>
 /// <param name="ToolCallCount">本次 turn 中发生的工具调用次数。</param>
-public sealed record RunTurnResult(SessionId SessionId, TurnId TurnId, string AssistantMessage, SessionStatus Status, int ToolCallCount);
+/// <param name="Performance">本次 turn 的性能指标摘要。</param>
+public sealed record RunTurnResult(
+    SessionId SessionId,
+    TurnId TurnId,
+    string AssistantMessage,
+    SessionStatus Status,
+    int ToolCallCount,
+    PerformanceMetrics? Performance = null);
+
+/// <summary>
+/// 表示一次 turn 的缓存与连接池性能指标。
+/// </summary>
+/// <param name="AgentLaunchPlanCacheHit">是否命中了启动计划缓存。</param>
+/// <param name="McpHandshakeAvoided">是否至少复用了一个 MCP 连接。</param>
+/// <param name="ReusedMcpConnections">复用的 MCP 连接数量。</param>
+/// <param name="TotalMcpConnections">本轮涉及的 MCP 连接总数。</param>
+public sealed record PerformanceMetrics(
+    bool AgentLaunchPlanCacheHit,
+    bool McpHandshakeAvoided,
+    int ReusedMcpConnections,
+    int TotalMcpConnections);
 
 /// <summary>
 /// 组合了运行时所需核心子系统的内核接口。
@@ -258,6 +330,12 @@ public interface IClawRuntime
     /// <param name="sessionId">session 标识。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     Task DeleteSessionDataAsync(SessionId sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 手动重新加载 agent、skill 与运行时缓存。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task ReloadAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -328,6 +406,7 @@ public sealed class ClawRuntime(
     IServiceProvider serviceProvider) : IClawRuntime, IDisposable
 {
     private readonly Dictionary<string, IAgentWorkerSession> _workers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, AgentLaunchPlanCacheEntry> _launchPlanCache = new(StringComparer.OrdinalIgnoreCase);
     private DefinitionWatcher? _watcher;
 
     private IPermissionUI? PermissionUI => serviceProvider.GetService(typeof(IPermissionUI)) as IPermissionUI;
@@ -340,6 +419,7 @@ public sealed class ClawRuntime(
         await kernel.Skills.ReloadAsync(cancellationToken).ConfigureAwait(false);
 
         _watcher = new DefinitionWatcher(kernel.Agents, kernel.Skills);
+        _watcher.DefinitionChanged += HandleDefinitionChanged;
         var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         _watcher.Watch(Path.Combine(userHome, ".agent"), isAgent: true);
         _watcher.Watch(Path.Combine(userHome, ".skills"), isAgent: false);
@@ -412,6 +492,11 @@ public sealed class ClawRuntime(
     /// </summary>
     public void Dispose()
     {
+        if (_watcher != null)
+        {
+            _watcher.DefinitionChanged -= HandleDefinitionChanged;
+        }
+
         _watcher?.Dispose();
     }
 
@@ -419,36 +504,77 @@ public sealed class ClawRuntime(
     public async Task<AgentLaunchPlan> PrepareAgentAsync(AgentLaunchRequest request, CancellationToken cancellationToken = default)
     {
         var agent = kernel.Agents.Get(request.AgentId);
-        
-        // 使用 PermissionResolver 解析最终权限
         var permissions = permissionResolver.Resolve(agent, kernel.Options.WorkspacePolicy);
-        
-        var provider = kernel.Providers.Resolve(agent);
         var record = await sessionStore.GetAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
                      ?? throw new KeyNotFoundException($"Session '{request.SessionId}' was not found.");
         var history = await kernel.History.ListAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var session = new RuntimeSession(record, permissions, null);
+        var definitionHash = ComputeDefinitionHash(agent, permissions);
+        var cacheKey = BuildCacheKey(request.SessionId, request.AgentId);
 
+        if (_launchPlanCache.TryGetValue(cacheKey, out var cached) &&
+            string.Equals(cached.DefinitionHash, definitionHash, StringComparison.Ordinal))
+        {
+            cached.LastUsedAt = DateTimeOffset.UtcNow;
+            return new AgentLaunchPlan(
+                session,
+                cached.Agent,
+                cached.Skills,
+                cached.Tools,
+                cached.McpServers,
+                cached.ProviderTarget,
+                history,
+                CacheHit: true,
+                DefinitionHash: cached.DefinitionHash);
+        }
+
+        var provider = kernel.Providers.Resolve(agent);
         var skills = agent.Skills.Select(kernel.Skills.Get).ToArray();
-        
-        // 合并 Agent 明确指定的工具和工作空间强制工具
         var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (agent.HasExplicitTools)
         {
-            foreach (var t in agent.Tools) toolNames.Add(t);
+            foreach (var t in agent.Tools)
+            {
+                toolNames.Add(t);
+            }
         }
-        foreach (var t in kernel.Options.WorkspacePolicy.MandatoryTools) toolNames.Add(t);
+
+        foreach (var t in kernel.Options.WorkspacePolicy.MandatoryTools)
+        {
+            toolNames.Add(t);
+        }
 
         var tools = kernel.Tools.GetAuthorizedTools(permissions)
             .Where(x => toolNames.Count == 0 || toolNames.Contains(x.Name))
             .ToArray();
-        
+
         var mcpServers = agent.McpServers
             .Select(serverCatalog.Get)
             .Where(s => s.Capabilities == ToolCapability.None || permissions.Capabilities.HasFlag(s.Capabilities))
             .ToArray();
 
-        return new AgentLaunchPlan(session, agent, skills, tools, mcpServers, provider.Target, history);
+        _launchPlanCache[cacheKey] = new AgentLaunchPlanCacheEntry
+        {
+            AgentId = request.AgentId,
+            DefinitionHash = definitionHash,
+            Agent = agent,
+            Skills = skills,
+            Tools = tools,
+            McpServers = mcpServers,
+            ProviderTarget = provider.Target,
+            LastUsedAt = DateTimeOffset.UtcNow
+        };
+
+        return new AgentLaunchPlan(
+            session,
+            agent,
+            skills,
+            tools,
+            mcpServers,
+            provider.Target,
+            history,
+            CacheHit: false,
+            DefinitionHash: definitionHash);
     }
 
     /// <inheritdoc />
@@ -542,9 +668,16 @@ public sealed class ClawRuntime(
             System.Diagnostics.Debug.WriteLine($"RAG Retrieval failed: {ex.Message}");
         }
         // --- 自动化 RAG 注入结束 ---
+        var reusedMcpConnections = 0;
         foreach (var mcpServer in plan.McpServers)
         {
+            var hadExistingConnection = kernel.Mcp.GetConnectedSessions()
+                .Any(connected => connected.ServerName.Equals(mcpServer.Name, StringComparison.OrdinalIgnoreCase));
             await kernel.Mcp.ConnectAsync(mcpServer.Name, cancellationToken).ConfigureAwait(false);
+            if (hadExistingConnection)
+            {
+                reusedMcpConnections++;
+            }
         }
 
         var worker = await LaunchAgentProcessAsync(plan, cancellationToken).ConfigureAwait(false);
@@ -643,6 +776,15 @@ public sealed class ClawRuntime(
                         toolCalls = totalToolCalls,
                         usage = latestUsage,
                         latencyMs = turnTimer.Elapsed.TotalMilliseconds,
+                        cacheHit = plan.CacheHit,
+                        mcpHandshakeAvoided = reusedMcpConnections > 0,
+                        performance = new
+                        {
+                            agentLaunchPlanCacheHit = plan.CacheHit,
+                            reusedMcpConnections,
+                            totalMcpConnections = plan.McpServers.Count,
+                            mcpHandshakeAvoided = reusedMcpConnections > 0
+                        },
                         blocks = string.IsNullOrWhiteSpace(finalAssistant)
                             ? Array.Empty<object>()
                             : new[]
@@ -659,11 +801,27 @@ public sealed class ClawRuntime(
             await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Completed, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
 
             turnSuccess = true;
-            var finalResult = new RunTurnResult(sessionId, lastUser.TurnId, finalAssistant, SessionStatus.Completed, totalToolCalls);
+            var performance = new PerformanceMetrics(
+                plan.CacheHit,
+                reusedMcpConnections > 0,
+                reusedMcpConnections,
+                plan.McpServers.Count);
+            var finalResult = new RunTurnResult(
+                sessionId,
+                lastUser.TurnId,
+                finalAssistant,
+                SessionStatus.Completed,
+                totalToolCalls,
+                performance);
             yield return new RunTurnStreamEvent(FinalResult: finalResult);
         }
         finally
         {
+            foreach (var mcpServer in plan.McpServers)
+            {
+                await kernel.Mcp.ReleaseAsync(mcpServer.Name, cancellationToken).ConfigureAwait(false);
+            }
+
             if (!turnSuccess)
             {
                 var status = cancellationToken.IsCancellationRequested ? SessionStatus.Cancelled : SessionStatus.Failed;
@@ -735,14 +893,25 @@ public sealed class ClawRuntime(
             await worker.CancelAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        EvictSessionCache(sessionId);
         await kernel.Sessions.CancelAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task DeleteSessionDataAsync(SessionId sessionId, CancellationToken cancellationToken = default)
     {
+        EvictSessionCache(sessionId);
         await kernel.History.DeleteBySessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
         await kernel.Events.DeleteBySessionAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ReloadAsync(CancellationToken cancellationToken = default)
+    {
+        _launchPlanCache.Clear();
+        await kernel.Agents.ReloadAsync(cancellationToken).ConfigureAwait(false);
+        await kernel.Skills.ReloadAsync(cancellationToken).ConfigureAwait(false);
+        await mcpService.ResetAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<WorkerToolResult> HandleToolRequestAsync(
@@ -854,5 +1023,45 @@ public sealed class ClawRuntime(
         }
 
         return new ModelMessage(role, message.Content);
+    }
+
+    private void HandleDefinitionChanged(DefinitionChangedEvent change)
+    {
+        _launchPlanCache.Clear();
+    }
+
+    private static string BuildCacheKey(SessionId sessionId, string agentId) => $"{sessionId.Value}:{agentId}";
+
+    private void EvictSessionCache(SessionId sessionId)
+    {
+        var prefix = $"{sessionId.Value}:";
+        foreach (var cacheKey in _launchPlanCache.Keys.Where(key => key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToArray())
+        {
+            _launchPlanCache.TryRemove(cacheKey, out _);
+        }
+    }
+
+    private static string ComputeDefinitionHash(AgentDefinition agent, ToolPermissionSet permissions)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            agent.Id,
+            agent.Name,
+            agent.Description,
+            agent.Provider,
+            agent.Model,
+            agent.SystemPrompt,
+            agent.Tools,
+            agent.Skills,
+            agent.MemoryScope,
+            agent.McpServers,
+            agent.Version,
+            agent.Body,
+            permissions.Capabilities,
+            permissions.ApprovalRequired
+        });
+
+        var bytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(payload));
+        return Convert.ToHexString(bytes);
     }
 }
