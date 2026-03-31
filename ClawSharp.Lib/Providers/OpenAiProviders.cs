@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Memory;
 
 namespace ClawSharp.Lib.Providers;
 
@@ -721,5 +722,68 @@ public sealed class GeminiCompatibleChatModelProvider(ClawOptions options, IProv
         {
             yield return chunk;
         }
+    }
+}
+
+/// <summary>
+/// 基于 OpenAI 协议的 embedding 提供者实现。
+/// </summary>
+public sealed class OpenAiEmbeddingProvider(ClawOptions options, IProviderHttpClientFactory httpClientFactory, IEmbeddingProvider simpleProvider) : IEmbeddingProvider
+{
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EmbeddingVector>> EmbedAsync(IReadOnlyList<string> texts, CancellationToken cancellationToken = default)
+    {
+        if (texts.Count == 0) return Array.Empty<EmbeddingVector>();
+        if (options.Embedding.Provider != "openai") return await simpleProvider.EmbedAsync(texts, cancellationToken);
+
+        var config = options.Embedding;
+        var providerConfig = options.Providers.Models.FirstOrDefault(m => string.Equals(m.Name, options.Providers.DefaultProvider, StringComparison.OrdinalIgnoreCase));
+        
+        var baseUrl = config.BaseUrl ?? providerConfig?.BaseUrl ?? "https://api.openai.com";
+        var apiKey = config.ApiKey ?? providerConfig?.ApiKey;
+        var model = config.Model;
+
+        var target = new ResolvedModelTarget(
+            options.Providers.DefaultProvider,
+            "openai-embedding",
+            baseUrl,
+            model,
+            providerConfig?.Organization,
+            providerConfig?.Project);
+
+        var client = httpClientFactory.CreateClient(target);
+        var payload = new JsonObject
+        {
+            ["model"] = model,
+            ["input"] = new JsonArray(texts.Select(t => (JsonNode)JsonValue.Create(t)!).ToArray())
+        };
+
+        var path = "v1/embeddings";
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json")
+        };
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        }
+
+        using var response = await client.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        await ProviderHttpHelpers.EnsureSuccessAsync(response, "OpenAI-Embedding", cancellationToken).ConfigureAwait(false);
+
+        using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false), cancellationToken: cancellationToken).ConfigureAwait(false);
+        var data = document.RootElement.GetProperty("data");
+        var results = new EmbeddingVector[data.GetArrayLength()];
+
+        for (var i = 0; i < data.GetArrayLength(); i++)
+        {
+            var item = data[i];
+            var index = item.GetProperty("index").GetInt32();
+            var values = item.GetProperty("embedding").EnumerateArray().Select(v => v.GetSingle()).ToArray();
+            results[index] = new EmbeddingVector(index.ToString(), values);
+        }
+
+        return results;
     }
 }

@@ -514,6 +514,30 @@ public sealed class ClawRuntime(
         await sessionStore.UpdateStatusAsync(sessionId, SessionStatus.Running, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var plan = await PrepareAgentAsync(new AgentLaunchRequest(session.Record.AgentId, sessionId), cancellationToken).ConfigureAwait(false);
+        
+        // --- 自动化 RAG 注入开始 ---
+        var augmentedContext = string.Empty;
+        try 
+        {
+            // 默认从 Workspace 级别检索 (基于当前绑定的目录)
+            var workspaceScope = $"workspace:{session.Record.WorkspaceRoot}";
+            var memoryResults = await kernel.Memory.SearchAsync(
+                new MemoryQuery(workspaceScope, lastUser.Content, TopK: 5), 
+                cancellationToken).ConfigureAwait(false);
+
+            if (memoryResults.Count > 0)
+            {
+                augmentedContext = "\n[Background Knowledge from Memory]:\n" + 
+                    string.Join("\n---\n", memoryResults.Select(r => r.Content));
+            }
+        }
+        catch (Exception ex)
+        {
+            // RAG 失败不应中断对话，仅记录日志
+            Debug.WriteLine($"RAG Retrieval failed: {ex.Message}");
+        }
+        // --- 自动化 RAG 注入结束 ---
+
         foreach (var mcpServer in plan.McpServers)
         {
             await kernel.Mcp.ConnectAsync(mcpServer.Name, cancellationToken).ConfigureAwait(false);
@@ -523,6 +547,14 @@ public sealed class ClawRuntime(
         await worker.InitializeAsync(new WorkerInitializeRequest(sessionId.Value, plan.Agent.Id, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
 
         var modelMessages = BuildModelMessages(plan.Agent, messages);
+        
+        // 如果有检索到的背景知识，将其注入到系统提示中或作为第一条增强消息
+        var finalSystemPrompt = plan.Agent.SystemPrompt;
+        if (!string.IsNullOrEmpty(augmentedContext))
+        {
+            finalSystemPrompt += "\n\n" + augmentedContext;
+        }
+
         var toolSchemas = plan.Tools.Select(tool => new ModelToolSchema(tool.Name, tool.Description, tool.InputSchema?.GetRawText())).ToArray();
         var request = new WorkerTurnRequest(
             sessionId.Value,
@@ -531,7 +563,7 @@ public sealed class ClawRuntime(
             plan.ProviderTarget,
             modelMessages,
             toolSchemas,
-            plan.Agent.SystemPrompt);
+            finalSystemPrompt);
 
         var assistant = new List<string>();
         var totalToolCalls = 0;

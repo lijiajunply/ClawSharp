@@ -98,8 +98,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillRegistry, SkillRegistry>();
         services.AddSingleton<IToolRegistry, ToolRegistry>();
         services.AddSingleton<IPermissionResolver, PermissionResolver>();
-        services.AddSingleton<IEmbeddingProvider, SimpleEmbeddingProvider>();
-        services.AddSingleton<IVectorStore, InMemoryVectorStore>();
+        services.AddSingleton<SimpleEmbeddingProvider>();
+        services.AddSingleton<IEmbeddingProvider>(sp => new OpenAiEmbeddingProvider(
+            sp.GetRequiredService<ClawOptions>(),
+            sp.GetRequiredService<IProviderHttpClientFactory>(),
+            sp.GetRequiredService<SimpleEmbeddingProvider>()));
+        services.AddSingleton<IVectorStore, SqliteVectorStore>();
         services.AddSingleton<IMemoryScopeResolver, DefaultMemoryScopeResolver>();
         services.AddSingleton<IMemoryIndex, MemoryIndex>();
         services.AddDbContextFactory<ClawDbContext>(dbContextOptions =>

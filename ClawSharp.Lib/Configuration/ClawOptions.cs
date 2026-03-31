@@ -237,14 +237,29 @@ public sealed class MemoryOptions
 public sealed class EmbeddingOptions
 {
     /// <summary>
-    /// embedding provider 名称。默认实现使用 <c>simple</c>。
+    /// embedding provider 名称。默认实现使用 <c>simple</c>，可设为 <c>openai</c>。
     /// </summary>
     public string Provider { get; set; } = "simple";
 
     /// <summary>
-    /// embedding 向量维度。默认值为 16。
+    /// 使用的具体模型名。对于 OpenAI，默认为 <c>text-embedding-3-small</c>。
     /// </summary>
-    public int Dimensions { get; set; } = 16;
+    public string Model { get; set; } = "text-embedding-3-small";
+
+    /// <summary>
+    /// embedding API 基础地址；为空时由 provider 选择默认端点。
+    /// </summary>
+    public string? BaseUrl { get; set; }
+
+    /// <summary>
+    /// embedding 专属 API key；为空时可能回退到全局 provider 配置。
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// embedding 向量维度。默认值为 1536 (对应 text-embedding-3-small)。
+    /// </summary>
+    public int Dimensions { get; set; } = 1536;
 }
 
 /// <summary>

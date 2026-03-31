@@ -12,6 +12,8 @@ internal sealed class ClawDbContext(DbContextOptions<ClawDbContext> options) : D
 
     public DbSet<SessionEventEntity> SessionEvents => Set<SessionEventEntity>();
 
+    public DbSet<MemoryChunkEntity> MemoryChunks => Set<MemoryChunkEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ClawDbContext).Assembly);
