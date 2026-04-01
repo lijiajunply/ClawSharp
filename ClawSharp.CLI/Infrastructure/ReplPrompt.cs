@@ -12,21 +12,25 @@ public sealed class ReplPrompt
         "/new",
         "/resume",
         "/sessions",
+        "/agents",
+        "/skills",
         "/tools",
+        "/config",
+        "/history",
+        "/stats",
+        "/spaces",
+        "/hub",
         "/paste",
         "/edit",
         "/cd",
         "/home",
         "/clear",
-        "/quit",
-        "/exit",
         "/init",
         "/init-proj",
-        "/agents",
-        "/skills",
-        "/config",
-        "/stats",
-        "/history"
+        "/reload",
+        "/speckit",
+        "/quit",
+        "/exit"
     ];
 
     private readonly List<string> _suggestions = new();
@@ -43,6 +47,8 @@ public sealed class ReplPrompt
     private const int MaxVisibleMenuLines = 8;
 
     public string? CurrentDirectory { get; set; }
+
+    public Func<string, string, IEnumerable<string>>? DynamicSuggestionProvider { get; set; }
 
     public void AddSuggestions(IEnumerable<string> suggestions)
     {
@@ -327,7 +333,6 @@ public sealed class ReplPrompt
         if (lastAtPos >= 0)
         {
             var textBeforeAt = currentInput[..lastAtPos];
-            // Only suggest if @ is at start or preceded by whitespace
             if (lastAtPos == 0 || char.IsWhiteSpace(textBeforeAt[^1]))
             {
                 var partialPath = currentInput[(lastAtPos + 1)..];
@@ -335,11 +340,52 @@ public sealed class ReplPrompt
             }
         }
 
-        // 2. Default command suggestions
+        // 2. Check for subcommand suggestions (only if space exists)
+        if (currentInput.StartsWith("/") && currentInput.Contains(" "))
+        {
+            var parts = currentInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var cmd = parts[0].ToLowerInvariant();
+            var arg = parts.Length > 1 ? parts[1] : string.Empty;
+
+            var subcommands = GetSubcommandSuggestions(cmd);
+            var matches = subcommands
+                .Where(s => s.StartsWith(arg, StringComparison.OrdinalIgnoreCase))
+                .Select(s => $"{cmd} {s}")
+                .ToList();
+
+            if (matches.Any()) return matches;
+
+            // 3. Dynamic suggestions (only if subcommands didn't match)
+            if (DynamicSuggestionProvider != null)
+            {
+                var dynamic = DynamicSuggestionProvider(cmd, arg);
+                var dynamicMatches = dynamic
+                    .Where(s => s.StartsWith(arg, StringComparison.OrdinalIgnoreCase))
+                    .Select(s => $"{cmd} {s}")
+                    .ToList();
+                if (dynamicMatches.Any()) return dynamicMatches;
+            }
+        }
+
+        // 4. Default command suggestions (Matches /s to /sessions, /spaces etc)
         return _suggestions
             .Where(s => s.StartsWith(currentInput, StringComparison.OrdinalIgnoreCase))
             .OrderBy(s => s.Length)
             .ToList();
+    }
+
+    private IEnumerable<string> GetSubcommandSuggestions(string command)
+    {
+        return command switch
+        {
+            "/help" => ["commands", "mcp", "speckit"],
+            "/spaces" => ["list", "show", "remove", "add"],
+            "/config" => ["list", "get", "set"],
+            "/hub" => ["search", "show", "install"],
+            "/mcp" => ["list", "search", "install", "show"],
+            "/history" => ["last", "all"],
+            _ => Enumerable.Empty<string>()
+        };
     }
 
     private List<string> GetFileSuggestions(string textBeforeAt, string partialPath)

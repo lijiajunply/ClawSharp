@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using ClawSharp.CLI.Infrastructure;
+using ClawSharp.Lib.Agents;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Hub;
 using ClawSharp.Lib.Mcp;
@@ -53,6 +54,23 @@ public static class ChatCommand
                 PromptHandler = CreatePromptHandler(kernel, options)
             };
 
+            state.PromptHandler.DynamicSuggestionProvider = (cmd, arg) =>
+            {
+                if (cmd == "/spaces" && (arg == "show" || arg == "remove"))
+                {
+                    return kernel.ThreadSpaces.ListAsync(false).GetAwaiter().GetResult().Select(s => s.Name);
+                }
+                if (cmd == "/agents")
+                {
+                    return kernel.Agents.GetAll().Select(a => a.Id);
+                }
+                if (cmd == "/config")
+                {
+                    return state.Host.Services.GetRequiredService<IConfigManager>().GetAllAsync().GetAwaiter().GetResult().Keys;
+                }
+                return Enumerable.Empty<string>();
+            };
+
             state.PromptHandler.CurrentDirectory = currentThreadSpace.BoundFolderPath;
 
             ShowWelcomeHeader(finalAgentId, currentThreadSpace.Name);
@@ -66,7 +84,7 @@ public static class ChatCommand
 
             while (true)
             {
-                var input = await state.PromptHandler.AskAsync(GetPrompt(state.CurrentThreadSpace));
+                var input = await state.PromptHandler.AskAsync(GetPrompt(state.CurrentThreadSpace, state.AgentId));
                 var trimmedInput = input.Trim();
                 if (string.IsNullOrWhiteSpace(trimmedInput))
                 {
@@ -148,7 +166,7 @@ public static class ChatCommand
             "/new" => await HandleNewSessionAsync(state),
             "/resume" => await HandleResumeAsync(state),
             "/sessions" => await HandleSessionsAsync(state, arguments),
-            "/agents" => await HandleAgentsAsync(state),
+            "/agents" => await HandleAgentsAsync(state, arguments),
             "/skills" => await HandleSkillsAsync(state),
             "/tools" => await HandleToolsAsync(state),
             "/config" => await HandleConfigAsync(state, arguments),
@@ -412,10 +430,39 @@ public static class ChatCommand
         return CommandDispatchResult.Handled();
     }
 
-    private static async Task<CommandDispatchResult> HandleAgentsAsync(ReplState state)
+    private static async Task<CommandDispatchResult> HandleAgentsAsync(ReplState state, string arguments)
     {
         await state.Runtime.InitializeAsync();
-        await RegistryCommands.RenderAgentsAsync(state.Host.Services);
+        var allAgents = state.Kernel.Agents.GetAll().OrderBy(a => a.Id).ToArray();
+
+        if (string.IsNullOrWhiteSpace(arguments))
+        {
+            await RegistryCommands.RenderAgentsAsync(state.Host.Services);
+            AnsiConsole.MarkupLine("[grey]Usage: /agents <#|id> to switch the active agent for this session.[/]");
+            return CommandDispatchResult.Handled();
+        }
+
+        AgentDefinition? selectedAgent = null;
+        if (int.TryParse(arguments, out var index) && index > 0 && index <= allAgents.Length)
+        {
+            selectedAgent = allAgents[index - 1];
+        }
+        else
+        {
+            selectedAgent = allAgents.FirstOrDefault(a => string.Equals(a.Id, arguments, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (selectedAgent == null)
+        {
+            AnsiConsole.MarkupLine($"[red]Agent '{arguments.EscapeMarkup()}' not found.[/]");
+            return CommandDispatchResult.Handled();
+        }
+
+        state.AgentId = selectedAgent.Id;
+        state.Session = await state.Runtime.StartSessionAsync(new StartSessionRequest(state.AgentId, state.CurrentThreadSpace.ThreadSpaceId));
+        state.SessionId = state.Session.Record.SessionId;
+
+        AnsiConsole.MarkupLine($"[green]Switched to agent:[/] [blue]{state.AgentId.EscapeMarkup()}[/]");
         return CommandDispatchResult.Handled();
     }
 
@@ -543,30 +590,34 @@ public static class ChatCommand
         var argParts = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var sub = argParts.Length > 0 ? argParts[0].ToLowerInvariant() : "list";
 
+        var spaces = await spaceManager.ListAsync(false);
+        var orderedSpaces = spaces.OrderByDescending(x => x.CreatedAt).ToArray();
+
         switch (sub)
         {
             case "list" or "":
             {
-                var spaces = await spaceManager.ListAsync(false);
                 var table = new Table().Border(TableBorder.Rounded);
-                table.AddColumn("[yellow]ID[/]");
+                table.AddColumn("[yellow]#[/]");
                 table.AddColumn("[yellow]Name[/]");
                 table.AddColumn("[yellow]Path[/]");
                 table.AddColumn("[yellow]Created[/]");
                 table.AddColumn("[yellow]Status[/]");
 
-                foreach (var sp in spaces)
+                for (int i = 0; i < orderedSpaces.Length; i++)
                 {
+                    var sp = orderedSpaces[i];
                     var status = sp.ArchivedAt.HasValue ? "[grey]Archived[/]" : "[green]Active[/]";
                     table.AddRow(
-                        sp.ThreadSpaceId.Value,
+                        (i + 1).ToString(),
                         sp.Name.EscapeMarkup(),
-                        sp.BoundFolderPath.EscapeMarkup(),
+                        (sp.BoundFolderPath ?? "[global]").EscapeMarkup(),
                         sp.CreatedAt.ToString("g"),
                         status);
                 }
 
                 AnsiConsole.Write(table);
+                AnsiConsole.MarkupLine("[grey]Usage: /spaces show <#|name> | /spaces remove <#|name> | /spaces add <name> <path>[/]");
                 break;
             }
             case "add" when argParts.Length >= 3:
@@ -581,7 +632,12 @@ public static class ChatCommand
             {
                 var identifier = argParts[1];
                 ThreadSpaceRecord? space = null;
-                if (Guid.TryParse(identifier, out _))
+
+                if (int.TryParse(identifier, out var index) && index > 0 && index <= orderedSpaces.Length)
+                {
+                    space = orderedSpaces[index - 1];
+                }
+                else if (Guid.TryParse(identifier, out _))
                 {
                     try { space = await spaceManager.GetAsync(new ThreadSpaceId(identifier)); } catch { }
                 }
@@ -629,7 +685,12 @@ public static class ChatCommand
             {
                 var identifier = argParts[1];
                 ThreadSpaceId? spaceId = null;
-                if (Guid.TryParse(identifier, out _))
+
+                if (int.TryParse(identifier, out var index) && index > 0 && index <= orderedSpaces.Length)
+                {
+                    spaceId = orderedSpaces[index - 1].ThreadSpaceId;
+                }
+                else if (Guid.TryParse(identifier, out _))
                 {
                     try { spaceId = (await spaceManager.GetAsync(new ThreadSpaceId(identifier))).ThreadSpaceId; } catch { }
                 }
@@ -646,7 +707,7 @@ public static class ChatCommand
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /spaces [list | add <name> <path> | show <id> | remove <id>][/]");
+                AnsiConsole.MarkupLine("[grey]Usage: /spaces [list | add <name> <path> | show <#|id> | remove <#|id>][/]");
                 break;
         }
 
@@ -1014,16 +1075,24 @@ public static class ChatCommand
         AnsiConsole.Write(panel);
     }
 
-    private static string GetPrompt(ThreadSpaceRecord space)
+    private static string GetPrompt(ThreadSpaceRecord space, string agentId)
     {
-        var name = space.Name;
-        if (name.Length > 20)
+        var spaceName = space.Name;
+        if (spaceName.Length > 20)
         {
-            name = name[..17] + "...";
+            spaceName = spaceName[..17] + "...";
+        }
+
+        var displayAgentId = agentId;
+        if (displayAgentId.Length > 10)
+        {
+            // Abbreviation: firstChar + countOfOmitted + lastChar
+            displayAgentId = $"{displayAgentId[0]}{displayAgentId.Length - 2}{displayAgentId[^1]}";
         }
 
         var color = space.IsGlobal ? "bold blue" : "cyan";
-        return $"[{color}]{name.EscapeMarkup()}[/] > ";
+        // To render literal [ and ], we must double them: [[ and ]]
+        return $"[{color}]{spaceName.EscapeMarkup()}[/][grey][[{displayAgentId.EscapeMarkup()}]][/] > ";
     }
 
     private static void ShowHelp()
