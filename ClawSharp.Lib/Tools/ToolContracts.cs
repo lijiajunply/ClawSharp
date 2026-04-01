@@ -45,7 +45,12 @@ public enum ToolCapability
     /// <summary>
     /// 允许执行版本控制操作（如 Git）。
     /// </summary>
-    VersionControl = 1 << 5
+    VersionControl = 1 << 5,
+
+    /// <summary>
+    /// 允许发送电子邮件。
+    /// </summary>
+    EmailSend = 1 << 6
 }
 
 /// <summary>
@@ -69,6 +74,7 @@ public static class ToolCapabilityParser
             "system.inspect" => ToolCapability.SystemInspect,
             "network.access" => ToolCapability.NetworkAccess,
             "version_control" => ToolCapability.VersionControl,
+            "email.send" => ToolCapability.EmailSend,
             _ => ToolCapability.None
         };
 
@@ -87,6 +93,7 @@ public static class ToolCapabilityParser
 /// <param name="ReadOnlyFileSystem">是否禁止任何写文件行为。</param>
 /// <param name="TimeoutSeconds">工具执行超时上限；为 <see langword="null"/> 时使用工具默认值。</param>
 /// <param name="MaxOutputLength">工具输出最大长度；为 <see langword="null"/> 时使用工具默认值。</param>
+/// <param name="AllowedEmailRecipients">允许发送邮件的收件人地址或域名白名单。</param>
 public sealed record ToolPermissionSet(
     ToolCapability Capabilities,
     IReadOnlyCollection<string> AllowedReadRoots,
@@ -95,8 +102,14 @@ public sealed record ToolPermissionSet(
     bool ApprovalRequired = false,
     bool ReadOnlyFileSystem = false,
     int? TimeoutSeconds = null,
-    int? MaxOutputLength = null)
+    int? MaxOutputLength = null,
+    IReadOnlyCollection<string>? AllowedEmailRecipients = null)
 {
+    /// <summary>
+    /// 获取允许发送邮件的收件人地址或域名白名单。
+    /// </summary>
+    public IReadOnlyCollection<string> EffectiveEmailRecipients => AllowedEmailRecipients ?? [];
+
     /// <summary>
     /// 不授予任何能力的空权限集。
     /// </summary>
@@ -121,7 +134,8 @@ public sealed record ToolPermissionSet(
             ApprovalRequired || other.ApprovalRequired,
             ReadOnlyFileSystem || other.ReadOnlyFileSystem,
             MinNullable(TimeoutSeconds, other.TimeoutSeconds),
-            MinNullable(MaxOutputLength, other.MaxOutputLength));
+            MinNullable(MaxOutputLength, other.MaxOutputLength),
+            IntersectOrUseExplicit(EffectiveEmailRecipients, other.EffectiveEmailRecipients));
     }
 
     private static IReadOnlyCollection<string> IntersectOrUseExplicit(
@@ -180,7 +194,7 @@ public sealed class WorkspacePolicy
         new()
         {
             Permissions = new ToolPermissionSet(
-                ToolCapability.ShellExecute | ToolCapability.FileRead | ToolCapability.FileWrite | ToolCapability.SystemInspect | ToolCapability.NetworkAccess | ToolCapability.VersionControl,
+                ToolCapability.ShellExecute | ToolCapability.FileRead | ToolCapability.FileWrite | ToolCapability.SystemInspect | ToolCapability.NetworkAccess | ToolCapability.VersionControl | ToolCapability.EmailSend,
                 [],
                 [],
                 [],
@@ -447,6 +461,31 @@ internal static class ToolSecurity
         return allowedCommands.Contains(normalized, StringComparer.OrdinalIgnoreCase)
             ? OperationResult.Success()
             : OperationResult.Failure("Command denied.");
+    }
+
+    public static OperationResult EnsureEmailRecipientAllowed(string recipient, IReadOnlyCollection<string> allowedRecipients)
+    {
+        if (allowedRecipients.Count == 0)
+        {
+            return OperationResult.Success();
+        }
+
+        var normalized = recipient.Trim().ToLowerInvariant();
+        var isAllowed = allowedRecipients.Any(pattern =>
+        {
+            var p = pattern.Trim().ToLowerInvariant();
+            if (p.StartsWith('@'))
+            {
+                // Domain match
+                return normalized.EndsWith(p, StringComparison.OrdinalIgnoreCase);
+            }
+            // Exact match
+            return normalized == p;
+        });
+
+        return isAllowed
+            ? OperationResult.Success()
+            : OperationResult.Failure("Email recipient denied.");
     }
 
     public static ToolInvocationResult CreateApprovalOrDenied(

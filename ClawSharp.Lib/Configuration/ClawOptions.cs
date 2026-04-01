@@ -221,6 +221,52 @@ public sealed class ToolOptions
     /// 联网搜索工具配置。
     /// </summary>
     public SearchOptions Search { get; set; } = new();
+
+    /// <summary>
+    /// 邮件工具配置。
+    /// </summary>
+    public EmailOptions Email { get; set; } = new();
+}
+
+/// <summary>
+/// 邮件工具的详细配置。
+/// </summary>
+public sealed class EmailOptions
+{
+    /// <summary>
+    /// SMTP 服务器地址。
+    /// </summary>
+    public string SmtpHost { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SMTP 服务器端口。
+    /// </summary>
+    public int SmtpPort { get; set; } = 587;
+
+    /// <summary>
+    /// 是否启用 SSL/TLS。
+    /// </summary>
+    public bool EnableSsl { get; set; } = true;
+
+    /// <summary>
+    /// SMTP 登录用户名。
+    /// </summary>
+    public string UserName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SMTP 登录密码。
+    /// </summary>
+    public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 发件人邮箱地址。
+    /// </summary>
+    public string FromAddress { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 发件人显示名称。
+    /// </summary>
+    public string FromName { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -268,6 +314,11 @@ public sealed class ToolSecurityOptions
     /// 允许执行的 shell 命令白名单。为空表示不按命令名做额外限制。
     /// </summary>
     public List<string> AllowedShellCommands { get; set; } = [];
+
+    /// <summary>
+    /// 允许发送邮件的收件人地址或域名白名单。为空表示不额外限制。
+    /// </summary>
+    public List<string> AllowedEmailRecipients { get; set; } = [];
 
     /// <summary>
     /// 单次命令最多保留的输出长度，默认值为 16384 个字符。

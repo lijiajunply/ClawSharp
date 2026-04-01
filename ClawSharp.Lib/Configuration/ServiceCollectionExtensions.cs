@@ -202,6 +202,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolExecutor, GitOpsTool>();
         services.AddSingleton<IToolExecutor, PdfReadTool>();
         services.AddSingleton<IToolExecutor, WebSearchTool>();
+        services.AddSingleton<IToolExecutor, EmailSendTool>();
 
         return services;
     }

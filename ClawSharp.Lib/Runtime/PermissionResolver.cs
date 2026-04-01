@@ -35,6 +35,9 @@ public sealed class PermissionResolver(ILogger<PermissionResolver>? logger = nul
         // 合并命令白名单
         var allowedCommands = IntersectPaths(agentPerms.AllowedCommands, policyPerms.AllowedCommands);
 
+        // 合并邮件收件人白名单
+        var allowedEmailRecipients = IntersectPaths(agentPerms.EffectiveEmailRecipients, policyPerms.EffectiveEmailRecipients);
+
         return new ToolPermissionSet(
             effectiveCapabilities,
             allowedReadRoots,
@@ -43,7 +46,8 @@ public sealed class PermissionResolver(ILogger<PermissionResolver>? logger = nul
             agentPerms.ApprovalRequired || policyPerms.ApprovalRequired,
             agentPerms.ReadOnlyFileSystem || policyPerms.ReadOnlyFileSystem,
             MinNullable(agentPerms.TimeoutSeconds, policyPerms.TimeoutSeconds),
-            MinNullable(agentPerms.MaxOutputLength, policyPerms.MaxOutputLength));
+            MinNullable(agentPerms.MaxOutputLength, policyPerms.MaxOutputLength),
+            allowedEmailRecipients);
     }
 
     private static IReadOnlyCollection<string> IntersectPaths(IReadOnlyCollection<string> agentPaths, IReadOnlyCollection<string> policyPaths)

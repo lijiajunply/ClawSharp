@@ -76,6 +76,7 @@ public sealed class MarkdownAgentParser
         public List<string>? AllowedReadRoots { get; init; }
         public List<string>? AllowedWriteRoots { get; init; }
         public List<string>? AllowedCommands { get; init; }
+        public List<string>? AllowedEmailRecipients { get; init; }
         public bool RequireApproval { get; init; }
         public bool ReadOnlyFileSystem { get; init; }
         public int? TimeoutSeconds { get; init; }
@@ -100,7 +101,8 @@ public sealed class MarkdownAgentParser
                 RequireApproval,
                 ReadOnlyFileSystem,
                 TimeoutSeconds,
-                MaxOutputLength);
+                MaxOutputLength,
+                AllowedEmailRecipients ?? []);
         }
     }
 }
