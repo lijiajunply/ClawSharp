@@ -94,6 +94,34 @@ public sealed class ConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task ConfigManager_OnlyReadsClawConfigFiles()
+    {
+        File.WriteAllText(Path.Combine(_root, "appsettings.json"), """
+{
+  "Runtime": {
+    "WorkspaceRoot": "json-root"
+  }
+}
+""");
+        Environment.SetEnvironmentVariable("Runtime__WorkspaceRoot", "process-root");
+        Environment.SetEnvironmentVariable("UNRELATED_SYSTEM_SETTING", "system-value");
+
+        var localJson = Path.Combine(_root, "appsettings.Local.json");
+        var config = ClawConfigurationLoader.Build(_root);
+        var options = new ClawOptions();
+        var manager = new ConfigManager(config, options, localJson);
+
+        Assert.Equal("json-root", manager.Get("Runtime:WorkspaceRoot"));
+
+        var all = await manager.GetAllAsync();
+        Assert.Contains("Runtime:WorkspaceRoot", all.Keys);
+        Assert.DoesNotContain("UNRELATED_SYSTEM_SETTING", all.Keys, StringComparer.OrdinalIgnoreCase);
+
+        Environment.SetEnvironmentVariable("Runtime__WorkspaceRoot", null);
+        Environment.SetEnvironmentVariable("UNRELATED_SYSTEM_SETTING", null);
+    }
+
+    [Fact]
     public async Task ConfigManager_CanSetAndMaskSecrets()
     {
         var config = ClawConfigurationLoader.Build(_root);

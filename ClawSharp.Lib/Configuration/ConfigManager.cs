@@ -10,8 +10,8 @@ namespace ClawSharp.Lib.Configuration;
 public sealed class ConfigManager : IConfigManager
 {
     private readonly IConfiguration _configuration;
-    private readonly ClawOptions _options;
     private readonly string _localJsonPath;
+    private readonly HashSet<string> _supportedRootSections;
 
     /// <summary>
     /// 初始化 <see cref="ConfigManager"/> 类的新实例。
@@ -22,9 +22,12 @@ public sealed class ConfigManager : IConfigManager
     public ConfigManager(IConfiguration configuration, ClawOptions options, string? localJsonPath = null)
     {
         _configuration = configuration;
-        _options = options;
         // 约定使用 appsettings.Local.json 作为持久化目标
         _localJsonPath = localJsonPath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.Local.json");
+        _supportedRootSections = typeof(ClawOptions)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(prop => prop.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc/>
@@ -35,16 +38,25 @@ public sealed class ConfigManager : IConfigManager
             root.Reload();
         }
 
-        var result = new Dictionary<string, string?>();
-        foreach (var entry in _configuration.AsEnumerable())
+        var result = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in BuildFileConfiguration().AsEnumerable())
         {
+            if (!ShouldExposeKey(entry.Key)) continue;
             result[entry.Key] = entry.Value;
         }
         return Task.FromResult<IReadOnlyDictionary<string, string?>>(result);
     }
 
     /// <inheritdoc/>
-    public string? Get(string key) => _configuration[key];
+    public string? Get(string key)
+    {
+        if (!ShouldExposeKey(key))
+        {
+            return null;
+        }
+
+        return BuildFileConfiguration()[key];
+    }
 
     /// <inheritdoc/>
     public Task<IEnumerable<string>> GetSupportedKeysAsync()
@@ -168,5 +180,31 @@ public sealed class ConfigManager : IConfigManager
         var lastPart = parts.Last();
         
         return secretPatterns.Any(p => lastPart.EndsWith(p, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IConfigurationRoot BuildFileConfiguration()
+    {
+        var basePath = Path.GetDirectoryName(_localJsonPath);
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            basePath = Directory.GetCurrentDirectory();
+        }
+
+        return new ConfigurationBuilder()
+            .SetBasePath(basePath)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddJsonFile(Path.GetFileName(_localJsonPath), optional: true, reloadOnChange: false)
+            .Build();
+    }
+
+    private bool ShouldExposeKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        var rootSection = key.Split(':', 2)[0];
+        return _supportedRootSections.Contains(rootSection);
     }
 }
