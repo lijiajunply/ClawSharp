@@ -228,9 +228,9 @@ public static class SpecKitCommands
         var table = new Table().Border(TableBorder.Rounded);
         table.AddColumn("Command");
         table.AddColumn("Description");
-        table.AddRow("/speckit init <name>", "Create a new feature spec directory");
-        table.AddRow("/speckit scaffold [plan.md]", "Analyze plan.md, preview changes, and scaffold files");
-        table.AddRow("speckit watch [plan.md]", "Watch plan.md and prompt before scaffold generation");
+        table.AddRow("/speckit init <name>".EscapeMarkup(), "Create a new feature spec directory".EscapeMarkup());
+        table.AddRow("/speckit scaffold [plan.md]".EscapeMarkup(), "Analyze plan.md, preview changes, and scaffold files".EscapeMarkup());
+        table.AddRow("/speckit watch [plan.md]".EscapeMarkup(), "Watch plan.md and prompt before scaffold generation".EscapeMarkup());
         AnsiConsole.Write(table);
     }
 

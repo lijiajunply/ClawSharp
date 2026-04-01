@@ -288,7 +288,7 @@ public static class ChatCommand
                 ? $"Authorized ({capability}, approval required)"
                 : $"Authorized ({capability})";
 
-            table.AddRow(tool.Name, tool.Description, status);
+            table.AddRow(tool.Name.EscapeMarkup(), tool.Description.EscapeMarkup(), status.EscapeMarkup());
         }
 
         AnsiConsole.Write(table);
@@ -905,29 +905,29 @@ public static class ChatCommand
         var table = new Table().Border(TableBorder.Rounded);
         table.AddColumn("[yellow]Command[/]");
         table.AddColumn("[yellow]Description[/]");
-        table.AddRow("/help", "Show this help message");
-        table.AddRow("/new", "Start a new session in current space");
-        table.AddRow("/resume", "Resume last session in current space");
-        table.AddRow("/sessions", "List sessions in the current space");
-        table.AddRow("/sessions <index>", "Switch to a session and replay recent history");
-        table.AddRow("/agents", "List registered agents with provider details");
-        table.AddRow("/skills", "List registered skills");
-        table.AddRow("/tools", "List currently authorized tools");
-        table.AddRow("/config [list|get|set]", "Manage configuration (e.g. /config get Providers:DefaultProvider)");
-        table.AddRow("/history [session-id]", "View message history (defaults to current session)");
-        table.AddRow("/stats [period]", "Show usage analytics (24h, 7d, 30d, all)");
-        table.AddRow("/spaces [list|add|show|remove]", "Manage ThreadSpaces (e.g. /spaces add myspace /path)");
-        table.AddRow("/hub [search|show|install]", "Browse and install skills from ClawHub");
-        table.AddRow("/paste", "Enter multiline paste mode and submit with '.'");
-        table.AddRow("/edit", "Compose a prompt in your external editor");
-        table.AddRow("/cd <path>", "Switch to a directory-bound space");
-        table.AddRow("/home", "Switch back to global space");
-        table.AddRow("/clear", "Clear terminal screen");
-        table.AddRow("/init", "Initialize an agent definition (agent.md) in current space");
-        table.AddRow("/init-proj", "Scaffold a new project from templates");
-        table.AddRow("/reload", "Reload agent/skill definitions and reset MCP pools");
-        table.AddRow("/speckit", "Run SpecKit feature workflows");
-        table.AddRow("/quit, /exit", "Exit the REPL");
+        table.AddRow("/help".EscapeMarkup(), "Show this help message".EscapeMarkup());
+        table.AddRow("/new".EscapeMarkup(), "Start a new session in current space".EscapeMarkup());
+        table.AddRow("/resume".EscapeMarkup(), "Resume last session in current space".EscapeMarkup());
+        table.AddRow("/sessions".EscapeMarkup(), "List sessions in the current space".EscapeMarkup());
+        table.AddRow("/sessions <index>".EscapeMarkup(), "Switch to a session and replay recent history".EscapeMarkup());
+        table.AddRow("/agents".EscapeMarkup(), "List registered agents with provider details".EscapeMarkup());
+        table.AddRow("/skills".EscapeMarkup(), "List registered skills".EscapeMarkup());
+        table.AddRow("/tools".EscapeMarkup(), "List currently authorized tools".EscapeMarkup());
+        table.AddRow("/config [list|get|set]".EscapeMarkup(), "Manage configuration (e.g. /config get Providers:DefaultProvider)".EscapeMarkup());
+        table.AddRow("/history [session-id]".EscapeMarkup(), "View message history (defaults to current session)".EscapeMarkup());
+        table.AddRow("/stats [period]".EscapeMarkup(), "Show usage analytics (24h, 7d, 30d, all)".EscapeMarkup());
+        table.AddRow("/spaces [list|add|show|remove]".EscapeMarkup(), "Manage ThreadSpaces (e.g. /spaces add myspace /path)".EscapeMarkup());
+        table.AddRow("/hub [search|show|install]".EscapeMarkup(), "Browse and install skills from ClawHub".EscapeMarkup());
+        table.AddRow("/paste".EscapeMarkup(), "Enter multiline paste mode and submit with '.'".EscapeMarkup());
+        table.AddRow("/edit".EscapeMarkup(), "Compose a prompt in your external editor".EscapeMarkup());
+        table.AddRow("/cd <path>".EscapeMarkup(), "Switch to a directory-bound space".EscapeMarkup());
+        table.AddRow("/home".EscapeMarkup(), "Switch back to global space".EscapeMarkup());
+        table.AddRow("/clear".EscapeMarkup(), "Clear terminal screen".EscapeMarkup());
+        table.AddRow("/init".EscapeMarkup(), "Initialize an agent definition (agent.md) in current space".EscapeMarkup());
+        table.AddRow("/init-proj".EscapeMarkup(), "Scaffold a new project from templates".EscapeMarkup());
+        table.AddRow("/reload".EscapeMarkup(), "Reload agent/skill definitions and reset MCP pools".EscapeMarkup());
+        table.AddRow("/speckit".EscapeMarkup(), "Run SpecKit feature workflows".EscapeMarkup());
+        table.AddRow("/quit, /exit".EscapeMarkup(), "Exit the REPL".EscapeMarkup());
         AnsiConsole.Write(table);
     }
 
