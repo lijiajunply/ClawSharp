@@ -32,7 +32,7 @@ public interface IPermissionResolver
 public interface IPermissionUI
 {
     /// <summary>
-    /// 向用户发起即时权限提升请求。
+    /// 向用户发起即时权限提升请求（针对能力位）。
     /// </summary>
     /// <param name="agentId">发起请求的 Agent。</param>
     /// <param name="capability">请求的能力位。</param>
@@ -40,6 +40,16 @@ public interface IPermissionUI
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>用户是否批准。</returns>
     Task<bool> RequestCapabilityAsync(string agentId, ToolCapability capability, string toolName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 向用户发起即时工具调用审批（针对具体参数）。
+    /// </summary>
+    /// <param name="agentId">发起请求的 Agent。</param>
+    /// <param name="toolName">关联的工具名。</param>
+    /// <param name="payload">待审批的负载预览（例如待执行的命令或待写入的内容）。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>用户是否批准。</returns>
+    Task<bool> RequestApprovalAsync(string agentId, string toolName, JsonElement payload, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -1005,11 +1015,41 @@ public sealed class ClawRuntime(
             Guid.NewGuid().ToString("N"),
             cancellationToken,
             delegation);
+
         var result = await kernel.Tools.ExecuteAsync(toolRequest.ToolName, context, arguments).ConfigureAwait(false);
-        if (result.Status == ToolInvocationStatus.ApprovalRequired)
+
+        // 如果工具返回了“需要审批” (FR-004)
+        if (result.Status == ToolInvocationStatus.ApprovalRequired && PermissionUI != null)
         {
             await sessionStore.UpdateStatusAsync(plan.Session.Record.SessionId, SessionStatus.WaitingForApproval, cancellationToken: cancellationToken).ConfigureAwait(false);
-            await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "ApprovalRequested", serializer.SerializeToElement(new { tool = toolRequest.ToolName }), cancellationToken).ConfigureAwait(false);
+            await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "ApprovalRequested", serializer.SerializeToElement(new { tool = toolRequest.ToolName, preview = result.Payload.GetRawText() }), cancellationToken).ConfigureAwait(false);
+
+            if (await PermissionUI.RequestApprovalAsync(plan.Agent.Id, toolRequest.ToolName, result.Payload, cancellationToken).ConfigureAwait(false))
+            {
+                // 用户批准，升级上下文并重试 (JIT-Retry)
+                await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "ApprovalGranted", serializer.SerializeToElement(new { tool = toolRequest.ToolName }), cancellationToken).ConfigureAwait(false);
+                await sessionStore.UpdateStatusAsync(plan.Session.Record.SessionId, SessionStatus.Running, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                // 根据负载类型升级权限
+                if (toolRequest.ToolName.Equals("shell_run", StringComparison.OrdinalIgnoreCase) && result.Payload.TryGetProperty("command", out var cmd))
+                {
+                    currentPermissions = currentPermissions with { AllowedCommands = currentPermissions.AllowedCommands.Append(cmd.GetString()!).ToArray() };
+                }
+                else if (toolRequest.ToolName.Equals("file_write", StringComparison.OrdinalIgnoreCase) && result.Payload.TryGetProperty("path", out var path))
+                {
+                    currentPermissions = currentPermissions with { AllowedWriteRoots = currentPermissions.AllowedWriteRoots.Append(path.GetString()!).ToArray() };
+                }
+                
+                // 构造新的上下文重试
+                var retryContext = context with { Permissions = currentPermissions };
+                result = await kernel.Tools.ExecuteAsync(toolRequest.ToolName, retryContext, arguments).ConfigureAwait(false);
+            }
+            else
+            {
+                // 用户拒绝
+                await kernel.Events.AppendAsync(plan.Session.Record.SessionId, userMessage.TurnId, "ApprovalDenied", serializer.SerializeToElement(new { tool = toolRequest.ToolName }), cancellationToken).ConfigureAwait(false);
+                result = ToolInvocationResult.Denied(toolRequest.ToolName, "User denied approval for this tool call.");
+            }
         }
 
         if (kernel.Options.History.RecordToolPayloads)
