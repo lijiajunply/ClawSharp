@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Diagnostics;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Hub;
 using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -143,7 +144,13 @@ public static class ChatCommand
             "/resume" => await HandleResumeAsync(state),
             "/sessions" => await HandleSessionsAsync(state, arguments),
             "/agents" => await HandleAgentsAsync(state),
+            "/skills" => await HandleSkillsAsync(state),
             "/tools" => await HandleToolsAsync(state),
+            "/config" => await HandleConfigAsync(state, arguments),
+            "/history" => await HandleHistoryAsync(state, arguments),
+            "/stats" => await HandleStatsAsync(state, arguments),
+            "/spaces" => await HandleSpacesAsync(state, arguments),
+            "/hub" => await HandleHubAsync(state, arguments),
             "/cd" or "/home" => await HandleThreadSpaceSwitchAsync(state, command, arguments),
             "/init" => await HandleInitAsync(state),
             "/init-proj" => await HandleInitProjectAsync(state),
@@ -291,15 +298,20 @@ public static class ChatCommand
     private static async Task<CommandDispatchResult> HandleAgentsAsync(ReplState state)
     {
         await state.Runtime.InitializeAsync();
+        await RegistryCommands.RenderAgentsAsync(state.Host.Services);
+        return CommandDispatchResult.Handled();
+    }
 
-        var agents = state.Kernel.Agents.GetAll()
-            .OrderBy(agent => agent.Id, StringComparer.OrdinalIgnoreCase)
+    private static Task<CommandDispatchResult> HandleSkillsAsync(ReplState state)
+    {
+        var skills = state.Kernel.Skills.GetAll()
+            .OrderBy(s => s.Id, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (agents.Length == 0)
+        if (skills.Length == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No registered agents were found.[/]");
-            return CommandDispatchResult.Handled();
+            AnsiConsole.MarkupLine("[yellow]No registered skills were found.[/]");
+            return Task.FromResult(CommandDispatchResult.Handled());
         }
 
         var table = new Table().Border(TableBorder.Rounded);
@@ -308,16 +320,302 @@ public static class ChatCommand
         table.AddColumn("[yellow]Source[/]");
         table.AddColumn("[yellow]Version[/]");
 
-        foreach (var agent in agents)
+        foreach (var skill in skills)
         {
             table.AddRow(
-                agent.Id.EscapeMarkup(),
-                agent.Name.EscapeMarkup(),
-                agent.Source.ToString().EscapeMarkup(),
-                agent.Version.EscapeMarkup());
+                skill.Id.EscapeMarkup(),
+                skill.Name.EscapeMarkup(),
+                skill.Source.ToString().EscapeMarkup(),
+                skill.Version.EscapeMarkup());
         }
 
         AnsiConsole.Write(table);
+        return Task.FromResult(CommandDispatchResult.Handled());
+    }
+
+    private static async Task<CommandDispatchResult> HandleConfigAsync(ReplState state, string arguments)
+    {
+        var configManager = state.Host.Services.GetRequiredService<IConfigManager>();
+        var argParts = arguments.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+        var sub = argParts.Length > 0 ? argParts[0].ToLowerInvariant() : "list";
+
+        switch (sub)
+        {
+            case "list" or "":
+            {
+                var allConfigs = await configManager.GetAllAsync();
+                var table = new Table().Border(TableBorder.Rounded);
+                table.AddColumn("[yellow]Key[/]");
+                table.AddColumn("[yellow]Value[/]");
+
+                foreach (var key in allConfigs.Keys.OrderBy(k => k))
+                {
+                    if (string.IsNullOrWhiteSpace(key)) continue;
+                    var displayValue = configManager.IsSecret(key) ? "********" : allConfigs[key];
+                    table.AddRow(key.EscapeMarkup(), displayValue?.EscapeMarkup() ?? "[grey]<null>[/]");
+                }
+
+                AnsiConsole.Write(table);
+                break;
+            }
+            case "get" when argParts.Length >= 2:
+            {
+                var key = argParts[1];
+                var value = configManager.Get(key);
+                if (value == null)
+                    AnsiConsole.MarkupLine($"[yellow]Key not found: {key.EscapeMarkup()}[/]");
+                else
+                    AnsiConsole.WriteLine(configManager.IsSecret(key) ? "********" : value);
+                break;
+            }
+            case "set" when argParts.Length >= 3:
+            {
+                var key = argParts[1];
+                var value = argParts[2];
+                await configManager.SetAsync(key, value);
+                AnsiConsole.MarkupLine($"[green]Set {key.EscapeMarkup()}[/]");
+                break;
+            }
+            default:
+                AnsiConsole.MarkupLine("[grey]Usage: /config [list | get <key> | set <key> <value>][/]");
+                break;
+        }
+
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleHistoryAsync(ReplState state, string arguments)
+    {
+        var sessionId = string.IsNullOrWhiteSpace(arguments)
+            ? state.SessionId
+            : new SessionId(arguments.Trim());
+
+        var history = await state.Runtime.GetHistoryAsync(sessionId);
+
+        foreach (var entry in history.OrderBy(m => m.SequenceNo))
+        {
+            if (entry.Message == null) continue;
+            var message = entry.Message;
+            var panel = new Panel(new Markdown(message.Content));
+            panel.Header = new PanelHeader(message.Role.ToString());
+
+            panel.BorderColor(message.Role switch
+            {
+                PromptMessageRole.User => Color.Green,
+                PromptMessageRole.Assistant => Color.Blue,
+                _ => Color.Grey
+            });
+
+            AnsiConsole.Write(panel);
+            AnsiConsole.WriteLine();
+        }
+
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleStatsAsync(ReplState state, string arguments)
+    {
+        var period = string.IsNullOrWhiteSpace(arguments) ? "24h" : arguments.Trim();
+        await StatsCommands.RunAsync(state.Host, period, false, false, "table");
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleSpacesAsync(ReplState state, string arguments)
+    {
+        var spaceManager = state.Host.Services.GetRequiredService<IThreadSpaceManager>();
+        var argParts = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var sub = argParts.Length > 0 ? argParts[0].ToLowerInvariant() : "list";
+
+        switch (sub)
+        {
+            case "list" or "":
+            {
+                var spaces = await spaceManager.ListAsync(false);
+                var table = new Table().Border(TableBorder.Rounded);
+                table.AddColumn("[yellow]ID[/]");
+                table.AddColumn("[yellow]Name[/]");
+                table.AddColumn("[yellow]Path[/]");
+                table.AddColumn("[yellow]Created[/]");
+                table.AddColumn("[yellow]Status[/]");
+
+                foreach (var sp in spaces)
+                {
+                    var status = sp.ArchivedAt.HasValue ? "[grey]Archived[/]" : "[green]Active[/]";
+                    table.AddRow(
+                        sp.ThreadSpaceId.Value,
+                        sp.Name.EscapeMarkup(),
+                        sp.BoundFolderPath.EscapeMarkup(),
+                        sp.CreatedAt.ToString("g"),
+                        status);
+                }
+
+                AnsiConsole.Write(table);
+                break;
+            }
+            case "add" when argParts.Length >= 3:
+            {
+                var name = argParts[1];
+                var path = Path.GetFullPath(argParts[2]);
+                var created = await spaceManager.CreateAsync(new CreateThreadSpaceRequest(name, path));
+                AnsiConsole.MarkupLine($"[green]Created space '{created.Name.EscapeMarkup()}' at {path.EscapeMarkup()}[/]");
+                break;
+            }
+            case "show" when argParts.Length >= 2:
+            {
+                var identifier = argParts[1];
+                ThreadSpaceRecord? space = null;
+                if (Guid.TryParse(identifier, out _))
+                {
+                    try { space = await spaceManager.GetAsync(new ThreadSpaceId(identifier)); } catch { }
+                }
+                space ??= await spaceManager.GetByNameAsync(identifier);
+
+                if (space == null)
+                {
+                    AnsiConsole.MarkupLine($"[red]Space '{identifier.EscapeMarkup()}' not found.[/]");
+                    break;
+                }
+
+                var grid = new Grid().AddColumn().AddColumn();
+                grid.AddRow("[yellow]ID:[/]", space.ThreadSpaceId.Value);
+                grid.AddRow("[yellow]Name:[/]", space.Name.EscapeMarkup());
+                grid.AddRow("[yellow]Path:[/]", (space.BoundFolderPath ?? "[global]").EscapeMarkup());
+                grid.AddRow("[yellow]Created:[/]", space.CreatedAt.ToString("F"));
+                grid.AddRow("[yellow]Is Global:[/]", space.IsGlobal.ToString());
+                if (space.ArchivedAt.HasValue)
+                    grid.AddRow("[red]Archived:[/]", space.ArchivedAt.Value.ToString("F"));
+                AnsiConsole.Write(new Panel(grid) { Header = new PanelHeader("ThreadSpace Details") });
+
+                var sessions = await spaceManager.ListSessionsAsync(space.ThreadSpaceId);
+                if (sessions.Count > 0)
+                {
+                    var sessionTable = new Table().Title("Sessions").Border(TableBorder.Rounded);
+                    sessionTable.AddColumn("Session ID");
+                    sessionTable.AddColumn("Agent");
+                    sessionTable.AddColumn("Status");
+                    sessionTable.AddColumn("Started At");
+                    foreach (var s in sessions)
+                    {
+                        sessionTable.AddRow(
+                            s.SessionId.Value, s.AgentId.EscapeMarkup(),
+                            s.Status.ToString(), s.StartedAt.ToString("g"));
+                    }
+                    AnsiConsole.Write(sessionTable);
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[grey]No sessions in this space.[/]");
+                }
+                break;
+            }
+            case "remove" when argParts.Length >= 2:
+            {
+                var identifier = argParts[1];
+                ThreadSpaceId? spaceId = null;
+                if (Guid.TryParse(identifier, out _))
+                {
+                    try { spaceId = (await spaceManager.GetAsync(new ThreadSpaceId(identifier))).ThreadSpaceId; } catch { }
+                }
+                spaceId ??= (await spaceManager.GetByNameAsync(identifier))?.ThreadSpaceId;
+
+                if (spaceId == null)
+                {
+                    AnsiConsole.MarkupLine($"[red]Space '{identifier.EscapeMarkup()}' not found.[/]");
+                    break;
+                }
+
+                await spaceManager.ArchiveAsync(spaceId.Value);
+                AnsiConsole.MarkupLine($"[green]Space '{identifier.EscapeMarkup()}' archived.[/]");
+                break;
+            }
+            default:
+                AnsiConsole.MarkupLine("[grey]Usage: /spaces [list | add <name> <path> | show <id> | remove <id>][/]");
+                break;
+        }
+
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleHubAsync(ReplState state, string arguments)
+    {
+        var options = state.Host.Services.GetRequiredService<ClawOptions>();
+        if (!options.Hub.Enabled || string.IsNullOrWhiteSpace(options.Hub.BaseUrl))
+        {
+            AnsiConsole.MarkupLine("[yellow]ClawHub is not enabled. Set Hub:Enabled=true and Hub:BaseUrl to use hub commands.[/]");
+            return CommandDispatchResult.Handled();
+        }
+
+        var hubClient = state.Host.Services.GetRequiredService<IHubClient>();
+        var argParts = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var sub = argParts.Length > 0 ? argParts[0].ToLowerInvariant() : "search";
+
+        switch (sub)
+        {
+            case "search":
+            {
+                var query = argParts.Length > 1 ? string.Join(' ', argParts[1..]) : null;
+                var results = await hubClient.SearchSkillsAsync(query);
+
+                if (results.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[yellow]No skills found.[/]");
+                    break;
+                }
+
+                var table = new Table().Border(TableBorder.Rounded).Expand();
+                table.AddColumn("[yellow]ID[/]");
+                table.AddColumn("[yellow]Name[/]");
+                table.AddColumn("[yellow]Version[/]");
+                table.AddColumn("[yellow]Description[/]");
+
+                foreach (var skill in results)
+                {
+                    table.AddRow(
+                        skill.Id.EscapeMarkup(),
+                        skill.Name.EscapeMarkup(),
+                        skill.LatestVersion.EscapeMarkup(),
+                        skill.Description.EscapeMarkup());
+                }
+
+                AnsiConsole.Write(table);
+                break;
+            }
+            case "show" when argParts.Length >= 2:
+            {
+                var skillId = argParts[1];
+                var skill = await hubClient.GetSkillAsync(skillId);
+                var content =
+                    $"[bold]{skill.Name.EscapeMarkup()}[/] ([blue]{skill.Id.EscapeMarkup()}[/]){Environment.NewLine}" +
+                    $"Latest: [green]{skill.LatestVersion.EscapeMarkup()}[/]{Environment.NewLine}" +
+                    $"Downloads: {skill.Downloads}{Environment.NewLine}" +
+                    $"{skill.Description.EscapeMarkup()}";
+                AnsiConsole.Write(new Panel(new Markup(content)) { Header = new PanelHeader("ClawHub Skill"), Border = BoxBorder.Rounded });
+                if (!string.IsNullOrWhiteSpace(skill.Readme))
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[bold]README[/]");
+                    AnsiConsole.WriteLine(skill.Readme);
+                }
+                break;
+            }
+            case "install" when argParts.Length >= 2:
+            {
+                var skillId = argParts[1];
+                var version = argParts.Length >= 3 ? argParts[2] : null;
+                var installer = state.Host.Services.GetRequiredService<IHubInstaller>();
+                var detail = await hubClient.GetSkillAsync(skillId);
+                var resolvedVersion = string.IsNullOrWhiteSpace(version) ? detail.LatestVersion : version;
+                var package = await hubClient.DownloadSkillPackageAsync(skillId, resolvedVersion!);
+                var installed = await installer.InstallAsync(package, InstallTarget.UserHome, false);
+                AnsiConsole.MarkupLine($"[green]Installed[/] [blue]{installed.SkillId.EscapeMarkup()}[/] [grey]v{installed.Version.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine($"Path: [grey]{installed.InstallPath.EscapeMarkup()}[/]");
+                break;
+            }
+            default:
+                AnsiConsole.MarkupLine("[grey]Usage: /hub [search [query] | show <skill-id> | install <skill-id> [version]][/]");
+                break;
+        }
+
         return CommandDispatchResult.Handled();
     }
 
@@ -612,8 +910,14 @@ public static class ChatCommand
         table.AddRow("/resume", "Resume last session in current space");
         table.AddRow("/sessions", "List sessions in the current space");
         table.AddRow("/sessions <index>", "Switch to a session and replay recent history");
-        table.AddRow("/agents", "List registered agents");
+        table.AddRow("/agents", "List registered agents with provider details");
+        table.AddRow("/skills", "List registered skills");
         table.AddRow("/tools", "List currently authorized tools");
+        table.AddRow("/config [list|get|set]", "Manage configuration (e.g. /config get Providers:DefaultProvider)");
+        table.AddRow("/history [session-id]", "View message history (defaults to current session)");
+        table.AddRow("/stats [period]", "Show usage analytics (24h, 7d, 30d, all)");
+        table.AddRow("/spaces [list|add|show|remove]", "Manage ThreadSpaces (e.g. /spaces add myspace /path)");
+        table.AddRow("/hub [search|show|install]", "Browse and install skills from ClawHub");
         table.AddRow("/paste", "Enter multiline paste mode and submit with '.'");
         table.AddRow("/edit", "Compose a prompt in your external editor");
         table.AddRow("/cd <path>", "Switch to a directory-bound space");
@@ -630,7 +934,8 @@ public static class ChatCommand
     internal static bool SupportsSlashCommand(string command) =>
         command.ToLowerInvariant() switch
         {
-            "/help" or "/clear" or "/new" or "/resume" or "/sessions" or "/agents" or "/tools" or
+            "/help" or "/clear" or "/new" or "/resume" or "/sessions" or "/agents" or "/skills" or
+            "/tools" or "/config" or "/history" or "/stats" or "/spaces" or "/hub" or
             "/cd" or "/home" or "/init" or "/init-proj" or "/reload" or "/speckit" or
             "/paste" or "/edit" or "/exit" or "/quit" => true,
             _ => false
