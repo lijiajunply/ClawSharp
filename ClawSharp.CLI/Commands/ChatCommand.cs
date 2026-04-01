@@ -2,7 +2,6 @@ using System.CommandLine;
 using System.Diagnostics;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Configuration;
-using ClawSharp.Lib.Markdown;
 using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -143,6 +142,7 @@ public static class ChatCommand
             "/new" => await HandleNewSessionAsync(state),
             "/resume" => await HandleResumeAsync(state),
             "/sessions" => await HandleSessionsAsync(state, arguments),
+            "/agents" => await HandleAgentsAsync(state),
             "/tools" => await HandleToolsAsync(state),
             "/cd" or "/home" => await HandleThreadSpaceSwitchAsync(state, command, arguments),
             "/init" => await HandleInitAsync(state),
@@ -282,6 +282,39 @@ public static class ChatCommand
                 : $"Authorized ({capability})";
 
             table.AddRow(tool.Name, tool.Description, status);
+        }
+
+        AnsiConsole.Write(table);
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleAgentsAsync(ReplState state)
+    {
+        await state.Runtime.InitializeAsync();
+
+        var agents = state.Kernel.Agents.GetAll()
+            .OrderBy(agent => agent.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (agents.Length == 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]No registered agents were found.[/]");
+            return CommandDispatchResult.Handled();
+        }
+
+        var table = new Table().Border(TableBorder.Rounded);
+        table.AddColumn("[yellow]ID[/]");
+        table.AddColumn("[yellow]Name[/]");
+        table.AddColumn("[yellow]Source[/]");
+        table.AddColumn("[yellow]Version[/]");
+
+        foreach (var agent in agents)
+        {
+            table.AddRow(
+                agent.Id.EscapeMarkup(),
+                agent.Name.EscapeMarkup(),
+                agent.Source.ToString().EscapeMarkup(),
+                agent.Version.EscapeMarkup());
         }
 
         AnsiConsole.Write(table);
@@ -611,6 +644,7 @@ public static class ChatCommand
         table.AddRow("/resume", "Resume last session in current space");
         table.AddRow("/sessions", "List sessions in the current space");
         table.AddRow("/sessions <index>", "Switch to a session and replay recent history");
+        table.AddRow("/agents", "List registered agents");
         table.AddRow("/tools", "List currently authorized tools");
         table.AddRow("/paste", "Enter multiline paste mode and submit with '.'");
         table.AddRow("/edit", "Compose a prompt in your external editor");
@@ -624,6 +658,15 @@ public static class ChatCommand
         table.AddRow("/quit, /exit", "Exit the REPL");
         AnsiConsole.Write(table);
     }
+
+    internal static bool SupportsSlashCommand(string command) =>
+        command.ToLowerInvariant() switch
+        {
+            "/help" or "/clear" or "/new" or "/resume" or "/sessions" or "/agents" or "/tools" or
+            "/cd" or "/home" or "/init" or "/init-proj" or "/reload" or "/speckit" or
+            "/paste" or "/edit" or "/exit" or "/quit" => true,
+            _ => false
+        };
 
     private static string ShortId(SessionId sessionId) =>
         sessionId.Value.Length <= 8 ? sessionId.Value : sessionId.Value[..8];

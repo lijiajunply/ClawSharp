@@ -214,6 +214,14 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
+        var availableCount = await CountScopeEntriesAsync(query.Scope, cancellationToken);
+        if (availableCount == 0)
+        {
+            return [];
+        }
+
+        var topK = NormalizeTopK(query.TopK);
+        topK = Math.Min(topK, availableCount);
         var results = new List<MemorySearchResult>();
 
         using var command = _connection.CreateCommand();
@@ -228,7 +236,7 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
         ";
         command.Parameters.AddWithValue("@scope", query.Scope);
         command.Parameters.AddWithValue("@query", JsonSerializer.Serialize(embedding.Values));
-        command.Parameters.AddWithValue("@topk", query.TopK);
+        command.Parameters.AddWithValue("@topk", topK);
 
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -247,6 +255,17 @@ public sealed class SqliteVssVectorStore : IVectorStore, IDisposable
 
         return results;
     }
+
+    private async Task<int> CountScopeEntriesAsync(string scope, CancellationToken cancellationToken)
+    {
+        using var countCommand = _connection.CreateCommand();
+        countCommand.CommandText = "SELECT COUNT(1) FROM chunk_metadata WHERE scope = @scope";
+        countCommand.Parameters.AddWithValue("@scope", scope);
+        var count = await countCommand.ExecuteScalarAsync(cancellationToken);
+        return count is null or DBNull ? 0 : Convert.ToInt32(count);
+    }
+
+    internal static int NormalizeTopK(int topK) => topK > 0 ? topK : 1;
 
     /// <summary>
     /// 释放资源，关闭数据库连接。

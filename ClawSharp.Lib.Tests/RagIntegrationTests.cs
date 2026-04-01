@@ -54,6 +54,35 @@ public class RagIntegrationTests
     }
 
     [Fact]
+    public async Task SqliteVss_Querying_Empty_Scope_Returns_Empty_Without_Crashing()
+    {
+        var services = new ServiceCollection();
+        var options = new ClawOptions();
+        options.Runtime.WorkspaceRoot = Path.GetTempPath();
+        options.Runtime.DataPath = "clawsharp_test_" + Guid.NewGuid().ToString("N");
+        options.Embedding.Dimensions = 384;
+
+        services.AddSingleton(options);
+        services.AddLogging();
+        services.AddSingleton<IVectorStore, SqliteVssVectorStore>();
+
+        var sp = services.BuildServiceProvider();
+        var vectorStore = sp.GetRequiredService<IVectorStore>();
+
+        var results = await vectorStore.QueryAsync(
+            new MemoryQuery("empty-scope", "hello", TopK: 5),
+            new EmbeddingVector("q", new float[384]));
+
+        Assert.Empty(results);
+
+        if (vectorStore is IDisposable d) d.Dispose();
+        if (Directory.Exists(Path.Combine(options.Runtime.WorkspaceRoot, options.Runtime.DataPath)))
+        {
+            Directory.Delete(Path.Combine(options.Runtime.WorkspaceRoot, options.Runtime.DataPath), true);
+        }
+    }
+
+    [Fact]
     public async Task LocalEmbeddingProvider_Should_Generate_Vectors()
     {
         var options = new ClawOptions();

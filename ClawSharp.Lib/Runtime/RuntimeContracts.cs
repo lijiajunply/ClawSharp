@@ -689,8 +689,18 @@ public sealed class ClawRuntime(
 
         var plan = await PrepareAgentAsync(new AgentLaunchRequest(session.Record.AgentId, sessionId), cancellationToken).ConfigureAwait(false);
         
+        var threadSpace = await kernel.ThreadSpaces.GetAsync(session.Record.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
+        var promptAugmentations = new List<string>();
+
+        var threadSpacePrompt = await ThreadSpacePromptAugmentor
+            .BuildAsync(threadSpace, session.Record.WorkspaceRoot, kernel.Options.Runtime.ThreadSpacePrompt, cancellationToken)
+            .ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(threadSpacePrompt))
+        {
+            promptAugmentations.Add(threadSpacePrompt);
+        }
+
         // --- 自动化 RAG 注入开始 ---
-        var augmentedContext = string.Empty;
         try
         {
             // 确定检索命名空间：默认使用当前 Session 的命名空间，
@@ -705,8 +715,9 @@ public sealed class ClawRuntime(
 
             if (memoryResults.Count > 0)
             {
-                augmentedContext = "\n[Relevant Background Knowledge]:\n" +
-                    string.Join("\n---\n", memoryResults.Select(r => r.Content));
+                promptAugmentations.Add(
+                    "[Relevant Background Knowledge]:\n" +
+                    string.Join("\n---\n", memoryResults.Select(r => r.Content)));
             }
         }
         catch (Exception ex)
@@ -734,9 +745,9 @@ public sealed class ClawRuntime(
         
         // 如果有检索到的背景知识，将其注入到系统提示中或作为第一条增强消息
         var finalSystemPrompt = plan.Agent.SystemPrompt;
-        if (!string.IsNullOrEmpty(augmentedContext))
+        if (promptAugmentations.Count > 0)
         {
-            finalSystemPrompt += "\n\n" + augmentedContext;
+            finalSystemPrompt += "\n\n" + string.Join("\n\n", promptAugmentations);
         }
 
         var toolSchemas = plan.Tools.Select(tool => new ModelToolSchema(tool.Name, tool.Description, tool.InputSchema?.GetRawText())).ToArray();

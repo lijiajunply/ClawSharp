@@ -134,6 +134,51 @@ public sealed class RuntimeOptions
     /// runtime 默认超时秒数。未被更具体配置覆盖时使用。
     /// </summary>
     public int DefaultTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// ThreadSpace 内系统提示增强配置。
+    /// </summary>
+    public ThreadSpacePromptOptions ThreadSpacePrompt { get; set; } = new();
+}
+
+/// <summary>
+/// 控制 ThreadSpace 场景下的动态系统提示增强行为。
+/// </summary>
+public sealed class ThreadSpacePromptOptions
+{
+    /// <summary>
+    /// 是否启用 ThreadSpace 提示增强。默认为 true。
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// 需要自动注入到系统提示中的项目文档文件名列表。
+    /// </summary>
+    public List<string> ProjectDocumentCandidates { get; set; } =
+    [
+        "README.md",
+        "README",
+        "AGENTS.md",
+        "agents.md",
+        "CLAUDE.md",
+        "claude.md",
+        "CLAUDE",
+        "claude",
+        "GEMINI.md",
+        "gemini.md",
+        "GEMINI",
+        "gemini"
+    ];
+
+    /// <summary>
+    /// 单个项目文档最多注入的字符数。
+    /// </summary>
+    public int MaxDocumentChars { get; set; } = 4_000;
+
+    /// <summary>
+    /// 所有项目文档合计最多注入的字符数。
+    /// </summary>
+    public int MaxCombinedDocumentChars { get; set; } = 10_000;
 }
 
 /// <summary>

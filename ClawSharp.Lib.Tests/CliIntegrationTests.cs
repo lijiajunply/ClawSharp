@@ -116,6 +116,13 @@ public sealed class CliIntegrationTests : IDisposable
         Assert.False(markdown.HasRichContent);
     }
 
+    [Fact]
+    public void ChatCommand_SupportsAgentsSlashCommand()
+    {
+        Assert.True(ChatCommand.SupportsSlashCommand("/agents"));
+        Assert.False(ChatCommand.SupportsSlashCommand("/definitely-not-a-command"));
+    }
+
 }
 
 internal class FakeAgentRegistry : IAgentRegistry

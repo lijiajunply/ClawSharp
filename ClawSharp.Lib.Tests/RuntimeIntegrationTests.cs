@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Lib.Tests;
@@ -244,6 +245,105 @@ data: {"type":"message_stop"}
 
         Assert.Equal(docs.ThreadSpaceId, session.Record.ThreadSpaceId);
         Assert.Equal(docs.BoundFolderPath, session.Record.WorkspaceRoot);
+    }
+
+    [Fact]
+    public async Task Runtime_RunTurn_IncludesThreadSpaceWorkspaceGuidanceAndProjectDocsInSystemPrompt()
+    {
+        var projectRoot = Path.Combine(_root, "project-space");
+        Directory.CreateDirectory(projectRoot);
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "README.md"), "# Project Guide\nAlways verify changes.");
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "AGENTS.md"), "# Agent Rules\nUse project-specific workflows.");
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "CLAUDE.md"), "# Team Rules\nPrefer editing files directly.");
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "GEMINI.md"), "# Gemini Notes\nConsult local docs first.");
+
+        string? capturedRequestBody = null;
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            null,
+            out _,
+            out _,
+            out var threadSpaces);
+
+        var threadSpace = await threadSpaces.CreateAsync(new CreateThreadSpaceRequest("project", projectRoot));
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", threadSpace.ThreadSpaceId));
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please implement this");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.Contains("[ThreadSpace Workspace]", instructions);
+        Assert.Contains(projectRoot, instructions);
+        Assert.Contains("Create or edit files directly", instructions);
+        Assert.Contains("File: README.md", instructions);
+        Assert.Contains("Always verify changes.", instructions);
+        Assert.Contains("File: AGENTS.md", instructions);
+        Assert.Contains("Use project-specific workflows.", instructions);
+        Assert.Contains("File: CLAUDE.md", instructions);
+        Assert.Contains("Prefer editing files directly.", instructions);
+        Assert.Contains("File: GEMINI.md", instructions);
+        Assert.Contains("Consult local docs first.", instructions);
+    }
+
+    [Fact]
+    public async Task Runtime_RunTurn_UsesConfiguredProjectDocumentCandidates()
+    {
+        var projectRoot = Path.Combine(_root, "custom-doc-space");
+        Directory.CreateDirectory(projectRoot);
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "TEAM.md"), "# Team Handbook\nUse TEAM rules.");
+        await File.WriteAllTextAsync(Path.Combine(projectRoot, "README.md"), "# Project Guide\nDo not include me.");
+
+        string? capturedRequestBody = null;
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            options =>
+            {
+                options.Runtime.ThreadSpacePrompt.ProjectDocumentCandidates =
+                [
+                    "TEAM.md"
+                ];
+            },
+            out _,
+            out _,
+            out var threadSpaces);
+
+        var threadSpace = await threadSpaces.CreateAsync(new CreateThreadSpaceRequest("custom-docs", projectRoot));
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", threadSpace.ThreadSpaceId));
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please implement this");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.Contains("File: TEAM.md", instructions);
+        Assert.Contains("Use TEAM rules.", instructions);
+        Assert.DoesNotContain("File: README.md", instructions);
+        Assert.DoesNotContain("Do not include me.", instructions);
     }
 
     [Fact]
@@ -491,6 +591,17 @@ data: {"type":"message_stop"}
 
     private ClawRuntime CreateOpenAiRuntime(IReadOnlyList<string> ssePayloads, out IPromptHistoryStore historyStore, out ISessionEventStore eventStore)
     {
+        return CreateOpenAiRuntime(ssePayloads, null, null, out historyStore, out eventStore, out _);
+    }
+
+    private ClawRuntime CreateOpenAiRuntime(
+        IReadOnlyList<string> ssePayloads,
+        Action<HttpRequestMessage>? inspectRequest,
+        Action<ClawOptions>? configureOptions,
+        out IPromptHistoryStore historyStore,
+        out ISessionEventStore eventStore,
+        out IThreadSpaceManager threadSpaceManager)
+    {
         var options = new ClawOptions
         {
             Runtime = new RuntimeOptions { WorkspaceRoot = _root },
@@ -524,13 +635,14 @@ data: {"type":"message_stop"}
                     2048)
             }
         };
+        configureOptions?.Invoke(options);
 
         var threadSpaceStore = new SqliteThreadSpaceStore(options);
         var sessionStore = new SqliteSessionStore(options);
         historyStore = new SqlitePromptHistoryStore(options);
         eventStore = new SqliteSessionEventStore(options);
         var sessionManager = new SessionManager(sessionStore);
-        var threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        threadSpaceManager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
 
         var agent = new AgentDefinition(
             "planner",
@@ -548,9 +660,14 @@ data: {"type":"message_stop"}
             "");
 
         var payloadQueue = new Queue<string>(ssePayloads);
-        var handler = new ProviderTestsProxyHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        var handler = new ProviderTestsProxyHandler(request =>
         {
-            Content = new StringContent(payloadQueue.Count > 0 ? payloadQueue.Dequeue() : ssePayloads[^1], Encoding.UTF8, "text/event-stream")
+            inspectRequest?.Invoke(request);
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(payloadQueue.Count > 0 ? payloadQueue.Dequeue() : ssePayloads[^1], Encoding.UTF8, "text/event-stream")
+            };
         });
         var provider = new OpenAiResponsesModelProvider(options, new ProviderTestsProxyFactory(handler));
         var registry = new ModelProviderRegistry([provider, new StubModelProvider()]);

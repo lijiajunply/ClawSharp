@@ -22,4 +22,14 @@ public sealed class MemoryTests
         Assert.All(first, item => Assert.Equal("doc-1", item.DocumentId));
         Assert.All(second, item => Assert.Equal("doc-2", item.DocumentId));
     }
+
+    [Theory]
+    [InlineData(5, 5)]
+    [InlineData(1, 1)]
+    [InlineData(0, 1)]
+    [InlineData(-3, 1)]
+    public void SqliteVssVectorStore_NormalizeTopK_ClampsToPositiveValue(int input, int expected)
+    {
+        Assert.Equal(expected, SqliteVssVectorStore.NormalizeTopK(input));
+    }
 }
