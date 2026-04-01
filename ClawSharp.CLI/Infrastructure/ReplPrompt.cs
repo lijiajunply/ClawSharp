@@ -90,8 +90,14 @@ public sealed class ReplPrompt
         var input = new StringBuilder();
         var cursor = 0;
         
-        var promptPlain = Regex.Replace(promptMarkup, @"\[[^\]]*\]", "");
-        var promptLength = promptPlain.Length;
+        var promptPlain = promptMarkup
+            .Replace("[[", "\u0001")
+            .Replace("]]", "\u0002");
+        promptPlain = Regex.Replace(promptPlain, @"\[[^\]]*\]", "");
+        promptPlain = promptPlain
+            .Replace("\u0001", "[")
+            .Replace("\u0002", "]");
+        var promptLength = GetDisplayWidth(promptPlain);
 
         if (Console.CursorLeft != 0) AnsiConsole.WriteLine();
 
@@ -144,7 +150,7 @@ public sealed class ReplPrompt
 
             // 6. Restore cursor position
             AnsiConsole.Write("\r");
-            var targetPos = promptLength + cursor;
+            var targetPos = promptLength + GetDisplayWidth(currentInput.Substring(0, cursor));
             AnsiConsole.Cursor.MoveRight(targetPos);
             AnsiConsole.Cursor.Show();
 
@@ -437,6 +443,20 @@ public sealed class ReplPrompt
         }
     }
 
+
+    private static int GetDisplayWidth(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return 0;
+        int width = 0;
+        foreach (char c in s)
+        {
+            // Simple logic for CJK characters: 
+            // if character code > 255, it's likely double-width in many terminals.
+            // More precise logic would involve Unicode categories or specific ranges.
+            width += (c > 255) ? 2 : 1;
+        }
+        return width;
+    }
 
     private void RenderMenu()
     {
