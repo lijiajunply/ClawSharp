@@ -1,3 +1,5 @@
+using Spectre.Console;
+
 namespace ClawSharp.CLI.Infrastructure;
 
 internal static class MultilineInputCollector
@@ -25,4 +27,17 @@ internal static class MultilineInputCollector
 
     internal static string Compose(IEnumerable<string> lines) =>
         string.Join(Environment.NewLine, lines);
+
+    internal static string Collect(string prompt)
+    {
+        AnsiConsole.MarkupLine($"[grey]{prompt.EscapeMarkup()}[/]");
+        var lines = new List<string>();
+        while (true)
+        {
+            var line = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(line)) break;
+            lines.Add(line);
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
 }

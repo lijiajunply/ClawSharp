@@ -370,44 +370,12 @@ public static class ChatCommand
 
     private static async Task<CommandDispatchResult> HandleInitProjectAsync(ReplState state)
     {
-        var templates = await state.Kernel.Projects.ListTemplatesAsync();
-        if (templates.Count == 0)
-        {
-            AnsiConsole.MarkupLine("[yellow]No project templates found.[/]");
-            return CommandDispatchResult.Handled();
-        }
-
-        var selectedTemplate = AnsiConsole.Prompt(
-            new SelectionPrompt<ProjectTemplateDefinition>()
-                .Title("Select a project template:")
-                .AddChoices(templates)
-                .UseConverter(t => $"{t.Name} ({t.Id})"));
-
-        var projectName = AnsiConsole.Ask<string>("Enter project name:", "my-new-project");
-        var targetDir = state.CurrentThreadSpace.BoundFolderPath ?? Directory.GetCurrentDirectory();
-        var projectPath = Path.Combine(targetDir, projectName);
-
-        var request = new CreateProjectRequest(
-            selectedTemplate.Id,
-            projectName,
-            projectPath,
-            new Dictionary<string, string>
-            {
-                ["ProjectName"] = projectName,
-                ["Author"] = Environment.UserName,
-                ["Date"] = DateTime.Now.ToString("yyyy-MM-dd")
-            });
-
-        var result = await state.Kernel.Projects.CreateProjectAsync(request);
-        if (result is { IsSuccess: true, Value: { } projectResult })
-        {
-            AnsiConsole.MarkupLine($"[green]Project created successfully at:[/] [blue]{projectResult.ProjectRootPath.EscapeMarkup()}[/]");
-            AnsiConsole.MarkupLine("[grey]Type /cd <path> to switch to the new project space.[/]");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine($"[red]Failed to create project: {result.Error?.EscapeMarkup() ?? "Unknown error"}[/]");
-        }
+        await ProjectInitHandler.RunAsync(
+            state.Host,
+            projectName: null,
+            templateId: null,
+            targetPath: state.CurrentThreadSpace.BoundFolderPath,
+            existingSessionId: state.SessionId);
 
         return CommandDispatchResult.Handled();
     }

@@ -161,6 +161,13 @@ public sealed class ProjectScaffolder(
             lines.Add(ProjectTemplateRenderer.Render(template.ReadmeAppendix.Trim(), variables));
         }
 
+        if (variables.TryGetValue("ai_appendix", out var aiAppendix) && !string.IsNullOrWhiteSpace(aiAppendix))
+        {
+            lines.Add(string.Empty);
+            lines.Add("## AI 生成的建议与计划");
+            lines.Add(aiAppendix.Trim());
+        }
+
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
