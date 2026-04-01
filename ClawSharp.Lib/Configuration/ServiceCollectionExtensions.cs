@@ -91,6 +91,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<ClawOptions>(),
             Path.Combine(builder.BasePath, "appsettings.Local.json")));
         services.AddSingleton<IHubClient, HubClient>();
+        services.AddHttpClient<ISmitheryClient, SmitheryClient>();
         services.AddSingleton<IHubManifestValidator, HubManifestValidator>();
         services.AddSingleton<IHubInstaller, HubInstaller>();
         services.AddSingleton<IAgentDefinitionStore, FileSystemAgentDefinitionStore>();
@@ -178,6 +179,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFeatureContextRepository, FeatureContextRepository>();
         services.AddSingleton<IPlannerAgent, PlannerAgent>();
         services.AddSingleton<IMcpServerCatalog, McpServerCatalog>();
+        services.AddSingleton<IMcpInstaller, McpInstaller>();
         services.AddSingleton<McpClientManager>();
         services.AddSingleton<IMcpClientManager>(serviceProvider => serviceProvider.GetRequiredService<McpClientManager>());
         services.AddSingleton<McpService>();

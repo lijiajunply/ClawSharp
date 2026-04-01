@@ -64,6 +64,11 @@ public sealed class ClawOptions
     public HubOptions Hub { get; set; } = new();
 
     /// <summary>
+    /// Smithery MCP 市场配置。
+    /// </summary>
+    public SmitheryOptions Smithery { get; set; } = new();
+
+    /// <summary>
     /// 外部 worker 进程配置。
     /// </summary>
     public WorkerOptions Worker { get; set; } = new();
@@ -501,6 +506,32 @@ public sealed class HubOptions
     /// Skill 安装根目录。支持使用 ~ 表示用户主目录。
     /// </summary>
     public string InstallRoot { get; set; } = "~/.skills";
+}
+
+/// <summary>
+/// Smithery 市场配置。
+/// </summary>
+public sealed class SmitheryOptions
+{
+    /// <summary>
+    /// 是否启用 Smithery 集成。
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Smithery API 基础地址。
+    /// </summary>
+    public string BaseUrl { get; set; } = "https://api.smithery.ai";
+
+    /// <summary>
+    /// Smithery API Key。部分接口可能需要。
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// 远程请求超时时间，单位秒。
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = 30;
 }
 
 /// <summary>

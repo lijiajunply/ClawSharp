@@ -3,6 +3,7 @@ using System.Diagnostics;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Hub;
+using ClawSharp.Lib.Mcp;
 using ClawSharp.Lib.Projects;
 using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -151,6 +152,7 @@ public static class ChatCommand
             "/stats" => await HandleStatsAsync(state, arguments),
             "/spaces" => await HandleSpacesAsync(state, arguments),
             "/hub" => await HandleHubAsync(state, arguments),
+            "/mcp" => await HandleMcpAsync(state, arguments),
             "/cd" or "/home" => await HandleThreadSpaceSwitchAsync(state, command, arguments),
             "/init" => await HandleInitAsync(state),
             "/init-proj" => await HandleInitProjectAsync(state),
@@ -160,6 +162,117 @@ public static class ChatCommand
             "/edit" => await HandleEditAsync(),
             _ => HandleUnknownCommand(command)
         };
+    }
+
+    private static async Task<CommandDispatchResult> HandleMcpAsync(ReplState state, string arguments)
+    {
+        var parts = arguments.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var action = parts.Length == 0 ? "list" : parts[0].ToLowerInvariant();
+        var remainder = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+
+        var smithery = state.Host.Services.GetRequiredService<ISmitheryClient>();
+        var catalog = state.Host.Services.GetRequiredService<IMcpServerCatalog>();
+
+        switch (action)
+        {
+            case "list":
+                var servers = catalog.GetAll();
+                if (servers.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[yellow]No MCP servers configured.[/]");
+                }
+                else
+                {
+                    var table = new Table().Border(TableBorder.Rounded);
+                    table.AddColumn("Name");
+                    table.AddColumn("Command");
+                    table.AddColumn("Capabilities");
+                    foreach (var s in servers) table.AddRow(s.Name.EscapeMarkup(), s.Command.EscapeMarkup(), s.Capabilities.ToString());
+                    AnsiConsole.Write(table);
+                }
+                break;
+
+            case "search":
+                if (string.IsNullOrWhiteSpace(remainder))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp search <query>");
+                    break;
+                }
+                await AnsiConsole.Status().StartAsync("Searching Smithery...", async ctx =>
+                {
+                    var results = await smithery.SearchServersAsync(remainder);
+                    if (results.Count == 0)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]No servers found in Smithery.[/]");
+                        return;
+                    }
+                    var table = new Table().Border(TableBorder.Rounded).Expand();
+                    table.AddColumn("Qualified Name");
+                    table.AddColumn("Description");
+                    table.AddColumn("Author");
+                    foreach (var s in results) table.AddRow($"[blue]{s.QualifiedName.EscapeMarkup()}[/]", s.Description.EscapeMarkup(), (s.Author ?? "[grey]n/a[/]").EscapeMarkup());
+                    AnsiConsole.Write(table);
+                });
+                break;
+
+            case "install":
+                if (string.IsNullOrWhiteSpace(remainder))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp install <qualified-name>");
+                    break;
+                }
+                var installer = state.Host.Services.GetRequiredService<IMcpInstaller>();
+                var srv = await smithery.GetServerAsync(remainder);
+                if (srv.McpConfig == null)
+                {
+                    AnsiConsole.MarkupLine("[red]Error: This server does not provide an automated MCP configuration.[/]");
+                    break;
+                }
+                AnsiConsole.MarkupLine($"[blue]Installing {srv.QualifiedName.EscapeMarkup()}...[/]");
+                var envs = new Dictionary<string, string>();
+                if (srv.McpConfig.Env?.Count > 0)
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[bold]Configuration Required:[/]");
+                    foreach (var env in srv.McpConfig.Env)
+                    {
+                        var prompt = $"Enter value for [yellow]{env.Key.EscapeMarkup()}[/]";
+                        if (!string.IsNullOrWhiteSpace(env.Value.Description)) prompt += $" ({env.Value.Description.EscapeMarkup()})";
+                        string val;
+                        if (env.Key.Contains("KEY") || env.Key.Contains("TOKEN") || env.Key.Contains("SECRET"))
+                            val = AnsiConsole.Prompt(new TextPrompt<string>(prompt).PromptStyle("grey").Secret());
+                        else
+                            val = AnsiConsole.Ask<string>(prompt);
+                        envs[env.Key] = val;
+                    }
+                }
+                await installer.InstallAsync(srv.Name, srv.McpConfig.Command, srv.McpConfig.Args, envs);
+                AnsiConsole.MarkupLine($"[green]Successfully installed {srv.Name.EscapeMarkup()}![/]");
+                AnsiConsole.MarkupLine("The server has been added to [grey]~/.clawsharp/mcp.json[/].");
+                AnsiConsole.MarkupLine("Type [blue]/reload[/] to apply changes.");
+                break;
+
+            case "show":
+                if (string.IsNullOrWhiteSpace(remainder))
+                {
+                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp show <qualified-name>");
+                    break;
+                }
+                var server = await smithery.GetServerAsync(remainder);
+                var panelContent = $"[bold]{server.Name.EscapeMarkup()}[/] ([blue]{server.QualifiedName.EscapeMarkup()}[/]){Environment.NewLine}" +
+                                 $"Author: {server.Author.EscapeMarkup() ?? "[grey]n/a[/]"}{Environment.NewLine}" +
+                                 $"Downloads: {server.DownloadCount}{Environment.NewLine}{Environment.NewLine}" +
+                                 $"{server.Description.EscapeMarkup()}";
+                AnsiConsole.Write(new Panel(new Markup(panelContent)) { Header = new PanelHeader("Smithery MCP Server"), Border = BoxBorder.Rounded });
+                break;
+
+            default:
+                AnsiConsole.MarkupLine($"[yellow]Unknown /mcp subcommand:[/] {action.EscapeMarkup()}");
+                AnsiConsole.MarkupLine("Supported: list, search, show");
+                break;
+        }
+
+        return CommandDispatchResult.Handled();
     }
 
     private static CommandDispatchResult HandleHelp()

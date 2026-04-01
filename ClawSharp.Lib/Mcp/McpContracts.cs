@@ -592,18 +592,56 @@ public sealed class McpResourceAdapter(McpResourceDescriptor descriptor)
 }
 
 /// <summary>
-/// MCP prompt 描述的轻量适配器。
+/// MCP 安装器抽象。
 /// </summary>
-/// <param name="descriptor">MCP prompt 描述。</param>
-public sealed class McpPromptAdapter(McpPromptDescriptor descriptor)
+public interface IMcpInstaller
 {
     /// <summary>
-    /// prompt 名称。
+    /// 从市场安装一个 MCP server。
     /// </summary>
-    public string Name => descriptor.Name;
+    /// <param name="serverName">server 名称。</param>
+    /// <param name="command">运行命令。</param>
+    /// <param name="args">运行参数。</param>
+    /// <param name="env">环境变量（已包含用户输入的值）。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task InstallAsync(string serverName, string command, string[] args, Dictionary<string, string>? env = null, CancellationToken cancellationToken = default);
+}
 
-    /// <summary>
-    /// prompt 描述。
-    /// </summary>
-    public string Description => descriptor.Description;
+/// <summary>
+/// 默认的 MCP 安装器实现。
+/// </summary>
+public sealed class McpInstaller : IMcpInstaller
+{
+    private readonly string _configPath;
+
+    public McpInstaller()
+    {
+        _configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".clawsharp", "mcp.json");
+    }
+
+    public async Task InstallAsync(string serverName, string command, string[] args, Dictionary<string, string>? env = null, CancellationToken cancellationToken = default)
+    {
+        McpConfiguration config;
+        if (File.Exists(_configPath))
+        {
+            var json = await File.ReadAllTextAsync(_configPath, cancellationToken).ConfigureAwait(false);
+            config = JsonSerializer.Deserialize<McpConfiguration>(json) ?? new();
+        }
+        else
+        {
+            config = new();
+            var directory = Path.GetDirectoryName(_configPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        }
+
+        config.McpServers[serverName] = new McpServerConfig
+        {
+            Command = command,
+            Args = args,
+            Env = env
+        };
+
+        var outputJson = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(_configPath, outputJson, cancellationToken).ConfigureAwait(false);
+    }
 }

@@ -104,10 +104,18 @@ public sealed class McpService : IAsyncDisposable
     }
 
     /// <summary>
-    /// 强制清理 MCP 连接池。
+    /// 强制清理 MCP 连接池并重新加载配置。
     /// </summary>
-    public Task ResetAsync(CancellationToken cancellationToken = default) =>
-        _manager.DisconnectAllAsync(cancellationToken);
+    public async Task ResetAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var client in _prewarmedClients)
+        {
+            await client.DisposeAsync();
+        }
+        _prewarmedClients.Clear();
+        await _manager.DisconnectAllAsync(cancellationToken).ConfigureAwait(false);
+        await StartAllAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task EnsureCleanupLoopStartedAsync(CancellationToken cancellationToken)
     {
