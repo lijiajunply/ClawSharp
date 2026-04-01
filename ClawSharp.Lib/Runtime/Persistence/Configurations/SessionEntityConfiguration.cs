@@ -17,6 +17,7 @@ internal sealed class SessionEntityConfiguration : IEntityTypeConfiguration<Sess
         builder.Property(x => x.Status).HasColumnName("status");
         builder.Property(x => x.StartedAt).HasColumnName("started_at");
         builder.Property(x => x.EndedAt).HasColumnName("ended_at");
+        builder.Property(x => x.OutputLanguageOverride).HasColumnName("output_language_override").HasMaxLength(64);
 
         builder.HasIndex(x => x.ThreadSpaceId);
         builder.HasOne<ThreadSpaceEntity>()

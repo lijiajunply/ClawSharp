@@ -15,4 +15,6 @@ internal sealed class SessionEntity
     public DateTimeOffset StartedAt { get; set; }
 
     public DateTimeOffset? EndedAt { get; set; }
+
+    public string? OutputLanguageOverride { get; set; }
 }

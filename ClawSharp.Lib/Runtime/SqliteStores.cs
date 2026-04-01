@@ -42,6 +42,10 @@ public sealed class SqliteSessionStore : ISessionStore
     /// <inheritdoc />
     public Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt = null, CancellationToken cancellationToken = default) =>
         _repository.UpdateStatusAsync(sessionId, status, endedAt, cancellationToken);
+
+    /// <inheritdoc />
+    public Task UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default) =>
+        _repository.UpdateOutputLanguageAsync(sessionId, outputLanguage, cancellationToken);
 }
 
 /// <summary>
@@ -123,9 +127,9 @@ public sealed class SqliteSessionEventStore : ISessionEventStore
 public sealed class SessionManager(ISessionStore sessions) : ISessionManager
 {
     /// <inheritdoc />
-    public async Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, CancellationToken cancellationToken = default)
+    public async Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, string? outputLanguage = null, CancellationToken cancellationToken = default)
     {
-        var record = new SessionRecord(SessionId.New(), threadSpaceId, agentId, workspaceRoot, SessionStatus.Created, DateTimeOffset.UtcNow);
+        var record = new SessionRecord(SessionId.New(), threadSpaceId, agentId, workspaceRoot, SessionStatus.Created, DateTimeOffset.UtcNow, OutputLanguageOverride: outputLanguage);
         await sessions.CreateAsync(record, cancellationToken).ConfigureAwait(false);
         return new RuntimeSession(record, null, null);
     }
@@ -136,6 +140,13 @@ public sealed class SessionManager(ISessionStore sessions) : ISessionManager
         var record = await sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false)
                      ?? throw new KeyNotFoundException($"Session '{sessionId}' was not found.");
         return new RuntimeSession(record, null, null);
+    }
+
+    /// <inheritdoc />
+    public async Task<RuntimeSession> UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default)
+    {
+        await sessions.UpdateOutputLanguageAsync(sessionId, outputLanguage, cancellationToken).ConfigureAwait(false);
+        return await GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

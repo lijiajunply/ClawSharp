@@ -120,6 +120,7 @@ public sealed class CliIntegrationTests : IDisposable
     public void ChatCommand_SupportsAgentsSlashCommand()
     {
         Assert.True(ChatCommand.SupportsSlashCommand("/agents"));
+        Assert.True(ChatCommand.SupportsSlashCommand("/lang"));
         Assert.False(ChatCommand.SupportsSlashCommand("/definitely-not-a-command"));
     }
 

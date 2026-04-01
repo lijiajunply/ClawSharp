@@ -82,10 +82,12 @@ public sealed class ConfigurationTests : IDisposable
         var manager = new ConfigManager(config, options, localJson);
 
         await manager.SetAsync("Providers:DefaultProvider", "anthropic");
+        await manager.SetAsync("Runtime:OutputLanguage", "zh-CN");
         
         Assert.True(File.Exists(localJson));
         var content = File.ReadAllText(localJson);
         Assert.Contains("\"DefaultProvider\": \"anthropic\"", content);
+        Assert.Contains("\"OutputLanguage\": \"zh-CN\"", content);
 
         // Test masking
         Assert.True(manager.IsSecret("Providers:Models:0:ApiKey"));
@@ -115,6 +117,7 @@ public sealed class ConfigurationTests : IDisposable
          var keyList = keys.ToList();
 
          Assert.Contains("Runtime:WorkspaceRoot", keyList);
+         Assert.Contains("Runtime:OutputLanguage", keyList);
          Assert.Contains("Providers:DefaultProvider", keyList);
          Assert.Contains("Agents:AgentsPath", keyList);
     }

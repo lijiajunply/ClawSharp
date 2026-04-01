@@ -162,6 +162,7 @@ public static class ChatCommand
         {
             "/exit" or "/quit" => CommandDispatchResult.Exit(),
             "/help" => HandleHelp(),
+            "/lang" => await HandleLanguageAsync(state, arguments),
             "/clear" => HandleClear(),
             "/new" => await HandleNewSessionAsync(state),
             "/resume" => await HandleResumeAsync(state),
@@ -300,6 +301,48 @@ public static class ChatCommand
     private static CommandDispatchResult HandleHelp()
     {
         ShowHelp();
+        return CommandDispatchResult.Handled();
+    }
+
+    private static async Task<CommandDispatchResult> HandleLanguageAsync(ReplState state, string arguments)
+    {
+        var trimmed = arguments.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            var sessionOverride = NormalizeOutputLanguage(state.Session.Record.OutputLanguageOverride);
+            var globalDefault = NormalizeOutputLanguage(state.Options.Runtime.OutputLanguage);
+            var effective = sessionOverride ?? globalDefault;
+
+            var table = new Table().Border(TableBorder.Rounded);
+            table.AddColumn("[yellow]Scope[/]");
+            table.AddColumn("[yellow]Language[/]");
+            table.AddRow("Current session override", sessionOverride?.EscapeMarkup() ?? "[grey]<none>[/]");
+            table.AddRow("Global default", globalDefault?.EscapeMarkup() ?? "[grey]<none>[/]");
+            table.AddRow("Effective output language", effective?.EscapeMarkup() ?? "[grey]<none>[/]");
+            AnsiConsole.Write(table);
+            return CommandDispatchResult.Handled();
+        }
+
+        if (trimmed.Equals("reset", StringComparison.OrdinalIgnoreCase))
+        {
+            state.Session = await state.Runtime.UpdateSessionOutputLanguageAsync(state.SessionId, null);
+            state.SessionId = state.Session.Record.SessionId;
+            var fallback = NormalizeOutputLanguage(state.Options.Runtime.OutputLanguage);
+            if (fallback is null)
+            {
+                AnsiConsole.MarkupLine("[green]Cleared the session language override. Subsequent replies are no longer language-constrained by CLI settings.[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[green]Cleared the session language override. Subsequent replies will default to {fallback.EscapeMarkup()}.[/]");
+            }
+            return CommandDispatchResult.Handled();
+        }
+
+        var outputLanguage = NormalizeOutputLanguage(trimmed);
+        state.Session = await state.Runtime.UpdateSessionOutputLanguageAsync(state.SessionId, outputLanguage);
+        state.SessionId = state.Session.Record.SessionId;
+        AnsiConsole.MarkupLine($"[green]Updated this session's output language. Subsequent replies will default to {outputLanguage!.EscapeMarkup()}.[/]");
         return CommandDispatchResult.Handled();
     }
 
@@ -1101,6 +1144,7 @@ public static class ChatCommand
         table.AddColumn("[yellow]Command[/]");
         table.AddColumn("[yellow]Description[/]");
         table.AddRow("/help".EscapeMarkup(), "Show this help message".EscapeMarkup());
+        table.AddRow("/lang [bcp47|reset]".EscapeMarkup(), "Show or override this session's output language".EscapeMarkup());
         table.AddRow("/new".EscapeMarkup(), "Start a new session in current space".EscapeMarkup());
         table.AddRow("/resume".EscapeMarkup(), "Resume last session in current space".EscapeMarkup());
         table.AddRow("/sessions".EscapeMarkup(), "List sessions in the current space".EscapeMarkup());
@@ -1130,7 +1174,7 @@ public static class ChatCommand
         command.ToLowerInvariant() switch
         {
             "/help" or "/clear" or "/new" or "/resume" or "/sessions" or "/agents" or "/skills" or
-            "/tools" or "/config" or "/history" or "/stats" or "/spaces" or "/hub" or
+            "/tools" or "/config" or "/history" or "/stats" or "/spaces" or "/hub" or "/lang" or
             "/cd" or "/home" or "/init" or "/init-proj" or "/reload" or "/speckit" or
             "/paste" or "/edit" or "/exit" or "/quit" => true,
             _ => false
@@ -1138,6 +1182,16 @@ public static class ChatCommand
 
     private static string ShortId(SessionId sessionId) =>
         sessionId.Value.Length <= 8 ? sessionId.Value : sessionId.Value[..8];
+
+    private static string? NormalizeOutputLanguage(string? outputLanguage)
+    {
+        if (string.IsNullOrWhiteSpace(outputLanguage))
+        {
+            return null;
+        }
+
+        return outputLanguage.Trim();
+    }
 
     private sealed class ReplState(IHost host, IClawRuntime runtime, IClawKernel kernel, ClawOptions options)
     {

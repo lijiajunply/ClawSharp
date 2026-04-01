@@ -65,7 +65,8 @@ public sealed record RuntimeSession(SessionRecord Record, ToolPermissionSet? Eff
 /// </summary>
 /// <param name="AgentId">agent 标识。</param>
 /// <param name="ThreadSpaceId">目标 ThreadSpace 标识。</param>
-public sealed record StartSessionRequest(string AgentId, ThreadSpaceId ThreadSpaceId);
+/// <param name="OutputLanguage">当前 session 的输出语言覆盖。</param>
+public sealed record StartSessionRequest(string AgentId, ThreadSpaceId ThreadSpaceId, string? OutputLanguage = null);
 
 /// <summary>
 /// 请求为某个 session 准备 agent 的输入参数。
@@ -313,6 +314,15 @@ public interface IClawRuntime
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>已追加的 prompt 消息。</returns>
     Task<PromptMessage> AppendUserMessageAsync(SessionId sessionId, string content, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新 session 的输出语言覆盖。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="outputLanguage">新的输出语言覆盖；为 <see langword="null"/> 时表示清除覆盖。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>更新后的 runtime session。</returns>
+    Task<RuntimeSession> UpdateSessionOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 执行 session 的下一次 turn。
@@ -616,7 +626,7 @@ public sealed class ClawRuntime(
     {
         var global = await kernel.ThreadSpaces.GetGlobalAsync(cancellationToken).ConfigureAwait(false);
         var workspaceRoot = ResolveSessionWorkspaceRoot(global, kernel.Options);
-        return await kernel.Sessions.StartAsync(agentId, global.ThreadSpaceId, workspaceRoot, cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.StartAsync(agentId, global.ThreadSpaceId, workspaceRoot, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -624,7 +634,8 @@ public sealed class ClawRuntime(
     {
         var threadSpace = await kernel.ThreadSpaces.GetAsync(request.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
         var workspaceRoot = ResolveSessionWorkspaceRoot(threadSpace, kernel.Options);
-        return await kernel.Sessions.StartAsync(request.AgentId, threadSpace.ThreadSpaceId, workspaceRoot, cancellationToken).ConfigureAwait(false);
+        var outputLanguage = NormalizeOutputLanguage(request.OutputLanguage);
+        return await kernel.Sessions.StartAsync(request.AgentId, threadSpace.ThreadSpaceId, workspaceRoot, outputLanguage, cancellationToken).ConfigureAwait(false);
     }
 
     private static string ResolveSessionWorkspaceRoot(ThreadSpaceRecord space, ClawOptions options)
@@ -651,6 +662,14 @@ public sealed class ClawRuntime(
         var message = await kernel.History.AppendAsync(sessionId, turnId, PromptMessageRole.User, content, cancellationToken: cancellationToken).ConfigureAwait(false);
         await kernel.Events.AppendAsync(sessionId, turnId, "MessageAppended", serializer.SerializeToElement(new { role = "user", content }), cancellationToken).ConfigureAwait(false);
         return message;
+    }
+
+    /// <inheritdoc />
+    public async Task<RuntimeSession> UpdateSessionOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default)
+    {
+        var normalizedLanguage = NormalizeOutputLanguage(outputLanguage);
+        await sessionStore.UpdateOutputLanguageAsync(sessionId, normalizedLanguage, cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -709,6 +728,14 @@ public sealed class ClawRuntime(
         
         var threadSpace = await kernel.ThreadSpaces.GetAsync(session.Record.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
         var promptAugmentations = new List<string>();
+
+        var outputLanguagePrompt = LanguagePromptAugmentor.Build(
+            session.Record.OutputLanguageOverride,
+            kernel.Options.Runtime.OutputLanguage);
+        if (!string.IsNullOrWhiteSpace(outputLanguagePrompt))
+        {
+            promptAugmentations.Add(outputLanguagePrompt);
+        }
 
         var threadSpacePrompt = await ThreadSpacePromptAugmentor
             .BuildAsync(threadSpace, session.Record.WorkspaceRoot, kernel.Options.Runtime.ThreadSpacePrompt, cancellationToken)
@@ -1142,6 +1169,16 @@ public sealed class ClawRuntime(
     }
 
     private static string BuildCacheKey(SessionId sessionId, string agentId) => $"{sessionId.Value}:{agentId}";
+
+    private static string? NormalizeOutputLanguage(string? outputLanguage)
+    {
+        if (string.IsNullOrWhiteSpace(outputLanguage))
+        {
+            return null;
+        }
+
+        return outputLanguage.Trim();
+    }
 
     private void EvictSessionCache(SessionId sessionId)
     {

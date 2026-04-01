@@ -141,6 +141,11 @@ public sealed class RuntimeOptions
     public int DefaultTimeoutSeconds { get; set; } = 60;
 
     /// <summary>
+    /// AI 默认输出语言。为空时不额外约束模型输出语言。
+    /// </summary>
+    public string? OutputLanguage { get; set; }
+
+    /// <summary>
     /// ThreadSpace 内系统提示增强配置。
     /// </summary>
     public ThreadSpacePromptOptions ThreadSpacePrompt { get; set; } = new();

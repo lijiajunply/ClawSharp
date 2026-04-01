@@ -128,6 +128,11 @@ namespace ClawSharp.Lib.Runtime
                         .HasColumnType("TEXT")
                         .HasColumnName("ended_at");
 
+                    b.Property<string>("OutputLanguageOverride")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("output_language_override");
+
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("started_at");

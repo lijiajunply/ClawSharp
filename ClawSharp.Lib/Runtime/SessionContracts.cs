@@ -151,6 +151,7 @@ public enum PromptMessageRole
 /// <param name="Status">当前 session 状态。</param>
 /// <param name="StartedAt">创建时间。</param>
 /// <param name="EndedAt">结束时间；未结束时为 <see langword="null"/>。</param>
+/// <param name="OutputLanguageOverride">当前 session 的输出语言覆盖。</param>
 public sealed record SessionRecord(
     SessionId SessionId,
     ThreadSpaceId ThreadSpaceId,
@@ -158,7 +159,8 @@ public sealed record SessionRecord(
     string WorkspaceRoot,
     SessionStatus Status,
     DateTimeOffset StartedAt,
-    DateTimeOffset? EndedAt = null);
+    DateTimeOffset? EndedAt = null,
+    string? OutputLanguageOverride = null);
 
 /// <summary>
 /// 描述写入 prompt 历史的一条消息。
@@ -399,6 +401,14 @@ public interface ISessionStore
     /// <param name="endedAt">结束时间；未结束时可为 <see langword="null"/>。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新 session 的输出语言覆盖。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="outputLanguage">新的输出语言覆盖；为 <see langword="null"/> 时表示清除覆盖。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -489,9 +499,19 @@ public interface ISessionManager
     /// <param name="agentId">agent 标识。</param>
     /// <param name="threadSpaceId">session 所属 ThreadSpace。</param>
     /// <param name="workspaceRoot">session 使用的 workspace 根目录。</param>
+    /// <param name="outputLanguage">当前 session 的输出语言覆盖。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>新建的 runtime session。</returns>
-    Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, CancellationToken cancellationToken = default);
+    Task<RuntimeSession> StartAsync(string agentId, ThreadSpaceId threadSpaceId, string workspaceRoot, string? outputLanguage = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新 session 的输出语言覆盖。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="outputLanguage">新的输出语言覆盖；为 <see langword="null"/> 时表示清除覆盖。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>更新后的 runtime session。</returns>
+    Task<RuntimeSession> UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 读取一个已存在的 session。

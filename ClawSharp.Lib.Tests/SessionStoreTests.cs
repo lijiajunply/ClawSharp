@@ -94,6 +94,31 @@ public sealed class SessionStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task SqliteStores_PersistSessionOutputLanguageOverride()
+    {
+        var options = CreateOptions();
+        var threadSpaceStore = new SqliteThreadSpaceStore(options);
+        var sessionStore = new SqliteSessionStore(options);
+        var manager = new ThreadSpaceManager(threadSpaceStore, sessionStore, options);
+        var global = await manager.EnsureDefaultAsync();
+        var session = new SessionRecord(
+            new SessionId("session-lang"),
+            global.ThreadSpaceId,
+            "planner",
+            _root,
+            SessionStatus.Created,
+            DateTimeOffset.UtcNow,
+            OutputLanguageOverride: "ja-JP");
+        await sessionStore.CreateAsync(session);
+
+        await sessionStore.UpdateOutputLanguageAsync(session.SessionId, "zh-CN");
+        var loaded = await sessionStore.GetAsync(session.SessionId);
+
+        Assert.NotNull(loaded);
+        Assert.Equal("zh-CN", loaded!.OutputLanguageOverride);
+    }
+
+    [Fact]
     public async Task AddClawSharp_ResolvesStoresThroughDbContextFactory()
     {
         var services = new ServiceCollection();

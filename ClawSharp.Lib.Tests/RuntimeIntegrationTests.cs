@@ -248,6 +248,19 @@ data: {"type":"message_stop"}
     }
 
     [Fact]
+    public async Task Runtime_StartSessionAsync_PersistsOutputLanguageOverride()
+    {
+        var runtime = CreateRuntime(out _, out _, out var threadSpaces);
+        var global = await threadSpaces.GetGlobalAsync();
+
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", global.ThreadSpaceId, "ja-JP"));
+        var updated = await runtime.UpdateSessionOutputLanguageAsync(session.Record.SessionId, "zh-CN");
+
+        Assert.Equal("ja-JP", session.Record.OutputLanguageOverride);
+        Assert.Equal("zh-CN", updated.Record.OutputLanguageOverride);
+    }
+
+    [Fact]
     public async Task Runtime_RunTurn_IncludesThreadSpaceWorkspaceGuidanceAndProjectDocsInSystemPrompt()
     {
         var projectRoot = Path.Combine(_root, "project-space");
@@ -344,6 +357,108 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output
         Assert.Contains("Use TEAM rules.", instructions);
         Assert.DoesNotContain("File: README.md", instructions);
         Assert.DoesNotContain("Do not include me.", instructions);
+    }
+
+    [Fact]
+    public async Task Runtime_RunTurn_IncludesConfiguredOutputLanguageInSystemPrompt()
+    {
+        string? capturedRequestBody = null;
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            options => options.Runtime.OutputLanguage = "zh-CN",
+            out _,
+            out _,
+            out _);
+
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please answer");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.Contains("[Output Language]", instructions);
+        Assert.Contains("Use zh-CN as the default language", instructions);
+    }
+
+    [Fact]
+    public async Task Runtime_RunTurn_PrefersSessionOutputLanguageOverrideOverGlobalDefault()
+    {
+        string? capturedRequestBody = null;
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            options => options.Runtime.OutputLanguage = "zh-CN",
+            out _,
+            out _,
+            out var threadSpaces);
+
+        var global = await threadSpaces.GetGlobalAsync();
+        var session = await runtime.StartSessionAsync(new StartSessionRequest("planner", global.ThreadSpaceId, "ja-JP"));
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please answer");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.Contains("Use ja-JP as the default language", instructions);
+        Assert.DoesNotContain("Use zh-CN as the default language", instructions);
+    }
+
+    [Fact]
+    public async Task Runtime_RunTurn_DoesNotInjectOutputLanguageWhenUnset()
+    {
+        string? capturedRequestBody = null;
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            null,
+            out _,
+            out _,
+            out _);
+
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please answer");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.DoesNotContain("[Output Language]", instructions);
     }
 
     [Fact]
