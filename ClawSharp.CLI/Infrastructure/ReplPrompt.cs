@@ -21,7 +21,12 @@ public sealed class ReplPrompt
         "/quit",
         "/exit",
         "/init",
-        "/init-proj"
+        "/init-proj",
+        "/agents",
+        "/skills",
+        "/config",
+        "/stats",
+        "/history"
     ];
 
     private readonly List<string> _suggestions = new();
@@ -29,6 +34,13 @@ public sealed class ReplPrompt
     private int _historyIndex = -1;
     private string _currentHistoryInput = string.Empty;
     private string? _historyFilePath;
+
+    // Menu state
+    private int _menuSelectionIndex = 0;
+    private int _menuStartIndex = 0;
+    private List<string> _currentMatches = new();
+    private int _lastMenuLineCount = 0;
+    private const int MaxVisibleMenuLines = 8;
 
     public void AddSuggestions(IEnumerable<string> suggestions)
     {
@@ -57,7 +69,6 @@ public sealed class ReplPrompt
         
         try
         {
-            // Append to file
             File.AppendAllLines(_historyFilePath, new[] { item });
         }
         catch
@@ -71,48 +82,77 @@ public sealed class ReplPrompt
         var input = new StringBuilder();
         var cursor = 0;
         
-        // Measure prompt length by stripping markup
         var promptPlain = Regex.Replace(promptMarkup, @"\[[^\]]*\]", "");
         var promptLength = promptPlain.Length;
 
-        // Ensure we are at the start of a new line
         if (Console.CursorLeft != 0) AnsiConsole.WriteLine();
 
         while (true)
         {
-            var suggestion = GetSuggestion(input.ToString());
+            var currentInput = input.ToString();
+            var isCommandMode = currentInput.StartsWith("/", StringComparison.Ordinal);
             
-            // 1. Move to start of line and clear everything after prompt
-            Console.CursorVisible = false;
-            Console.SetCursorPosition(0, Console.CursorTop);
+            _currentMatches = GetMatches(currentInput);
             
-            // 2. Render Prompt
+            // Only show menu if in command mode and multiple matches
+            var showMenu = isCommandMode && _currentMatches.Count > 1;
+            
+            // Ghost suggestion logic
+            var suggestion = (isCommandMode && _currentMatches.Count == 1) || (!isCommandMode && _currentMatches.Count > 0)
+                ? _currentMatches.FirstOrDefault() ?? string.Empty 
+                : string.Empty;
+
+            // Clamp and handle window scrolling
+            UpdateMenuSelectionAndWindow();
+
+            // --- RENDER ---
+            AnsiConsole.Cursor.Hide();
+            
+            // 1. Clear previous menu area
+            ClearMenuArea();
+
+            // 2. Clear current prompt line and render
+            AnsiConsole.Write("\r");
             AnsiConsole.Markup(promptMarkup);
+            AnsiConsole.Markup(currentInput.EscapeMarkup());
             
-            // 3. Render Input
-            var inputStr = input.ToString();
-            AnsiConsole.Markup(inputStr.EscapeMarkup());
-            
-            // 4. Render Ghost Suggestion
-            if (!string.IsNullOrEmpty(suggestion) && suggestion.Length > inputStr.Length)
+            // 3. Render Ghost Suggestion
+            if (!string.IsNullOrEmpty(suggestion) && suggestion.Length > currentInput.Length)
             {
-                var ghostText = suggestion.Substring(inputStr.Length);
+                var ghostText = suggestion.Substring(currentInput.Length);
                 AnsiConsole.Markup($"[grey]{ghostText.EscapeMarkup()}[/]");
             }
             
-            // 5. Clear tail (if any)
-            var currentPos = Console.CursorLeft;
-            AnsiConsole.Write(new string(' ', Math.Max(0, Console.WindowWidth - currentPos - 1)));
+            // 4. Clear tail
+            var currentLinePos = Console.CursorLeft;
+            AnsiConsole.Write(new string(' ', Math.Max(0, Console.WindowWidth - currentLinePos - 1)));
             
+            // 5. Render Menu (below)
+            if (showMenu)
+            {
+                RenderMenu();
+            }
+
             // 6. Restore cursor position
-            Console.SetCursorPosition(promptLength + cursor, Console.CursorTop);
-            Console.CursorVisible = true;
+            AnsiConsole.Write("\r");
+            var targetPos = promptLength + cursor;
+            AnsiConsole.Cursor.MoveRight(targetPos);
+            AnsiConsole.Cursor.Show();
 
             var key = Console.ReadKey(true);
 
             if (key.Key == ConsoleKey.Enter)
             {
-                var result = input.ToString();
+                string result;
+                if (showMenu && _currentMatches.Count > 0)
+                {
+                    result = _currentMatches[_menuSelectionIndex];
+                }
+                else
+                {
+                    result = input.ToString();
+                }
+
                 if (!string.IsNullOrWhiteSpace(result))
                 {
                     if (_history.Count == 0 || _history[0] != result)
@@ -121,18 +161,26 @@ public sealed class ReplPrompt
                         SaveHistory(result);
                     }
                 }
+                
                 _historyIndex = -1;
+                _menuSelectionIndex = 0;
+                _menuStartIndex = 0;
+                
+                ClearMenuArea();
                 AnsiConsole.WriteLine();
                 return result;
             }
 
-            if (key.Key == ConsoleKey.Tab || (key.Key == ConsoleKey.RightArrow && cursor == input.Length))
+            if (key.Key == ConsoleKey.Tab)
             {
-                if (!string.IsNullOrEmpty(suggestion))
+                if (_currentMatches.Count > 0)
                 {
+                    var selected = showMenu ? _currentMatches[_menuSelectionIndex] : _currentMatches[0];
                     input.Clear();
-                    input.Append(suggestion);
+                    input.Append(selected);
                     cursor = input.Length;
+                    _menuSelectionIndex = 0;
+                    _menuStartIndex = 0;
                 }
                 continue;
             }
@@ -143,6 +191,8 @@ public sealed class ReplPrompt
                 {
                     input.Remove(cursor - 1, 1);
                     cursor--;
+                    _menuSelectionIndex = 0;
+                    _menuStartIndex = 0;
                 }
                 continue;
             }
@@ -152,6 +202,8 @@ public sealed class ReplPrompt
                 if (cursor < input.Length)
                 {
                     input.Remove(cursor, 1);
+                    _menuSelectionIndex = 0;
+                    _menuStartIndex = 0;
                 }
                 continue;
             }
@@ -164,13 +216,28 @@ public sealed class ReplPrompt
 
             if (key.Key == ConsoleKey.RightArrow)
             {
-                if (cursor < input.Length) cursor++;
+                if (cursor < input.Length)
+                {
+                    cursor++;
+                }
+                else if (!string.IsNullOrEmpty(suggestion))
+                {
+                    input.Clear();
+                    input.Append(suggestion);
+                    cursor = input.Length;
+                    _menuSelectionIndex = 0;
+                    _menuStartIndex = 0;
+                }
                 continue;
             }
 
             if (key.Key == ConsoleKey.UpArrow)
             {
-                if (_history.Count > 0 && _historyIndex < _history.Count - 1)
+                if (showMenu)
+                {
+                    _menuSelectionIndex = (_menuSelectionIndex - 1 + _currentMatches.Count) % _currentMatches.Count;
+                }
+                else if (_history.Count > 0 && _historyIndex < _history.Count - 1)
                 {
                     if (_historyIndex == -1) _currentHistoryInput = input.ToString();
                     _historyIndex++;
@@ -183,7 +250,11 @@ public sealed class ReplPrompt
 
             if (key.Key == ConsoleKey.DownArrow)
             {
-                if (_historyIndex > 0)
+                if (showMenu)
+                {
+                    _menuSelectionIndex = (_menuSelectionIndex + 1) % _currentMatches.Count;
+                }
+                else if (_historyIndex > 0)
                 {
                     _historyIndex--;
                     input.Clear();
@@ -200,17 +271,12 @@ public sealed class ReplPrompt
                 continue;
             }
 
-            if (key.Key == ConsoleKey.U && key.Modifiers.HasFlag(ConsoleModifiers.Control))
-            {
-                input.Clear();
-                cursor = 0;
-                continue;
-            }
-
             if (key.Key == ConsoleKey.Escape)
             {
                 input.Clear();
                 cursor = 0;
+                _menuSelectionIndex = 0;
+                _menuStartIndex = 0;
                 continue;
             }
 
@@ -218,17 +284,93 @@ public sealed class ReplPrompt
             {
                 input.Insert(cursor, key.KeyChar);
                 cursor++;
+                _menuSelectionIndex = 0;
+                _menuStartIndex = 0;
             }
         }
     }
 
-    private string GetSuggestion(string currentInput)
+    private void UpdateMenuSelectionAndWindow()
     {
-        if (string.IsNullOrWhiteSpace(currentInput)) return string.Empty;
+        if (_currentMatches.Count == 0)
+        {
+            _menuSelectionIndex = 0;
+            _menuStartIndex = 0;
+            return;
+        }
+
+        if (_menuSelectionIndex >= _currentMatches.Count) 
+            _menuSelectionIndex = _currentMatches.Count - 1;
+        if (_menuSelectionIndex < 0) 
+            _menuSelectionIndex = 0;
+
+        // Window logic
+        if (_menuSelectionIndex < _menuStartIndex)
+        {
+            _menuStartIndex = _menuSelectionIndex;
+        }
+        else if (_menuSelectionIndex >= _menuStartIndex + MaxVisibleMenuLines)
+        {
+            _menuStartIndex = _menuSelectionIndex - MaxVisibleMenuLines + 1;
+        }
+    }
+
+    private List<string> GetMatches(string currentInput)
+    {
+        if (string.IsNullOrWhiteSpace(currentInput)) return new List<string>();
 
         return _suggestions
             .Where(s => s.StartsWith(currentInput, StringComparison.OrdinalIgnoreCase))
             .OrderBy(s => s.Length)
-            .FirstOrDefault() ?? string.Empty;
+            .ToList();
+    }
+
+    private void RenderMenu()
+    {
+        var displayCount = Math.Min(MaxVisibleMenuLines, _currentMatches.Count);
+        _lastMenuLineCount = displayCount;
+
+        for (int i = 0; i < displayCount; i++)
+        {
+            AnsiConsole.Write("\n");
+            var matchIndex = _menuStartIndex + i;
+            if (matchIndex >= _currentMatches.Count) break;
+
+            var match = _currentMatches[matchIndex];
+            
+            // Render indicator for scrollable above/below
+            var prefix = "  ";
+            if (i == 0 && _menuStartIndex > 0) prefix = "↑ ";
+            else if (i == displayCount - 1 && _menuStartIndex + displayCount < _currentMatches.Count) prefix = "↓ ";
+
+            if (matchIndex == _menuSelectionIndex)
+            {
+                AnsiConsole.Markup($"[blue]{prefix}>[/] [white on blue]{match.EscapeMarkup()}[/]");
+            }
+            else
+            {
+                AnsiConsole.Markup($"  [grey]{match.EscapeMarkup()}[/]");
+            }
+            
+            // Clear rest of menu line
+            var currentPos = Console.CursorLeft;
+            AnsiConsole.Write(new string(' ', Math.Max(0, Console.WindowWidth - currentPos - 1)));
+        }
+
+        AnsiConsole.Cursor.MoveUp(displayCount);
+    }
+
+    private void ClearMenuArea()
+    {
+        if (_lastMenuLineCount == 0) return;
+
+        for (int i = 0; i < _lastMenuLineCount; i++)
+        {
+            AnsiConsole.Write("\n");
+            AnsiConsole.Write(new string(' ', Console.WindowWidth - 1));
+        }
+
+        AnsiConsole.Cursor.MoveUp(_lastMenuLineCount);
+        _lastMenuLineCount = 0;
     }
 }
