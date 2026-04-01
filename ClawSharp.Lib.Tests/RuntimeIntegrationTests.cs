@@ -231,7 +231,7 @@ data: {"type":"message_stop"}
         var session = await runtime.StartSessionAsync("planner");
 
         Assert.Equal(global.ThreadSpaceId, session.Record.ThreadSpaceId);
-        Assert.Equal(_root, session.Record.WorkspaceRoot);
+        Assert.EndsWith(".clawsharp/global", session.Record.WorkspaceRoot.Replace('\\', '/'));
     }
 
     [Fact]

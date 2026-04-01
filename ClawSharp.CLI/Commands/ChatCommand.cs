@@ -1,5 +1,7 @@
 using System.CommandLine;
 using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 using ClawSharp.CLI.Infrastructure;
 using ClawSharp.Lib.Configuration;
 using ClawSharp.Lib.Hub;
@@ -50,6 +52,8 @@ public static class ChatCommand
                 SessionId = session.Record.SessionId,
                 PromptHandler = CreatePromptHandler(kernel, options)
             };
+
+            state.PromptHandler.CurrentDirectory = currentThreadSpace.BoundFolderPath;
 
             ShowWelcomeHeader(finalAgentId, currentThreadSpace.Name);
 
@@ -734,12 +738,18 @@ public static class ChatCommand
 
     private static async Task<CommandDispatchResult> HandleThreadSpaceSwitchAsync(ReplState state, string command, string arguments)
     {
-        if (command == "/home" || string.IsNullOrWhiteSpace(arguments))
+        if (command == "/home")
         {
             state.CurrentThreadSpace = await state.Kernel.ThreadSpaces.GetGlobalAsync();
         }
-        else
+        else // /cd
         {
+            if (string.IsNullOrWhiteSpace(arguments))
+            {
+                AnsiConsole.MarkupLine("[red]Error: /cd requires a path argument. Use /home to switch to global space.[/]");
+                return CommandDispatchResult.Handled();
+            }
+
             var path = Path.GetFullPath(arguments);
             if (!Directory.Exists(path))
             {
@@ -753,6 +763,8 @@ public static class ChatCommand
 
         state.Session = await state.Runtime.StartSessionAsync(new StartSessionRequest(state.AgentId, state.CurrentThreadSpace.ThreadSpaceId));
         state.SessionId = state.Session.Record.SessionId;
+        state.PromptHandler.CurrentDirectory = state.CurrentThreadSpace.BoundFolderPath;
+
         AnsiConsole.MarkupLine($"[bold blue]Switched to space:[/] [green]{state.CurrentThreadSpace.Name.EscapeMarkup()}[/]");
         return CommandDispatchResult.Handled();
     }
@@ -924,7 +936,8 @@ public static class ChatCommand
 
     private static async Task RunTurnAsync(ReplState state, string input)
     {
-        await state.Runtime.AppendUserMessageAsync(state.SessionId, input);
+        var processedInput = await InputPreprocessor.ProcessAsync(input, state.PromptHandler.CurrentDirectory);
+        await state.Runtime.AppendUserMessageAsync(state.SessionId, processedInput);
 
         var hasTextOutput = false;
         string? finalAssistantMessage = null;
@@ -1114,5 +1127,57 @@ public static class ChatCommand
         public static CommandDispatchResult Submit(string value) => new(false, value);
 
         public static CommandDispatchResult Exit() => new(true);
+    }
+
+    private static class InputPreprocessor
+    {
+        private static readonly Regex FileRefRegex = new(@"@(\S+)", RegexOptions.Compiled);
+
+        public static async Task<string> ProcessAsync(string input, string? currentDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(input) || !input.Contains("@"))
+            {
+                return input;
+            }
+
+            var baseDir = currentDirectory ?? Directory.GetCurrentDirectory();
+            var matches = FileRefRegex.Matches(input);
+            if (matches.Count == 0) return input;
+
+            var sb = new StringBuilder(input);
+            var offset = 0;
+
+            foreach (Match match in matches)
+            {
+                var relativePath = match.Groups[1].Value;
+                var fullPath = Path.GetFullPath(Path.Combine(baseDir, relativePath));
+
+                if (File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var content = await File.ReadAllTextAsync(fullPath);
+                        var fileName = Path.GetFileName(fullPath);
+                        var ext = Path.GetExtension(fullPath).TrimStart('.');
+                        
+                        var replacement = $"\n\n[File: {relativePath}]\n```{ext}\n{content}\n```\n";
+                        
+                        sb.Remove(match.Index + offset, match.Length);
+                        sb.Insert(match.Index + offset, replacement);
+                        offset += replacement.Length - match.Length;
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]Warning: Could not read file {relativePath}: {ex.Message}[/]");
+                    }
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Warning: File not found: {relativePath}[/]");
+                }
+            }
+
+            return sb.ToString();
+        }
     }
 }

@@ -42,6 +42,8 @@ public sealed class ReplPrompt
     private int _lastMenuLineCount = 0;
     private const int MaxVisibleMenuLines = 8;
 
+    public string? CurrentDirectory { get; set; }
+
     public void AddSuggestions(IEnumerable<string> suggestions)
     {
         foreach (var s in suggestions)
@@ -94,8 +96,9 @@ public sealed class ReplPrompt
             
             _currentMatches = GetMatches(currentInput);
             
-            // Only show menu if in command mode and multiple matches
-            var showMenu = isCommandMode && _currentMatches.Count > 1;
+            // Only show menu if in command mode OR file reference mode and multiple matches
+            var isFileRefMode = currentInput.Contains("@");
+            var showMenu = (isCommandMode || isFileRefMode) && _currentMatches.Count > 1;
             
             // Ghost suggestion logic
             var suggestion = (isCommandMode && _currentMatches.Count == 1) || (!isCommandMode && _currentMatches.Count > 0)
@@ -319,11 +322,75 @@ public sealed class ReplPrompt
     {
         if (string.IsNullOrWhiteSpace(currentInput)) return new List<string>();
 
+        // 1. Check for @ file reference
+        var lastAtPos = currentInput.LastIndexOf('@');
+        if (lastAtPos >= 0)
+        {
+            var textBeforeAt = currentInput[..lastAtPos];
+            // Only suggest if @ is at start or preceded by whitespace
+            if (lastAtPos == 0 || char.IsWhiteSpace(textBeforeAt[^1]))
+            {
+                var partialPath = currentInput[(lastAtPos + 1)..];
+                return GetFileSuggestions(textBeforeAt, partialPath);
+            }
+        }
+
+        // 2. Default command suggestions
         return _suggestions
             .Where(s => s.StartsWith(currentInput, StringComparison.OrdinalIgnoreCase))
             .OrderBy(s => s.Length)
             .ToList();
     }
+
+    private List<string> GetFileSuggestions(string textBeforeAt, string partialPath)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentDirectory))
+        {
+            // In global mode, we don't allow relative file selection to avoid leaking project files.
+            return new List<string>();
+        }
+
+        var baseDir = CurrentDirectory;
+        if (!Directory.Exists(baseDir)) return new List<string>();
+
+        try
+        {
+            // Normalize partial path (replace forward slashes with system separators)
+            var normalizedPartial = partialPath.Replace('/', Path.DirectorySeparatorChar);
+            
+            var searchDir = baseDir;
+            var searchPattern = "*";
+            
+            if (normalizedPartial.Contains(Path.DirectorySeparatorChar))
+            {
+                var lastSeparatorPos = normalizedPartial.LastIndexOf(Path.DirectorySeparatorChar);
+                var subPath = normalizedPartial[..lastSeparatorPos];
+                searchDir = Path.Combine(baseDir, subPath);
+                searchPattern = normalizedPartial[(lastSeparatorPos + 1)..] + "*";
+                
+                if (!Directory.Exists(searchDir)) return new List<string>();
+            }
+            else
+            {
+                searchPattern = normalizedPartial + "*";
+            }
+
+            var entries = Directory.GetFileSystemEntries(searchDir, searchPattern)
+                .Select(e => Path.GetRelativePath(baseDir, e))
+                .Select(e => e.Replace(Path.DirectorySeparatorChar, '/')) // Always use forward slashes for cross-platform
+                .Select(e => textBeforeAt + "@" + e)
+                .OrderBy(e => e.Length)
+                .Take(20)
+                .ToList();
+
+            return entries;
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
 
     private void RenderMenu()
     {
