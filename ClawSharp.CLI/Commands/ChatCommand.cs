@@ -541,7 +541,7 @@ public static class ChatCommand
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /config [list | get <key> | set <key> <value>][/]");
+                AnsiConsole.MarkupLine("[grey]Usage: /config [[list | get <key> | set <key> <value>]][/]");
                 break;
         }
 
@@ -707,7 +707,7 @@ public static class ChatCommand
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /spaces [list | add <name> <path> | show <#|id> | remove <#|id>][/]");
+                AnsiConsole.MarkupLine("[grey]Usage: /spaces [[list | add <name> <path> | show <#|id> | remove <#|id>]][/]");
                 break;
         }
 
@@ -790,7 +790,7 @@ public static class ChatCommand
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /hub [search [query] | show <skill-id> | install <skill-id> [version]][/]");
+                AnsiConsole.MarkupLine("[grey]Usage: /hub [[search [[query]] | show <skill-id> | install <skill-id> [[version]]]][/]");
                 break;
         }
 
