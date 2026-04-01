@@ -13,7 +13,7 @@ namespace ClawSharp.CLI.Infrastructure;
 /// </summary>
 public static class ProjectInitHandler
 {
-    public sealed record AiProjectContent(string Summary, string Appendix);
+    public sealed record AiProjectContent(string Summary, string Appendix, string Plan, string Spec);
 
     public static async Task RunAsync(
         IHost host,
@@ -77,6 +77,8 @@ public static class ProjectInitHandler
                 {
                     variables["project_summary"] = aiContent.Summary;
                     variables["ai_appendix"] = aiContent.Appendix;
+                    variables["ai_plan"] = aiContent.Plan;
+                    variables["ai_spec"] = aiContent.Spec;
                     AnsiConsole.MarkupLine("[green]AI content generated and will be applied to the project.[/]");
                 }
             }
@@ -126,11 +128,13 @@ public static class ProjectInitHandler
                           Template Description: {template.Description}
                           My Idea: {idea}
 
-                          Please generate two things in JSON format:
+                          Please generate four things in JSON format:
                           1. "summary": A concise one-sentence summary of the project.
-                          2. "appendix": A detailed Markdown section covering project goals, research questions (if applicable), and a high-level roadmap.
+                          2. "appendix": A detailed Markdown section for README covering project goals and high-level roadmap.
+                          3. "plan": A detailed initial project implementation plan in Markdown format, following the structure: Background, Goals, Implementation Steps (detailed), Verification Strategy.
+                          4. "spec": A technical specification for the initial research/feature in Markdown format.
 
-                          Response MUST be a valid JSON object with "summary" and "appendix" keys.
+                          Response MUST be a valid JSON object with "summary", "appendix", "plan", and "spec" keys.
                           """;
 
             await runtime.AppendUserMessageAsync(sessionId, prompt);
@@ -147,13 +151,15 @@ public static class ProjectInitHandler
                     using var doc = JsonDocument.Parse(json);
                     return new AiProjectContent(
                         doc.RootElement.GetProperty("summary").GetString() ?? "",
-                        doc.RootElement.GetProperty("appendix").GetString() ?? ""
+                        doc.RootElement.GetProperty("appendix").GetString() ?? "",
+                        doc.RootElement.GetProperty("plan").GetString() ?? "",
+                        doc.RootElement.GetProperty("spec").GetString() ?? ""
                     );
                 }
             }
             catch
             {
-                return new AiProjectContent(idea, result.AssistantMessage);
+                return new AiProjectContent(idea, result.AssistantMessage, "", "");
             }
 
             return null;

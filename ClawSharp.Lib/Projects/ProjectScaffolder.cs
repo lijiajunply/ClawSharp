@@ -90,6 +90,11 @@ public sealed class ProjectScaffolder(
             createdDirectories.AddRange(specKitResult.Value?.CreatedDirectories ?? []);
             createdFiles.AddRange(specKitResult.Value?.CreatedFiles ?? []);
 
+            // 应用 AI 生成的初始规格与计划
+            var aiSpecResult = await ApplyAiGeneratedSpecAsync(projectRoot, variables, cancellationToken).ConfigureAwait(false);
+            createdDirectories.AddRange(aiSpecResult.CreatedDirectories);
+            createdFiles.AddRange(aiSpecResult.CreatedFiles);
+
             return OperationResult<CreateProjectResult>.Success(
                 new CreateProjectResult(
                     template.Id,
@@ -116,6 +121,37 @@ public sealed class ProjectScaffolder(
         string projectRoot,
         CancellationToken cancellationToken = default) =>
         specKitProvider.ApplyAsync(projectRoot, cancellationToken);
+
+    private async Task<ApplySpecKitResult> ApplyAiGeneratedSpecAsync(
+        string projectRoot,
+        IReadOnlyDictionary<string, string> variables,
+        CancellationToken cancellationToken)
+    {
+        var createdDirs = new List<string>();
+        var createdFiles = new List<string>();
+
+        if (!variables.TryGetValue("ai_plan", out var plan) || string.IsNullOrWhiteSpace(plan))
+        {
+            return new ApplySpecKitResult(projectRoot, createdDirs, createdFiles);
+        }
+
+        var specRoot = Path.Combine(projectRoot, "specs", "001-initial-research");
+        Directory.CreateDirectory(specRoot);
+        createdDirs.Add(specRoot);
+
+        var planPath = Path.Combine(specRoot, "plan.md");
+        await File.WriteAllTextAsync(planPath, plan, cancellationToken).ConfigureAwait(false);
+        createdFiles.Add(planPath);
+
+        if (variables.TryGetValue("ai_spec", out var spec) && !string.IsNullOrWhiteSpace(spec))
+        {
+            var specPath = Path.Combine(specRoot, "spec.md");
+            await File.WriteAllTextAsync(specPath, spec, cancellationToken).ConfigureAwait(false);
+            createdFiles.Add(specPath);
+        }
+
+        return new ApplySpecKitResult(projectRoot, createdDirs, createdFiles);
+    }
 
     private static IReadOnlyDictionary<string, string> BuildVariables(CreateProjectRequest request,
         ProjectTemplateDefinition template)
