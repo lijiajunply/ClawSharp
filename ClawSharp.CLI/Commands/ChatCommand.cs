@@ -8,6 +8,7 @@ using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace ClawSharp.CLI.Commands;
 
@@ -513,47 +514,49 @@ public static class ChatCommand
     {
         await state.Runtime.AppendUserMessageAsync(state.SessionId, input);
 
-        AnsiConsole.Markup("[bold yellow]Agent >[/] ");
         var hasTextOutput = false;
         string? finalAssistantMessage = null;
         PerformanceMetrics? performance = null;
+        var streamingMarkdown = new Markdown(string.Empty);
+        var streamingRenderable = new StreamingAssistantRenderable(streamingMarkdown);
 
         try
         {
-            // 简单的提示，表明正在进行知识检索（如果是自动化 RAG）
-            AnsiConsole.Markup("[grey](Searching memory...)[/] \r");
-
-            await foreach (var @event in state.Runtime.RunTurnStreamingAsync(state.SessionId))
+            await AnsiConsole.Live(streamingRenderable)
+                .AutoClear(false)
+                .Overflow(VerticalOverflow.Visible)
+                .StartAsync(async ctx =>
             {
-                if (@event.Delta is not null)
+                await foreach (var @event in state.Runtime.RunTurnStreamingAsync(state.SessionId))
                 {
-                    hasTextOutput = true;
-                    Console.Write(@event.Delta);
-                }
+                    if (@event.Delta is not null)
+                    {
+                        hasTextOutput = true;
+                        finalAssistantMessage = string.Concat(finalAssistantMessage, @event.Delta);
+                        streamingRenderable.Update(finalAssistantMessage);
+                        ctx.UpdateTarget(streamingRenderable);
+                    }
 
-                if (@event.FinalResult is not null)
-                {
-                    finalAssistantMessage = @event.FinalResult.AssistantMessage;
-                    performance = @event.FinalResult.Performance;
+                    if (@event.FinalResult is not null)
+                    {
+                        finalAssistantMessage = @event.FinalResult.AssistantMessage;
+                        performance = @event.FinalResult.Performance;
+                        streamingRenderable.Update(finalAssistantMessage);
+                        ctx.UpdateTarget(streamingRenderable);
+                    }
                 }
-            }
+            })
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteLine();
             CliErrorHandler.Handle(ex);
             hasTextOutput = true;
         }
 
         if (!hasTextOutput)
         {
-            AnsiConsole.MarkupLine("[grey](No text response from agent)[/]");
-        }
-        else if (MarkdownCodeFenceDetector.ContainsFencedCodeBlock(finalAssistantMessage ?? string.Empty))
-        {
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]Rendered Markdown:[/]");
-            AnsiConsole.Write(new Markdown(finalAssistantMessage ?? string.Empty));
+            AnsiConsole.Write(new StreamingAssistantRenderable(new Markdown("(No text response from agent)")));
         }
 
         if (performance is not null)
@@ -636,6 +639,43 @@ public static class ChatCommand
         public required RuntimeSession Session { get; set; }
         public required SessionId SessionId { get; set; }
         public required ReplPrompt PromptHandler { get; set; }
+    }
+
+    private sealed class StreamingAssistantRenderable(Markdown markdown) : IRenderable
+    {
+        public void Update(string? content)
+        {
+            markdown.Update(content ?? string.Empty);
+        }
+
+        public Measurement Measure(RenderOptions options, int maxWidth)
+        {
+            var renderable = CreateBodyRenderable();
+            return renderable.Measure(options, maxWidth);
+        }
+
+        public IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
+        {
+            var renderable = CreateBodyRenderable();
+            return renderable.Render(options, maxWidth);
+        }
+
+        private IRenderable CreateBodyRenderable()
+        {
+            var rows = new List<IRenderable>
+            {
+                new Markup("[bold yellow]Agent >[/]")
+            };
+
+            if (!string.IsNullOrWhiteSpace(markdown.Content))
+            {
+                rows.Add(markdown.HasRichContent
+                    ? markdown
+                    : new Text(markdown.Content));
+            }
+
+            return new Rows(rows.ToArray());
+        }
     }
 
     private sealed record CommandDispatchResult(bool ExitRequested, string? SubmittedInput = null)

@@ -268,6 +268,12 @@ public interface IClawRuntime
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 获取当前缓存的环境探测结果；若尚未探测则即时执行一次。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task<EnvironmentDiscoveryResult> GetEnvironmentDiscoveryAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 在启动 worker 前准备完整的 agent 执行计划。
     /// </summary>
     /// <param name="request">agent 启动请求。</param>
@@ -427,6 +433,7 @@ public sealed class ClawRuntime(
     private readonly Dictionary<string, IAgentWorkerSession> _workers = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, AgentLaunchPlanCacheEntry> _launchPlanCache = new(StringComparer.OrdinalIgnoreCase);
     private DefinitionWatcher? _watcher;
+    private EnvironmentDiscoveryResult? _environmentDiscovery;
 
     private IPermissionUI? PermissionUI => serviceProvider.GetService(typeof(IPermissionUI)) as IPermissionUI;
 
@@ -446,22 +453,27 @@ public sealed class ClawRuntime(
         await kernel.ThreadSpaces.EnsureDefaultAsync(cancellationToken).ConfigureAwait(false);
 
         // Check for environment dependencies if they are used by any registered tools
-        await CheckEnvironmentDependenciesAsync().ConfigureAwait(false);
+        _environmentDiscovery = await CheckEnvironmentDependenciesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task CheckEnvironmentDependenciesAsync()
+    /// <inheritdoc />
+    public async Task<EnvironmentDiscoveryResult> GetEnvironmentDiscoveryAsync(CancellationToken cancellationToken = default)
+    {
+        _environmentDiscovery ??= await EnvironmentDiscoveryInspector.DiscoverAsync(cancellationToken).ConfigureAwait(false);
+        return _environmentDiscovery;
+    }
+
+    private async Task<EnvironmentDiscoveryResult> CheckEnvironmentDependenciesAsync(CancellationToken cancellationToken)
     {
         var tools = kernel.Tools.GetAll();
+        var discovery = await EnvironmentDiscoveryInspector.DiscoverAsync(cancellationToken).ConfigureAwait(false);
 
         // 1. Playwright Check (Required for web_browser)
         if (tools.Any(t => t.Name == "web_browser"))
         {
             try
             {
-                var playwrightCaches = ResolvePlaywrightCachePaths();
-                if (!playwrightCaches.Any(path =>
-                        Directory.Exists(path) &&
-                        Directory.EnumerateDirectories(path, "chromium-*").Any()))
+                if (!discovery.PlaywrightInstalled)
                 {
                     throw new EnvironmentDependencyException(
                         "web_browser",
@@ -482,28 +494,18 @@ public sealed class ClawRuntime(
                 Debug.WriteLine("Hint: 'markitdown' not found. Install it via 'pip install markitdown' for better PDF extraction quality.");
             }
         }
-    }
 
-    private static IReadOnlyList<string> ResolvePlaywrightCachePaths()
-    {
-        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var paths = new List<string>();
-
-        if (OperatingSystem.IsWindows())
+        if (discovery.Ollama.Available)
         {
-            paths.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ms-playwright"));
-        }
-        else
-        {
-            paths.Add(Path.Combine(userHome, ".cache", "ms-playwright"));
-
-            if (OperatingSystem.IsMacOS())
-            {
-                paths.Add(Path.Combine(userHome, "Library", "Caches", "ms-playwright"));
-            }
+            Debug.WriteLine($"Detected Ollama at {discovery.Ollama.BaseUrl} with {discovery.Ollama.Models.Count} model(s).");
         }
 
-        return paths;
+        if (discovery.LlamaEdge.Available)
+        {
+            Debug.WriteLine($"Detected LlamaEdge at {discovery.LlamaEdge.BaseUrl} with {discovery.LlamaEdge.Models.Count} model(s).");
+        }
+
+        return discovery;
     }
 
     /// <summary>

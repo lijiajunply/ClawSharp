@@ -1,4 +1,5 @@
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Runtime;
 using Spectre.Console;
 
 namespace ClawSharp.CLI.Infrastructure;
@@ -41,9 +42,32 @@ public static class BootstrapWizard
         AnsiConsole.WriteLine();
 
         var bootstrapper = new ConfigBootstrapper();
-        var templates = bootstrapper.GetProviderTemplates().ToList();
+        var discovery = await EnvironmentDiscoveryInspector.DiscoverAsync();
+        var templates = bootstrapper.GetProviderTemplates(discovery).ToList();
 
         var config = new BootstrapConfig();
+
+        if (discovery.HasLocalModelProvider)
+        {
+            AnsiConsole.MarkupLine("[bold green]Detected local model services:[/]");
+            if (discovery.Ollama.Available)
+            {
+                var modelSummary = discovery.Ollama.Models.Count == 0
+                    ? "no models reported"
+                    : string.Join(", ", discovery.Ollama.Models.Take(3));
+                AnsiConsole.MarkupLine($"[grey]- Ollama:[/] {discovery.Ollama.BaseUrl?.EscapeMarkup()} ({modelSummary.EscapeMarkup()})");
+            }
+
+            if (discovery.LlamaEdge.Available)
+            {
+                var modelSummary = discovery.LlamaEdge.Models.Count == 0
+                    ? "no models reported"
+                    : string.Join(", ", discovery.LlamaEdge.Models.Take(3));
+                AnsiConsole.MarkupLine($"[grey]- LlamaEdge:[/] {discovery.LlamaEdge.BaseUrl?.EscapeMarkup()} ({modelSummary.EscapeMarkup()})");
+            }
+
+            AnsiConsole.WriteLine();
+        }
 
         // 1. Workspace Root (FR-003)
         config.WorkspaceRoot = AnsiConsole.Prompt(
@@ -66,18 +90,36 @@ public static class BootstrapWizard
                 .Title("Select your [green]default AI provider[/]:")
                 .PageSize(10)
                 .AddChoices(templates)
-                .UseConverter(t => t.Name));
+                .UseConverter(t =>
+                {
+                    var detected = !t.RequiresApiKey && !string.IsNullOrWhiteSpace(t.BaseUrl) ? " [green](Detected)[/]" : string.Empty;
+                    return $"{t.Name}{detected}";
+                }));
 
         config.DefaultProvider = selectedTemplate.Id;
         config.ProviderType = selectedTemplate.Type;
+        config.BaseUrl = selectedTemplate.BaseUrl;
+        config.DefaultModel = selectedTemplate.DefaultModel;
+        config.RequestPath = selectedTemplate.RequestPath;
+        config.SupportsResponses = selectedTemplate.SupportsResponses;
+        config.SupportsChatCompletions = selectedTemplate.SupportsChatCompletions;
 
         // 4. API Key (FR-006)
-        if (selectedTemplate.Type != "stub")
+        if (selectedTemplate.RequiresApiKey)
         {
             config.ApiKey = AnsiConsole.Prompt(
                 new TextPrompt<string>($"Enter [green]API Key[/] for {selectedTemplate.Name}:")
                     .PromptStyle("red")
                     .Secret());
+        }
+
+        if (string.IsNullOrWhiteSpace(config.DefaultModel) && selectedTemplate.Id is "ollama-local" or "llamaedge-local")
+        {
+            config.DefaultModel = AnsiConsole.Prompt(
+                new TextPrompt<string>($"Enter [green]default model[/] for {selectedTemplate.Name}:")
+                    .Validate(value => string.IsNullOrWhiteSpace(value)
+                        ? ValidationResult.Error("[red]Model name is required for local providers.[/]")
+                        : ValidationResult.Success()));
         }
 
         // 5. Generate and Save (FR-007)
@@ -92,7 +134,7 @@ public static class BootstrapWizard
         AnsiConsole.MarkupLine("[bold green]Configuration generated successfully![/]");
         AnsiConsole.WriteLine();
 
-        // 6. Optional: Playwright Browser Installation (for web_browser tool)
+        // 6. Optional: browser dependency installation (for web_browser tool)
         if (AnsiConsole.Confirm("Would you like to install [green]Playwright[/] browser drivers now? (Required for [blue]web_browser[/] tool)"))
         {
             await AnsiConsole.Status()

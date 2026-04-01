@@ -1,4 +1,5 @@
 using ClawSharp.Lib.Configuration;
+using ClawSharp.Lib.Runtime;
 using Microsoft.Extensions.Configuration;
 
 namespace ClawSharp.Lib.Tests;
@@ -147,17 +148,41 @@ public async Task ConfigManager_CanReset()
             DataPath = ".data",
             DefaultProvider = "openai",
             ProviderType = "openai-responses",
+            BaseUrl = "https://api.openai.com",
+            DefaultModel = "gpt-test",
+            SupportsResponses = true,
             ApiKey = "sk-test"
         };
 
         var json = bootstrapper.GenerateConfigJson(config);
         
         Assert.Contains("\"WorkspaceRoot\": \"/tmp/ws\"", json);
+        Assert.Contains("\"BaseUrl\": \"https://api.openai.com\"", json);
+        Assert.Contains("\"DefaultModel\": \"gpt-test\"", json);
+        Assert.Contains("\"SupportsResponses\": true", json);
         Assert.Contains("\"ApiKey\": \"sk-test\"", json);
 
         var path = Path.Combine(_root, "appsettings.json");
         await bootstrapper.SaveConfigAsync(path, json);
         Assert.True(File.Exists(path));
+    }
+
+    [Fact]
+    public void ConfigBootstrapper_IncludesDiscoveredLocalProviders_First()
+    {
+        var bootstrapper = new ConfigBootstrapper();
+        var discovery = new EnvironmentDiscoveryResult(
+            PlaywrightInstalled: true,
+            Ollama: new LocalModelServiceDiscovery(true, "http://127.0.0.1:11434", ["qwen3:latest"]),
+            LlamaEdge: new LocalModelServiceDiscovery(true, "http://127.0.0.1:8080", ["llama-edge"]));
+
+        var templates = bootstrapper.GetProviderTemplates(discovery).ToArray();
+
+        Assert.Equal("ollama-local", templates[0].Id);
+        Assert.Equal("llamaedge-local", templates[1].Id);
+        Assert.False(templates[0].RequiresApiKey);
+        Assert.Equal("qwen3:latest", templates[0].DefaultModel);
+        Assert.Equal("http://127.0.0.1:8080", templates[1].BaseUrl);
     }
 
     public void Dispose()

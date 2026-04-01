@@ -10,6 +10,7 @@ using ClawSharp.Lib.Skills;
 using ClawSharp.Lib.Tools;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -296,6 +297,58 @@ data: {"type":"message_stop"}
         Assert.True(plannerCached.CacheHit);
         Assert.False(reviewerFirst.CacheHit);
         Assert.True(reviewerCached.CacheHit);
+    }
+
+    [Fact]
+    public async Task Runtime_GetEnvironmentDiscoveryAsync_ReturnsUnavailableLocalModels_WhenNothingIsRunning()
+    {
+        Environment.SetEnvironmentVariable("OLLAMA_HOST", "http://127.0.0.1:9");
+        Environment.SetEnvironmentVariable("LLAMAEDGE_HOST", "http://127.0.0.1:9");
+
+        try
+        {
+            var runtime = CreateRuntime(out _, out _);
+            await runtime.InitializeAsync();
+
+            var discovery = await runtime.GetEnvironmentDiscoveryAsync();
+
+            Assert.False(discovery.Ollama.Available);
+            Assert.False(discovery.LlamaEdge.Available);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OLLAMA_HOST", null);
+            Environment.SetEnvironmentVariable("LLAMAEDGE_HOST", null);
+        }
+    }
+
+    [Fact]
+    public async Task EnvironmentDiscoveryInspector_DetectsOllamaAndLlamaEdge_FromConfiguredHosts()
+    {
+        using var ollamaServer = await LocalHttpServer.StartAsync("""
+{"models":[{"name":"qwen3:latest"}]}
+""");
+        using var llamaEdgeServer = await LocalHttpServer.StartAsync("""
+{"data":[{"id":"llama-edge"}]}
+""");
+
+        Environment.SetEnvironmentVariable("OLLAMA_HOST", ollamaServer.BaseUrl);
+        Environment.SetEnvironmentVariable("LLAMAEDGE_HOST", llamaEdgeServer.BaseUrl);
+
+        try
+        {
+            var discovery = await EnvironmentDiscoveryInspector.DiscoverAsync();
+
+            Assert.True(discovery.Ollama.Available);
+            Assert.Equal("qwen3:latest", discovery.Ollama.Models[0]);
+            Assert.True(discovery.LlamaEdge.Available);
+            Assert.Equal("llama-edge", discovery.LlamaEdge.Models[0]);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("OLLAMA_HOST", null);
+            Environment.SetEnvironmentVariable("LLAMAEDGE_HOST", null);
+        }
     }
 
     [Fact]
@@ -684,5 +737,87 @@ data: {"type":"message_stop"}
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+}
+
+internal sealed class LocalHttpServer : IDisposable
+{
+    private readonly HttpListener _listener;
+    private readonly CancellationTokenSource _cts;
+    private readonly Task _serverTask;
+
+    private LocalHttpServer(HttpListener listener, CancellationTokenSource cts, Task serverTask, string baseUrl)
+    {
+        _listener = listener;
+        _cts = cts;
+        _serverTask = serverTask;
+        BaseUrl = baseUrl.TrimEnd('/');
+    }
+
+    public string BaseUrl { get; }
+
+    public static async Task<LocalHttpServer> StartAsync(string body)
+    {
+        var port = GetFreePort();
+        var prefix = $"http://127.0.0.1:{port}/";
+        var listener = new HttpListener();
+        listener.Prefixes.Add(prefix);
+        listener.Start();
+
+        var cts = new CancellationTokenSource();
+        var serverTask = Task.Run(async () =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                HttpListenerContext context;
+                try
+                {
+                    context = await listener.GetContextAsync();
+                }
+                catch (HttpListenerException)
+                {
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json";
+                await using var writer = new StreamWriter(context.Response.OutputStream);
+                await writer.WriteAsync(body);
+                await writer.FlushAsync();
+                context.Response.Close();
+            }
+        }, cts.Token);
+
+        var server = new LocalHttpServer(listener, cts, serverTask, prefix);
+        await Task.Delay(50);
+        return server;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _listener.Close();
+        try
+        {
+            _serverTask.GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Ignore listener shutdown races during tests.
+        }
+        _cts.Dispose();
+    }
+
+    private static int GetFreePort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
     }
 }

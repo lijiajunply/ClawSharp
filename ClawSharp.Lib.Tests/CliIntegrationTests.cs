@@ -103,6 +103,19 @@ public sealed class CliIntegrationTests : IDisposable
         Assert.Contains(editor, startInfo.ArgumentList[1]);
         Assert.Contains(filePath, startInfo.ArgumentList[1]);
     }
+
+    [Fact]
+    public void MarkdownRenderer_DetectsRichMarkdownStructures()
+    {
+        var markdown = new ClawSharp.CLI.Infrastructure.Markdown("## Heading");
+
+        Assert.True(markdown.HasRichContent);
+
+        markdown.Update("Plain text only");
+
+        Assert.False(markdown.HasRichContent);
+    }
+
 }
 
 internal class FakeAgentRegistry : IAgentRegistry

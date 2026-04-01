@@ -26,6 +26,31 @@ public sealed class BootstrapConfig
     public string ProviderType { get; set; } = "openai-responses";
 
     /// <summary>
+    /// provider 基础地址。
+    /// </summary>
+    public string BaseUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// provider 默认模型。
+    /// </summary>
+    public string DefaultModel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 可选请求路径覆盖。
+    /// </summary>
+    public string? RequestPath { get; set; }
+
+    /// <summary>
+    /// 是否支持 Responses API。
+    /// </summary>
+    public bool SupportsResponses { get; set; }
+
+    /// <summary>
+    /// 是否支持 Chat Completions。
+    /// </summary>
+    public bool SupportsChatCompletions { get; set; }
+
+    /// <summary>
     /// 提供商 API Key。
     /// </summary>
     public string? ApiKey { get; set; }
