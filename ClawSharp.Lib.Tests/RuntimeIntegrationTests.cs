@@ -62,6 +62,31 @@ public sealed class RuntimeIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Runtime_RunTurnStreaming_EmitsStructuredToolEvents()
+    {
+        var runtime = CreateRuntime(out _, out _);
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "tool:system_info:{}");
+
+        var streamEvents = new List<RunTurnStreamEvent>();
+        await foreach (var streamEvent in runtime.RunTurnStreamingAsync(session.Record.SessionId))
+        {
+            streamEvents.Add(streamEvent);
+        }
+
+        Assert.Contains(streamEvents, streamEvent =>
+            streamEvent.EventType == "worker.tool.requested" &&
+            streamEvent.EventPayload is { } payload &&
+            payload.TryGetProperty("name", out var name) &&
+            name.GetString() == "system_info");
+        Assert.Contains(streamEvents, streamEvent =>
+            streamEvent.EventType == "worker.tool.completed" &&
+            streamEvent.EventPayload is { } payload &&
+            payload.TryGetProperty("toolName", out var name) &&
+            name.GetString() == "system_info");
+    }
+
+    [Fact]
     public async Task Runtime_CancelSession_UpdatesStatus()
     {
         var runtime = CreateRuntime(out _, out _);

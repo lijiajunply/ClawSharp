@@ -833,14 +833,38 @@ public sealed class ClawRuntime(
                     case "worker.tool.requested":
                         totalToolCalls++;
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallRequested", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
-                        var toolName = workerEvent.Payload.GetProperty("name").GetString();
-                        var isAgent = kernel.Agents.GetAll().Any(a => a.Id.Equals(toolName, StringComparison.OrdinalIgnoreCase) || a.Name.Equals(toolName, StringComparison.OrdinalIgnoreCase));
-                        var label = isAgent ? "Delegating to agent" : "Calling tool";
-                        yield return new RunTurnStreamEvent(Delta: $"\n[{label}: {toolName}]... ");
+                        var requestedToolName = workerEvent.Payload.GetProperty("name").GetString() ?? string.Empty;
+                        var requestedIsAgent = kernel.Agents.GetAll().Any(a =>
+                            a.Id.Equals(requestedToolName, StringComparison.OrdinalIgnoreCase) ||
+                            a.Name.Equals(requestedToolName, StringComparison.OrdinalIgnoreCase));
+                        yield return new RunTurnStreamEvent(
+                            EventType: workerEvent.EventType,
+                            EventPayload: serializer.SerializeToElement(new
+                            {
+                                id = workerEvent.Payload.GetProperty("id").GetString(),
+                                name = requestedToolName,
+                                argumentsJson = workerEvent.Payload.GetProperty("argumentsJson").GetString(),
+                                isAgent = requestedIsAgent,
+                                blocks = workerEvent.Payload.TryGetProperty("blocks", out var requestedBlocks) ? requestedBlocks : default
+                            }));
                         break;
                     case "worker.tool.completed":
                         await kernel.Events.AppendAsync(sessionId, lastUser.TurnId, "ToolCallCompleted", workerEvent.Payload, cancellationToken).ConfigureAwait(false);
-                        yield return new RunTurnStreamEvent(Delta: "[Done]\n");
+                        var completedToolName = workerEvent.Payload.GetProperty("toolName").GetString() ?? string.Empty;
+                        var completedIsAgent = kernel.Agents.GetAll().Any(a =>
+                            a.Id.Equals(completedToolName, StringComparison.OrdinalIgnoreCase) ||
+                            a.Name.Equals(completedToolName, StringComparison.OrdinalIgnoreCase));
+                        yield return new RunTurnStreamEvent(
+                            EventType: workerEvent.EventType,
+                            EventPayload: serializer.SerializeToElement(new
+                            {
+                                toolCallId = workerEvent.Payload.GetProperty("toolCallId").GetString(),
+                                toolName = completedToolName,
+                                status = workerEvent.Payload.GetProperty("status").GetString(),
+                                payload = workerEvent.Payload.GetProperty("payload"),
+                                isAgent = completedIsAgent,
+                                blocks = workerEvent.Payload.TryGetProperty("blocks", out var completedBlocks) ? completedBlocks : default
+                            }));
                         break;
                     case "worker.usage.updated":
                         if (workerEvent.Payload.TryGetProperty("usage", out var usagePayload))
