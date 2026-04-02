@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:ClawSharp.Desktop.ViewModels"
+             xmlns:v="clr-namespace:ClawSharp.Desktop.Views"
+             xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+             xmlns:infra="clr-namespace:ClawSharp.Desktop.Infrastructure"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ClawSharp.Desktop.Views.ChatView"
+             x:DataType="vm:ChatViewModel">
+    <Grid ColumnDefinitions="300,*">
+        <!-- Sidebar: Agent List -->
+        <v:AgentListView Grid.Column="0" DataContext="{Binding}" />
+
+        <!-- Chat Area -->
+        <Grid Grid.Column="1" RowDefinitions="*,Auto">
+            <!-- Messages Area -->
+            <ListBox Grid.Row="0" ItemsSource="{Binding Messages}" Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <suki:GlassCard Margin="10" Padding="15" 
+                                       HorizontalAlignment="{Binding IsAi, Converter={StaticResource AiAlignmentConverter}}">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding Sender}" FontWeight="Bold" FontSize="12" Opacity="0.7" />
+                                <md:MarkdownScrollViewer Markdown="{Binding Content}" 
+                                                        HorizontalAlignment="Stretch" />
+                                <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" 
+                                           FontSize="10" Opacity="0.5" HorizontalAlignment="Right" />
+                            </StackPanel>
+                        </suki:GlassCard>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </ListBox.Styles>
+            </ListBox>
+
+            <!-- Input Area -->
+            <suki:GlassCard Grid.Row="1" Margin="10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Text="{Binding InputText}" 
+                             Watermark="Type a message..."
+                             AcceptsReturn="True"
+                             IsEnabled="{Binding !IsProcessing}"
+                             Classes="Flat"
+                             Margin="0,0,10,0" />
+                    <Button Grid.Column="1" 
+                            Command="{Binding SendMessageCommand}"
+                            Content="Send"
+                            Classes="Primary" />
+                </Grid>
+            </suki:GlassCard>
+        </Grid>
+    </Grid>
+
+    <UserControl.Resources>
+        <infra:AiBackgroundConverter x:Key="AiBackgroundConverter" />
+        <infra:AiAlignmentConverter x:Key="AiAlignmentConverter" />
+    </UserControl.Resources>
+</UserControl>

@@ -12,9 +12,26 @@ ClawSharp 是一个使用 C# 编写、面向 `.NET 10` 的本地优先 AI 应用
 - 内置本地工具系统
 - 向量记忆与检索
 - 基于 JSON 和 `.env` 的本地配置
-- 先完成可复用的 Library 内核，再承载 CLI 和 Web 应用
+- 先完成可复用的 Library 内核，再承载 CLI 和桌面应用
 
 当前仓库的重点是 `ClawSharp.Lib`。到目前为止，这个库已经具备可运行的 runtime 骨架、持久化 session、provider 抽象、工具执行、memory，以及真实 OpenAI / 兼容 API provider 支持。
+
+## UI 应用
+
+- `ClawSharp.CLI`: 终端界面。
+- `ClawSharp.Desktop`: 基于 Avalonia + SukiUI 的跨平台桌面界面。
+
+## 运行
+
+### 桌面 GUI
+```bash
+dotnet run --project ClawSharp.Desktop/ClawSharp.Desktop.csproj
+```
+
+### CLI
+```bash
+dotnet run --project ClawSharp.CLI/ClawSharp.CLI.csproj
+```
 
 ## 当前进度
 

@@ -1,20 +1,44 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:ClawSharp.Desktop.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="ClawSharp.Desktop.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="ClawSharp.Desktop">
+<sukiUi:SukiWindow xmlns="https://github.com/avaloniaui"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:vm="using:ClawSharp.Desktop.ViewModels"
+            xmlns:v="using:ClawSharp.Desktop.Views"
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            xmlns:sukiUi="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+            mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+            x:Class="ClawSharp.Desktop.Views.MainWindow"
+            x:DataType="vm:MainWindowViewModel"
+            Icon="/Assets/avalonia-logo.ico"
+            Title="ClawSharp">
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <sukiUi:SukiSideMenu IsMenuExpanded="True" 
+                         ItemsSource="{Binding MenuItems}" 
+                         SelectedItem="{Binding SelectedMenuItem}">
+        <sukiUi:SukiSideMenu.HeaderContent>
+            <TextBlock Text="ClawSharp" 
+                       HorizontalAlignment="Center" 
+                       FontSize="20" FontWeight="Bold" 
+                       Margin="20" />
+        </sukiUi:SukiSideMenu.HeaderContent>
+        
+        <sukiUi:SukiSideMenu.ItemTemplate>
+            <DataTemplate x:DataType="vm:MenuItemViewModel">
+                <TextBlock Text="{Binding Header}" />
+            </DataTemplate>
+        </sukiUi:SukiSideMenu.ItemTemplate>
 
-</Window>
+        <sukiUi:SukiSideMenu.FooterContent>
+            <Button Command="{Binding ToggleThemeCommand}" 
+                    Content="Toggle Theme" 
+                    Margin="10" />
+        </sukiUi:SukiSideMenu.FooterContent>
+
+        <!-- Main Content Area -->
+        <ContentControl Content="{Binding SelectedMenuItem.Content}" />
+    </sukiUi:SukiSideMenu>
+
+</sukiUi:SukiWindow>
