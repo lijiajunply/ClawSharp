@@ -430,6 +430,50 @@ public sealed class ToolRegistry(
 
 internal static class ToolSecurity
 {
+    private static readonly string[] SafeReadOnlyCommandPrefixes =
+    [
+        "ls",
+        "pwd",
+        "cat",
+        "head",
+        "tail",
+        "grep",
+        "rg",
+        "find",
+        "which",
+        "where",
+        "echo",
+        "printf",
+        "git status",
+        "git diff",
+        "git log",
+        "git show",
+        "git branch",
+        "git rev-parse",
+        "dotnet build",
+        "dotnet test",
+        "dotnet --info"
+    ];
+
+    private static readonly (string Pattern, string Level, string Reason)[] RiskPatterns =
+    [
+        (@"(^|[;&|]\s*)rm\s+-rf(\s|$)", "critical", "Deletes files recursively and forcefully."),
+        (@"(^|[;&|]\s*)sudo\s+", "high", "Elevates privileges with sudo."),
+        (@"(^|[;&|]\s*)(mkfs|fdisk|diskutil|format)\b", "critical", "Touches disk or filesystem formatting tools."),
+        (@"(^|[;&|]\s*)dd\s+", "critical", "Performs raw disk or device writes."),
+        (@"(^|[;&|]\s*)(shutdown|reboot|poweroff)\b", "critical", "Can stop or reboot the current machine."),
+        (@"(^|[;&|]\s*)(killall|pkill)\b", "high", "Can terminate running processes broadly."),
+        (@"git\s+reset\s+--hard\b", "high", "Discards tracked changes with git reset --hard."),
+        (@"git\s+clean\s+-[^\n]*f", "high", "Removes untracked files with git clean."),
+        (@"git\s+checkout\s+--\s", "high", "Overwrites local file changes from git."),
+        (@"(curl|wget)[^|\n\r]*\|\s*(sh|bash|zsh)\b", "high", "Pipes downloaded content directly into a shell."),
+        (@"(^|[;&|]\s*)(npm|pnpm|yarn|pip|brew|apt|apt-get)\s+install\b", "medium", "Installs packages and mutates the environment."),
+        (@"(^|[;&|]\s*)(sed|perl)\b[^\n\r]*\s-i(\s|$)", "medium", "Edits files in place."),
+        (@"(^|[;&|]\s*)(mv|cp)\b", "medium", "Moves or copies files and may overwrite existing content."),
+        (@"(^|[;&|]\s*)(chmod|chown)\b", "medium", "Changes file ownership or permissions."),
+        (@">\s*[/~A-Za-z0-9._-]+", "medium", "Redirects command output into a file.")
+    ];
+
     public static OperationResult EnsurePathAllowed(
         string workspaceRoot,
         string path,
@@ -461,6 +505,58 @@ internal static class ToolSecurity
         return allowedCommands.Contains(normalized, StringComparer.OrdinalIgnoreCase)
             ? OperationResult.Success()
             : OperationResult.Failure("Command denied.");
+    }
+
+    public static bool IsCommandExplicitlyAllowed(string command, IReadOnlyCollection<string> allowedCommands)
+    {
+        if (allowedCommands.Count == 0)
+        {
+            return false;
+        }
+
+        var normalized = command.Trim();
+        return allowedCommands.Contains(normalized, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static ShellCommandRiskAnalysis AnalyzeShellCommand(string command)
+    {
+        var normalized = command.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return new ShellCommandRiskAnalysis("medium", ["Command is empty or whitespace."], RequiresApproval: true);
+        }
+
+        if (SafeReadOnlyCommandPrefixes.Any(prefix => normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new ShellCommandRiskAnalysis("low", [], RequiresApproval: false);
+        }
+
+        var reasons = new List<string>();
+        var highestRisk = "low";
+        var requiresApproval = false;
+
+        foreach (var (pattern, level, reason) in RiskPatterns)
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                continue;
+            }
+
+            reasons.Add(reason);
+            requiresApproval = true;
+            highestRisk = MaxRiskLevel(highestRisk, level);
+        }
+
+        if (normalized.Contains("&&", StringComparison.Ordinal) ||
+            normalized.Contains(';', StringComparison.Ordinal) ||
+            normalized.Contains('|', StringComparison.Ordinal))
+        {
+            reasons.Add("Chains multiple shell operations together.");
+            requiresApproval = true;
+            highestRisk = MaxRiskLevel(highestRisk, "medium");
+        }
+
+        return new ShellCommandRiskAnalysis(highestRisk, reasons, requiresApproval);
     }
 
     public static OperationResult EnsureEmailRecipientAllowed(string recipient, IReadOnlyCollection<string> allowedRecipients)
@@ -535,7 +631,35 @@ internal static class ToolSecurity
 
         return output[..maxLength];
     }
+
+    private static string MaxRiskLevel(string current, string candidate)
+    {
+        return RiskRank(candidate) > RiskRank(current) ? candidate : current;
+    }
+
+    private static int RiskRank(string level)
+    {
+        return level.ToLowerInvariant() switch
+        {
+            "critical" => 4,
+            "high" => 3,
+            "medium" => 2,
+            "low" => 1,
+            _ => 0
+        };
+    }
 }
+
+/// <summary>
+/// 描述 shell 命令的风险分析结果。
+/// </summary>
+/// <param name="Level">风险级别，例如 <c>low</c>、<c>medium</c>、<c>high</c>、<c>critical</c>。</param>
+/// <param name="Reasons">触发该风险等级的原因列表。</param>
+/// <param name="RequiresApproval">是否应在执行前请求用户审批。</param>
+public sealed record ShellCommandRiskAnalysis(
+    string Level,
+    IReadOnlyList<string> Reasons,
+    bool RequiresApproval);
 
 /// <summary>
 /// 本地 shell 命令执行工具。
@@ -563,6 +687,21 @@ public sealed class ShellRunTool : IToolExecutor
         if (!commandCheck.IsSuccess)
         {
             return ToolSecurity.CreateApprovalOrDenied(Definition, context, commandCheck.Error!, new { command });
+        }
+
+        var isExplicitlyAllowed = ToolSecurity.IsCommandExplicitlyAllowed(command, context.Permissions.AllowedCommands);
+        var risk = ToolSecurity.AnalyzeShellCommand(command);
+        if (!isExplicitlyAllowed && (context.Permissions.ApprovalRequired || risk.RequiresApproval))
+        {
+            return ToolInvocationResult.RequiresApproval(
+                Definition.Name,
+                ToolSecurity.Json(new
+                {
+                    command,
+                    riskLevel = risk.Level,
+                    reasons = risk.Reasons,
+                    requestedByPolicy = context.Permissions.ApprovalRequired
+                }));
         }
 
         var shell = OperatingSystem.IsWindows() ? "cmd" : "/bin/zsh";

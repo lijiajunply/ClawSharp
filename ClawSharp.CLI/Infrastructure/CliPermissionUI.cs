@@ -48,6 +48,37 @@ public sealed class CliPermissionUI : IPermissionUI
         if (toolName.Equals("shell_run", StringComparison.OrdinalIgnoreCase))
         {
             var command = payload.GetProperty("command").GetString() ?? string.Empty;
+            if (payload.TryGetProperty("riskLevel", out var riskLevel))
+            {
+                var level = riskLevel.GetString() ?? "unknown";
+                var riskColor = level switch
+                {
+                    "critical" => Color.Red,
+                    "high" => Color.Orange1,
+                    "medium" => Color.Yellow,
+                    _ => Color.Grey
+                };
+                AnsiConsole.Write(new Text($"Risk: {level}\n", new Style(riskColor)));
+            }
+
+            if (payload.TryGetProperty("reasons", out var reasonsElement) && reasonsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                var reasons = reasonsElement.EnumerateArray()
+                    .Select(x => x.GetString())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToArray();
+
+                if (reasons.Length > 0)
+                {
+                    var reasonLines = string.Join(Environment.NewLine, reasons.Select(reason => $"- {reason}"));
+                    AnsiConsole.Write(new Panel(new Text(reasonLines, new Style(Color.Yellow)))
+                    {
+                        Header = new PanelHeader("Why approval is needed"),
+                        Border = BoxBorder.Rounded
+                    });
+                }
+            }
+
             AnsiConsole.Write(new Panel(new Text(command, new Style(Color.Grey))) 
             { 
                 Header = new PanelHeader(I18n.T("Permissions.Approval.CommandPanel")),

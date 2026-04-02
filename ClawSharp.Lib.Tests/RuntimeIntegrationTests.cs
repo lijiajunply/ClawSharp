@@ -487,6 +487,49 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output
     }
 
     [Fact]
+    public async Task Runtime_RunTurn_IncludesAgentBodyInSystemPromptInstructions()
+    {
+        string? capturedRequestBody = null;
+        const string agentBody = """
+# Presets
+
+- 必须先读取仓库里的真实文件，再做判断。
+- 需要执行命令验证时，优先调用工具，不要只给口头建议。
+""";
+
+        var runtime = CreateOpenAiRuntime(
+            [
+                """
+data: {"type":"response.output_text.delta","delta":"Done"}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":2,"total_tokens":5}}}
+
+"""
+            ],
+            request => capturedRequestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult(),
+            null,
+            out _,
+            out _,
+            out _,
+            agentBody: agentBody);
+
+        var session = await runtime.StartSessionAsync("planner");
+        await runtime.AppendUserMessageAsync(session.Record.SessionId, "please answer");
+
+        await runtime.RunTurnAsync(session.Record.SessionId);
+
+        Assert.NotNull(capturedRequestBody);
+
+        using var document = JsonDocument.Parse(capturedRequestBody!);
+        var instructions = document.RootElement.GetProperty("instructions").GetString();
+
+        Assert.NotNull(instructions);
+        Assert.Contains("[Agent Preset Instructions]", instructions);
+        Assert.Contains("必须先读取仓库里的真实文件", instructions);
+        Assert.Contains("优先调用工具", instructions);
+    }
+
+    [Fact]
     public async Task Runtime_PrepareAgentAsync_UsesLaunchPlanCacheOnSecondCall()
     {
         var runtime = CreateRuntime(out _, out _);
@@ -740,7 +783,8 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output
         Action<ClawOptions>? configureOptions,
         out IPromptHistoryStore historyStore,
         out ISessionEventStore eventStore,
-        out IThreadSpaceManager threadSpaceManager)
+        out IThreadSpaceManager threadSpaceManager,
+        string agentBody = "")
     {
         var options = new ClawOptions
         {
@@ -797,7 +841,7 @@ data: {"type":"response.completed","response":{"usage":{"input_tokens":3,"output
             [],
             new ToolPermissionSet(ToolCapability.SystemInspect, [], [], [], false, false, 10, 1024),
             "v1",
-            "");
+            agentBody);
 
         var payloadQueue = new Queue<string>(ssePayloads);
         var handler = new ProviderTestsProxyHandler(request =>

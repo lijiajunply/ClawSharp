@@ -786,14 +786,8 @@ public sealed class ClawRuntime(
         var worker = await LaunchAgentProcessAsync(plan, cancellationToken).ConfigureAwait(false);
         await worker.InitializeAsync(new WorkerInitializeRequest(sessionId.Value, plan.Agent.Id, Guid.NewGuid().ToString("N")), cancellationToken).ConfigureAwait(false);
 
-        var modelMessages = BuildModelMessages(plan.Agent, messages);
-        
-        // 如果有检索到的背景知识，将其注入到系统提示中或作为第一条增强消息
-        var finalSystemPrompt = plan.Agent.SystemPrompt;
-        if (promptAugmentations.Count > 0)
-        {
-            finalSystemPrompt += "\n\n" + string.Join("\n\n", promptAugmentations);
-        }
+        var finalSystemPrompt = BuildEffectiveSystemPrompt(plan.Agent, promptAugmentations);
+        var modelMessages = BuildModelMessages(messages, finalSystemPrompt);
 
         var toolSchemas = plan.Tools.Select(tool => new ModelToolSchema(tool.Name, tool.Description, tool.InputSchema?.GetRawText())).ToArray();
         var request = new WorkerTurnRequest(
@@ -1133,6 +1127,10 @@ public sealed class ClawRuntime(
                 result = ToolInvocationResult.Denied(toolRequest.ToolName, "User denied approval for this tool call.");
             }
         }
+        else if (result.Status == ToolInvocationStatus.ApprovalRequired)
+        {
+            result = ToolInvocationResult.Denied(toolRequest.ToolName, "Approval required, but no permission UI is available in the current session.");
+        }
 
         if (kernel.Options.History.RecordToolPayloads)
         {
@@ -1148,12 +1146,37 @@ public sealed class ClawRuntime(
         return new WorkerToolResult(toolRequest.ToolCallId, result);
     }
 
-    private static IReadOnlyList<ModelMessage> BuildModelMessages(AgentDefinition agent, IReadOnlyList<PromptMessage> messages)
+    private static string? BuildEffectiveSystemPrompt(AgentDefinition agent, IReadOnlyList<string> promptAugmentations)
     {
-        var modelMessages = new List<ModelMessage>();
+        var sections = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(agent.SystemPrompt))
         {
-            modelMessages.Add(new ModelMessage(ModelMessageRole.System, agent.SystemPrompt));
+            sections.Add(agent.SystemPrompt.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(agent.Body))
+        {
+            sections.Add($"[Agent Preset Instructions]\n{agent.Body.Trim()}");
+        }
+
+        foreach (var augmentation in promptAugmentations)
+        {
+            if (!string.IsNullOrWhiteSpace(augmentation))
+            {
+                sections.Add(augmentation.Trim());
+            }
+        }
+
+        return sections.Count == 0 ? null : string.Join("\n\n", sections);
+    }
+
+    private static IReadOnlyList<ModelMessage> BuildModelMessages(IReadOnlyList<PromptMessage> messages, string? systemPrompt)
+    {
+        var modelMessages = new List<ModelMessage>();
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            modelMessages.Add(new ModelMessage(ModelMessageRole.System, systemPrompt));
         }
 
         modelMessages.AddRange(messages.Select(ToModelMessage));

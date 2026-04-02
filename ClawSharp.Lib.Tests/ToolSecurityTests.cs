@@ -70,6 +70,75 @@ public sealed class ToolSecurityTests : IDisposable
         Assert.Equal("Write path denied.", result.Error);
     }
 
+    [Fact]
+    public async Task ShellRun_RequiresApproval_ForDangerousCommandEvenWithoutGlobalApprovalFlag()
+    {
+        var tool = new ShellRunTool();
+        var permissions = new ToolPermissionSet(
+            ToolCapability.ShellExecute,
+            [],
+            [],
+            [],
+            false,
+            false,
+            10,
+            1024);
+
+        var result = await tool.ExecuteAsync(
+            TestHelpers.CreateContext(_workspace, permissions),
+            TestHelpers.Json(new { command = "rm -rf ./tmp" }));
+
+        Assert.Equal(ToolInvocationStatus.ApprovalRequired, result.Status);
+        Assert.Equal("critical", result.Payload.GetProperty("riskLevel").GetString());
+        Assert.Contains(
+            result.Payload.GetProperty("reasons").EnumerateArray().Select(x => x.GetString()),
+            reason => reason == "Deletes files recursively and forcefully.");
+    }
+
+    [Fact]
+    public async Task ShellRun_RequiresApproval_ForAnyCommandWhenApprovalFlagEnabled()
+    {
+        var tool = new ShellRunTool();
+        var permissions = new ToolPermissionSet(
+            ToolCapability.ShellExecute,
+            [],
+            [],
+            [],
+            true,
+            false,
+            10,
+            1024);
+
+        var result = await tool.ExecuteAsync(
+            TestHelpers.CreateContext(_workspace, permissions),
+            TestHelpers.Json(new { command = "pwd" }));
+
+        Assert.Equal(ToolInvocationStatus.ApprovalRequired, result.Status);
+        Assert.True(result.Payload.GetProperty("requestedByPolicy").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ShellRun_Succeeds_WhenCommandAlreadyWhitelistedAfterApproval()
+    {
+        var tool = new ShellRunTool();
+        var permissions = new ToolPermissionSet(
+            ToolCapability.ShellExecute,
+            [],
+            [],
+            ["pwd"],
+            true,
+            false,
+            10,
+            1024);
+
+        var result = await tool.ExecuteAsync(
+            TestHelpers.CreateContext(_workspace, permissions),
+            TestHelpers.Json(new { command = "pwd" }));
+
+        Assert.Equal(ToolInvocationStatus.Success, result.Status);
+        Assert.True(result.Payload.TryGetProperty("stdout", out _));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_workspace))
