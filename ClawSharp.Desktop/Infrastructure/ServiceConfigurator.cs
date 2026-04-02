@@ -33,15 +33,15 @@ public static class ServiceConfigurator
                 });
 
                 // Register DesktopPermissionUI
-                services.AddSingleton<ClawSharp.Lib.Runtime.IPermissionUI, DesktopPermissionUI>();
+                services.AddSingleton<Lib.Runtime.IPermissionUI, DesktopPermissionUI>();
 
                 // ViewModels
-                services.AddSingleton<MainWindowViewModel>();
                 services.AddTransient<ChatViewModel>();
                 services.AddTransient<AgentViewModel>();
                 services.AddSingleton<HistoryViewModel>();
                 services.AddSingleton<McpViewModel>();
                 services.AddSingleton<ConfigViewModel>();
+                services.AddSingleton<MainWindowViewModel>();
             })
             .Build();
 

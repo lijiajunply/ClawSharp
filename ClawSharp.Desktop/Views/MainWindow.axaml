@@ -1,26 +1,22 @@
 <sukiUi:SukiWindow xmlns="https://github.com/avaloniaui"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:vm="using:ClawSharp.Desktop.ViewModels"
-            xmlns:v="using:ClawSharp.Desktop.Views"
             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
             xmlns:sukiUi="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+            xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
             x:Class="ClawSharp.Desktop.Views.MainWindow"
             x:DataType="vm:MainWindowViewModel"
             Icon="/Assets/avalonia-logo.ico"
             Title="ClawSharp">
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
-
     <sukiUi:SukiSideMenu IsMenuExpanded="False" 
                          ItemsSource="{Binding MenuItems}" 
                          SelectedItem="{Binding SelectedMenuItem}">
         <sukiUi:SukiSideMenu.HeaderContent>
             <Border Height="40" Margin="0,20">
-                <TextBlock Text="CS" 
+                <TextBlock Text="ClawSharp" 
                            HorizontalAlignment="Center" 
                            VerticalAlignment="Center"
                            FontSize="18" FontWeight="ExtraBold" />
@@ -30,10 +26,10 @@
         <sukiUi:SukiSideMenu.ItemTemplate>
             <DataTemplate x:DataType="vm:MenuItemViewModel">
                 <Grid ColumnDefinitions="40,*" HorizontalAlignment="Left">
-                    <TextBlock Grid.Column="0" Text="{Binding Icon}" 
-                               FontSize="20" 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center" />
+                    <avalonia:MaterialIcon Grid.Column="0" Kind="{Binding Icon}"
+                                  FontSize="20" 
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="{Binding Header}" 
                                VerticalAlignment="Center" 
                                Margin="10,0,0,0" />

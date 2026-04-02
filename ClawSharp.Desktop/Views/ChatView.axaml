@@ -3,12 +3,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:ClawSharp.Desktop.ViewModels"
-             xmlns:v="clr-namespace:ClawSharp.Desktop.Views"
              xmlns:rt="using:ClawSharp.Lib.Runtime"
-             xmlns:sessions="using:ClawSharp.Lib.Runtime"
              xmlns:md="clr-namespace:LiveMarkdown.Avalonia;assembly=LiveMarkdown.Avalonia"
              xmlns:infra="clr-namespace:ClawSharp.Desktop.Infrastructure"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             xmlns:material="using:Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClawSharp.Desktop.Views.ChatView"
              x:DataType="vm:ChatViewModel">
@@ -52,7 +51,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="rt:SessionRecord">
                                 <Grid ColumnDefinitions="Auto,*" Margin="8,5">
-                                    <TextBlock Grid.Column="0" Text="💬" VerticalAlignment="Center" FontSize="16" />
+                                    <material:MaterialIcon Grid.Column="0" Kind="MessageOutline" Width="18" Height="18" VerticalAlignment="Center" />
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding AgentId}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                         <TextBlock Text="{Binding StartedAt, StringFormat='{}{0:MM-dd HH:mm}'}" FontSize="10" Opacity="0.5" />

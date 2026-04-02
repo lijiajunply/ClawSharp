@@ -6,19 +6,20 @@ using Avalonia.Styling;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System;
+using Material.Icons;
 
 namespace ClawSharp.Desktop.ViewModels;
 
-public class MenuItemViewModel(string header, object icon, ViewModelBase content) : ViewModelBase
+public class MenuItemViewModel(string header, MaterialIconKind icon, ViewModelBase content) : ViewModelBase
 {
     public string Header { get; init; } = header;
-    public object Icon { get; init; } = icon;
+    public MaterialIconKind Icon { get; init; } = icon;
     public ViewModelBase Content { get; init; } = content;
 }
 
 public class MainWindowViewModel : ViewModelBase
 {
-    public MenuItemViewModel? SelectedMenuItem
+    public MenuItemViewModel SelectedMenuItem
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
@@ -27,8 +28,6 @@ public class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MenuItemViewModel> MenuItems { get; } = [];
 
     public ReactiveCommand<Unit, Unit> ToggleThemeCommand { get; }
-    
-    public MainWindowViewModel(){}
 
     public MainWindowViewModel(
         ChatViewModel chatViewModel, 
@@ -36,12 +35,17 @@ public class MainWindowViewModel : ViewModelBase
         McpViewModel mcpViewModel,
         ConfigViewModel configViewModel)
     {
-        MenuItems.Add(new MenuItemViewModel("Chat", "💬", chatViewModel));
-        MenuItems.Add(new MenuItemViewModel("History", "📜", historyViewModel));
-        MenuItems.Add(new MenuItemViewModel("MCP", "🛠️", mcpViewModel));
-        MenuItems.Add(new MenuItemViewModel("Config", "⚙️", configViewModel));
+        var chat = new MenuItemViewModel("Chat", MaterialIconKind.Chat, chatViewModel);
+        var history = new MenuItemViewModel("History", MaterialIconKind.History, historyViewModel);
+        var mcp = new MenuItemViewModel("MCP", MaterialIconKind.Tools, mcpViewModel);
+        var config = new MenuItemViewModel("Config", MaterialIconKind.Settings, configViewModel);
+
+        MenuItems.Add(chat);
+        MenuItems.Add(history);
+        MenuItems.Add(mcp);
+        MenuItems.Add(config);
         
-        SelectedMenuItem = MenuItems.First();
+        SelectedMenuItem = chat;
         
         ToggleThemeCommand = ReactiveCommand.Create(() =>
         {
@@ -65,7 +69,7 @@ public class MainWindowViewModel : ViewModelBase
             await chatViewModel.LoadSessionAsync(session.SessionId);
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                SelectedMenuItem = MenuItems.First(m => m.Header == "Chat");
+                SelectedMenuItem = chat;
             });
         });
     }
