@@ -9,32 +9,26 @@ using System;
 
 namespace ClawSharp.Desktop.ViewModels;
 
-public class MenuItemViewModel : ViewModelBase
+public class MenuItemViewModel(string header, object icon, ViewModelBase content) : ViewModelBase
 {
-    public string Header { get; init; }
-    public object Icon { get; init; }
-    public ViewModelBase Content { get; init; }
-
-    public MenuItemViewModel(string header, object icon, ViewModelBase content)
-    {
-        Header = header;
-        Icon = icon;
-        Content = content;
-    }
+    public string Header { get; init; } = header;
+    public object Icon { get; init; } = icon;
+    public ViewModelBase Content { get; init; } = content;
 }
 
 public class MainWindowViewModel : ViewModelBase
 {
-    private MenuItemViewModel? _selectedMenuItem;
     public MenuItemViewModel? SelectedMenuItem
     {
-        get => _selectedMenuItem;
-        set => this.RaiseAndSetIfChanged(ref _selectedMenuItem, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    public ObservableCollection<MenuItemViewModel> MenuItems { get; } = new();
+    public ObservableCollection<MenuItemViewModel> MenuItems { get; } = [];
 
     public ReactiveCommand<Unit, Unit> ToggleThemeCommand { get; }
+    
+    public MainWindowViewModel(){}
 
     public MainWindowViewModel(
         ChatViewModel chatViewModel, 

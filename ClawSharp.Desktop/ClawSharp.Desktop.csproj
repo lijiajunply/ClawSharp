@@ -25,6 +25,8 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="LiveMarkdown.Avalonia" Version="1.9.1" />
+    <PackageReference Include="LiveMarkdown.Avalonia.Math" Version="1.9.1" />
+    <PackageReference Include="LiveMarkdown.Avalonia.Svg" Version="1.9.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="SukiUI" Version="6.0.3" />

@@ -1,15 +1,14 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using ClawSharp.Desktop.ViewModels;
 using ClawSharp.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
-using Avalonia.ReactiveUI;
 using System.IO;
 using System;
+using LiveMarkdown.Avalonia;
 
 namespace ClawSharp.Desktop;
 
@@ -61,6 +60,15 @@ public partial class App : Application
             }
             else
             {
+                MarkdownNode.Register<MathInlineNode>();
+                MarkdownNode.Register<MathBlockNode>(); 
+        
+                AsyncImageLoader.DefaultDecoders =
+                [
+                    SvgImageDecoder.Shared,
+                    DefaultBitmapDecoder.Shared
+                ];
+
                 ShowMainWindow(desktop);
             }
         }

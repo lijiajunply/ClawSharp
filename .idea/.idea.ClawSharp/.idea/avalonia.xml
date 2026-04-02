@@ -4,6 +4,7 @@
     <option name="projectPerEditor">
       <map>
         <entry key="ClawSharp.Desktop/App.axaml" value="ClawSharp.Desktop/ClawSharp.Desktop.csproj" />
+        <entry key="ClawSharp.Desktop/Views/MainWindow.axaml" value="ClawSharp.Desktop/ClawSharp.Desktop.csproj" />
       </map>
     </option>
   </component>

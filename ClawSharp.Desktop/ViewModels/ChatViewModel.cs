@@ -4,10 +4,8 @@ using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using ClawSharp.Lib.Core;
 using ClawSharp.Lib.Runtime;
 using ReactiveUI;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Desktop.ViewModels;
 
@@ -17,43 +15,38 @@ public class ChatViewModel : ViewModelBase
     private readonly IClawKernel _kernel;
     private SessionId? _currentSessionId;
 
-    public ObservableCollection<ThreadSpaceRecord> ThreadSpaces { get; } = new();
-    public ObservableCollection<SessionRecord> RecentSessions { get; } = new();
-    public ObservableCollection<AgentViewModel> Agents { get; } = new();
+    public ObservableCollection<ThreadSpaceRecord> ThreadSpaces { get; } = [];
+    public ObservableCollection<SessionRecord> RecentSessions { get; } = [];
+    public ObservableCollection<AgentViewModel> Agents { get; } = [];
 
-    private ThreadSpaceRecord? _currentThreadSpace;
     public ThreadSpaceRecord? CurrentThreadSpace
     {
-        get => _currentThreadSpace;
-        set => this.RaiseAndSetIfChanged(ref _currentThreadSpace, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private SessionRecord? _selectedSession;
     public SessionRecord? SelectedSession
     {
-        get => _selectedSession;
-        set => this.RaiseAndSetIfChanged(ref _selectedSession, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private AgentViewModel? _currentAgent;
     public AgentViewModel? CurrentAgent
     {
-        get => _currentAgent;
-        set => this.RaiseAndSetIfChanged(ref _currentAgent, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private string _inputText = string.Empty;
     public string InputText
     {
-        get => _inputText;
-        set => this.RaiseAndSetIfChanged(ref _inputText, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
 
-    private bool _isProcessing;
     public bool IsProcessing
     {
-        get => _isProcessing;
-        set => this.RaiseAndSetIfChanged(ref _isProcessing, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -117,10 +110,10 @@ public class ChatViewModel : ViewModelBase
             if (_currentSessionId == null)
             {
                 var session = await _runtime.StartSessionAsync(new StartSessionRequest(
-                    CurrentAgent.Id, 
+                    CurrentAgent.Id,
                     CurrentThreadSpace.ThreadSpaceId));
                 _currentSessionId = session.Record.SessionId;
-                
+
                 // 刷新历史列表以包含新会话
                 await LoadSessionsForSpaceAsync(CurrentThreadSpace.ThreadSpaceId);
             }
@@ -153,17 +146,17 @@ public class ChatViewModel : ViewModelBase
     {
         var runtimeSession = await _kernel.Sessions.GetAsync(sessionId);
         _currentSessionId = sessionId;
-        
+
         CurrentAgent = Agents.FirstOrDefault(a => a.Id == runtimeSession.Record.AgentId);
-        
+
         Messages.Clear();
         var history = await _runtime.GetHistoryAsync(sessionId);
         foreach (var entry in history.Where(e => e.Message != null))
         {
             var msg = entry.Message!;
             Messages.Add(new MessageViewModel(
-                msg.Content, 
-                msg.Role == PromptMessageRole.Assistant ? (CurrentAgent?.Name ?? "Agent") : "User", 
+                msg.Content,
+                msg.Role == PromptMessageRole.Assistant ? (CurrentAgent?.Name ?? "Agent") : "User",
                 msg.Role == PromptMessageRole.Assistant));
         }
     }
