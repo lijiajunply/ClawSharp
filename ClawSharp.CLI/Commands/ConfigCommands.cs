@@ -11,7 +11,7 @@ public static class ConfigCommands
 {
     public static Command Create(IHost host)
     {
-        var configCommand = new Command("config", "Manage ClawSharp configuration settings");
+        var configCommand = new Command("config", I18n.T("Config.Description"));
 
         configCommand.AddCommand(CreateList(host));
         configCommand.AddCommand(CreateGet(host));
@@ -23,8 +23,8 @@ public static class ConfigCommands
 
     private static Command CreateList(IHost host)
     {
-        var command = new Command("list", "Show all configuration settings");
-        var allOption = new Option<bool>("--all", "Show all supported keys, even if not explicitly set");
+        var command = new Command("list", I18n.T("Config.List.Description"));
+        var allOption = new Option<bool>("--all", I18n.T("Config.List.AllOption"));
         command.AddOption(allOption);
 
         command.SetHandler(async (showAll) =>
@@ -35,8 +35,8 @@ public static class ConfigCommands
                 var allConfigs = await configManager.GetAllAsync();
                 
                 var table = new Table().Border(TableBorder.Rounded);
-                table.AddColumn("Key");
-                table.AddColumn("Value");
+                table.AddColumn(I18n.T("Chat.Config.Column.Key"));
+                table.AddColumn(I18n.T("Common.Value"));
 
                 var keysToShow = showAll 
                     ? await configManager.GetSupportedKeysAsync() 
@@ -54,10 +54,10 @@ public static class ConfigCommands
                     }
                     else
                     {
-                        displayValue = "[grey]<not set>[/]";
+                        displayValue = $"[grey]{I18n.T("Common.NotSet")}[/]";
                     }
 
-                    table.AddRow(key.EscapeMarkup(), displayValue?.EscapeMarkup() ?? "[grey]<null>[/]");
+                    table.AddRow(key.EscapeMarkup(), displayValue?.EscapeMarkup() ?? $"[grey]{I18n.T("Common.Null")}[/]");
                 }
 
                 AnsiConsole.Write(table);
@@ -70,8 +70,8 @@ public static class ConfigCommands
 
     private static Command CreateGet(IHost host)
     {
-        var command = new Command("get", "Retrieve the value of a specific setting");
-        var keyArg = new Argument<string>("key", "The configuration key to retrieve");
+        var command = new Command("get", I18n.T("Config.Get.Description"));
+        var keyArg = new Argument<string>("key", I18n.T("Config.Get.KeyArg"));
         command.AddArgument(keyArg);
 
         command.SetHandler(async (key) =>
@@ -83,7 +83,7 @@ public static class ConfigCommands
                 
                 if (value == null)
                 {
-                    AnsiConsole.MarkupLine($"[yellow]Key not found or not set: {key.EscapeMarkup()}[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Config.Get.KeyMissing", key.EscapeMarkup()));
                 }
                 else
                 {
@@ -99,9 +99,9 @@ public static class ConfigCommands
 
     private static Command CreateSet(IHost host)
     {
-        var command = new Command("set", "Set a configuration value");
-        var keyArg = new Argument<string>("key", "The configuration key to set");
-        var valueArg = new Argument<string?>("value", () => null, "The value to set (optional for secrets, will trigger prompt)");
+        var command = new Command("set", I18n.T("Config.Set.Description"));
+        var keyArg = new Argument<string>("key", I18n.T("Config.Set.KeyArg"));
+        var valueArg = new Argument<string?>("value", () => null, I18n.T("Config.Set.ValueArg"));
         command.AddArgument(keyArg);
         command.AddArgument(valueArg);
 
@@ -115,18 +115,18 @@ public static class ConfigCommands
                 if (string.IsNullOrEmpty(finalValue) && configManager.IsSecret(key))
                 {
                     finalValue = AnsiConsole.Prompt(
-                        new TextPrompt<string>($"Enter value for [blue]{key.EscapeMarkup()}[/]:")
+                        new TextPrompt<string>(I18n.T("Config.Set.Prompt", key.EscapeMarkup()))
                             .Secret());
                 }
 
                 if (finalValue == null)
                 {
-                     AnsiConsole.MarkupLine("[red]Value is required.[/]");
+                     AnsiConsole.MarkupLine(I18n.T("Config.Set.ValueRequired"));
                      return 1;
                 }
 
                 await configManager.SetAsync(key, finalValue);
-                AnsiConsole.MarkupLine($"[green]Successfully set {key.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Config.Set.Success", key.EscapeMarkup()));
                 return 0;
             });
         }, keyArg, valueArg);
@@ -136,10 +136,10 @@ public static class ConfigCommands
 
     private static Command CreateReset(IHost host)
     {
-        var command = new Command("reset", "Reset configuration to defaults");
-        var allOption = new Option<bool>("--all", "Reset all local settings");
-        var keyOption = new Option<string?>("--key", "Reset a specific key");
-        var forceOption = new Option<bool>("--force", "Skip confirmation prompt");
+        var command = new Command("reset", I18n.T("Config.Reset.Description"));
+        var allOption = new Option<bool>("--all", I18n.T("Config.Reset.AllOption"));
+        var keyOption = new Option<string?>("--key", I18n.T("Config.Reset.KeyOption"));
+        var forceOption = new Option<bool>("--force", I18n.T("Config.Reset.ForceOption"));
         
         command.AddOption(allOption);
         command.AddOption(keyOption);
@@ -151,23 +151,25 @@ public static class ConfigCommands
             {
                 if (!all && string.IsNullOrEmpty(key))
                 {
-                    AnsiConsole.MarkupLine("[red]Either --all or --key must be specified.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Config.Reset.MissingTarget"));
                     return 1;
                 }
 
                 if (!force)
                 {
-                    var message = all ? "Are you sure you want to reset ALL settings?" : $"Are you sure you want to reset [blue]{key.EscapeMarkup()}[/]?";
+                    var message = all
+                        ? I18n.T("Config.Reset.ConfirmAll")
+                        : I18n.T("Config.Reset.ConfirmKey", key!.EscapeMarkup());
                     if (!AnsiConsole.Confirm(message))
                     {
-                        AnsiConsole.MarkupLine("[grey]Operation cancelled.[/]");
+                        AnsiConsole.MarkupLine(I18n.T("Config.Reset.Cancelled"));
                         return 0;
                     }
                 }
 
                 var configManager = host.Services.GetRequiredService<IConfigManager>();
                 await configManager.ResetAsync(all, key, force);
-                AnsiConsole.MarkupLine("[green]Reset completed successfully.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Config.Reset.Success"));
                 return 0;
             });
         }, allOption, keyOption, forceOption);

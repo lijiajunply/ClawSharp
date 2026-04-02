@@ -146,6 +146,11 @@ public sealed class RuntimeOptions
     public string? OutputLanguage { get; set; }
 
     /// <summary>
+    /// UI 界面语言（如 "zh-CN", "en-US"）。为空时使用系统语言。
+    /// </summary>
+    public string? UILanguage { get; set; }
+
+    /// <summary>
     /// ThreadSpace 内系统提示增强配置。
     /// </summary>
     public ThreadSpacePromptOptions ThreadSpacePrompt { get; set; } = new();

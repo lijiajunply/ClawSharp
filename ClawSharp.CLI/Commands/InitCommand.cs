@@ -11,7 +11,7 @@ public static class InitCommand
 {
     public static Command Create(IHost host)
     {
-        var rootCommand = new Command("init", "Initialization commands");
+        var rootCommand = new Command("init", I18n.T("Init.Description"));
 
         rootCommand.AddCommand(CreateThreadSpaceCommand(host));
         rootCommand.AddCommand(CreateProjectCommand(host));
@@ -21,8 +21,8 @@ public static class InitCommand
 
     private static Command CreateThreadSpaceCommand(IHost host)
     {
-        var command = new Command("space", "Initialize a ThreadSpace in the current folder (default)");
-        var pathOption = new Option<string>("--path", "The directory to initialize");
+        var command = new Command("space", I18n.T("Init.Space.Description"));
+        var pathOption = new Option<string>("--path", I18n.T("Init.Space.PathOption"));
         pathOption.SetDefaultValue(".");
         command.AddOption(pathOption);
 
@@ -33,15 +33,15 @@ public static class InitCommand
                 var runtime = host.Services.GetRequiredService<IClawRuntime>();
                 
                 var absolutePath = Path.GetFullPath(path);
-                AnsiConsole.MarkupLine($"[bold blue]Initializing ThreadSpace at:[/] [green]{absolutePath.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Init.Space.Start", absolutePath.EscapeMarkup()));
 
                 await AnsiConsole.Status()
-                    .StartAsync("Working...", async ctx =>
+                    .StartAsync(I18n.T("Init.Space.Working"), async ctx =>
                     {
                         await runtime.InitializeAsync();
                     });
 
-                AnsiConsole.MarkupLine("[bold green]Success![/] ThreadSpace infrastructure initialized.");
+                AnsiConsole.MarkupLine(I18n.T("Init.Space.Success"));
                 return 0;
             });
         }, pathOption);
@@ -51,10 +51,10 @@ public static class InitCommand
 
     private static Command CreateProjectCommand(IHost host)
     {
-        var command = new Command("proj", "Create a new project from a template with AI assistance");
-        var nameArgument = new Argument<string?>("name", () => null, "The name of the project");
-        var templateOption = new Option<string?>("--template", "The template ID to use");
-        var pathOption = new Option<string>("--path", "The target directory");
+        var command = new Command("proj", I18n.T("Init.Project.Description"));
+        var nameArgument = new Argument<string?>("name", () => null, I18n.T("Init.Project.NameArg"));
+        var templateOption = new Option<string?>("--template", I18n.T("Init.Project.TemplateOption"));
+        var pathOption = new Option<string>("--path", I18n.T("Init.Project.PathOption"));
         pathOption.SetDefaultValue(".");
 
         command.AddArgument(nameArgument);

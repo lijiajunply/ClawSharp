@@ -11,8 +11,8 @@ public static class HistoryCommand
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("history", "View message history for a session");
-        var sessionIdArg = new Argument<string>("session-id", "The ID of the session to view");
+        var command = new Command("history", I18n.T("History.Description"));
+        var sessionIdArg = new Argument<string>("session-id", I18n.T("History.SessionIdArg"));
         command.AddArgument(sessionIdArg);
         
         command.SetHandler(async sessionIdValue =>
@@ -36,12 +36,12 @@ public static class HistoryCommand
                     if (message.Role == PromptMessageRole.User)
                     {
                         panel.BorderColor(Color.Green);
-                        AnsiConsole.MarkupLine("[bold green]User:[/]");
+                        AnsiConsole.MarkupLine(I18n.T("History.User"));
                     }
                     else if (message.Role == PromptMessageRole.Assistant)
                     {
                         panel.BorderColor(Color.Blue);
-                        AnsiConsole.MarkupLine("[bold blue]Agent:[/]");
+                        AnsiConsole.MarkupLine(I18n.T("History.Agent"));
                     }
                     else
                     {

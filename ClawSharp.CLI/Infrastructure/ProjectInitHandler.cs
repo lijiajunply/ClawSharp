@@ -31,7 +31,7 @@ public static class ProjectInitHandler
         var templates = await scaffolder.ListTemplatesAsync();
         if (templates.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No project templates found.[/]");
+            AnsiConsole.MarkupLine(I18n.T("ProjectInit.NoTemplates"));
             return;
         }
 
@@ -44,7 +44,7 @@ public static class ProjectInitHandler
 
         selectedTemplate ??= AnsiConsole.Prompt(
             new SelectionPrompt<ProjectTemplateDefinition>()
-                .Title("Select a [green]project template[/]:")
+                .Title(I18n.T("ProjectInit.TemplateTitle"))
                 .PageSize(10)
                 .AddChoices(templates)
                 .UseConverter(t => $"{t.Name} ({t.Id}) - {t.Description}"));
@@ -52,7 +52,7 @@ public static class ProjectInitHandler
         // 2. 项目名称
         if (string.IsNullOrWhiteSpace(projectName))
         {
-            projectName = AnsiConsole.Ask<string>("Enter project name:", "my-new-project");
+            projectName = AnsiConsole.Ask<string>(I18n.T("ProjectInit.ProjectNamePrompt"), "my-new-project");
         }
 
         // 3. 目标路径
@@ -67,9 +67,9 @@ public static class ProjectInitHandler
             ["Date"] = DateTime.Now.ToString("yyyy-MM-dd")
         };
 
-        if (AnsiConsole.Confirm("Use [blue]AI assistance[/] to generate project description and README content?", true))
+        if (AnsiConsole.Confirm(I18n.T("ProjectInit.UseAi"), true))
         {
-            var idea = MultilineInputCollector.Collect("Describe your project idea (press Enter twice to finish):");
+            var idea = MultilineInputCollector.Collect(I18n.T("ProjectInit.DescribeIdea"));
             if (!string.IsNullOrWhiteSpace(idea))
             {
                 var aiContent = await GenerateAiProjectContentAsync(runtime, options, idea, selectedTemplate, existingSessionId);
@@ -79,7 +79,7 @@ public static class ProjectInitHandler
                     variables["ai_appendix"] = aiContent.Appendix;
                     variables["ai_plan"] = aiContent.Plan;
                     variables["ai_spec"] = aiContent.Spec;
-                    AnsiConsole.MarkupLine("[green]AI content generated and will be applied to the project.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("ProjectInit.AiGenerated"));
                 }
             }
         }
@@ -90,15 +90,15 @@ public static class ProjectInitHandler
 
         if (result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"[bold green]Success![/] Project '{projectName}' created at [blue]{result.Value?.ProjectRootPath.EscapeMarkup()}[/]");
+            AnsiConsole.MarkupLine(I18n.T("ProjectInit.Success", projectName!.EscapeMarkup(), result.Value?.ProjectRootPath?.EscapeMarkup() ?? string.Empty));
             if (existingSessionId != null)
             {
-                AnsiConsole.MarkupLine("[grey]Type /cd <path> to switch to the new project space.[/]");
+                AnsiConsole.MarkupLine(I18n.T("ProjectInit.SwitchTip"));
             }
         }
         else
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {result.Error?.EscapeMarkup() ?? "Unknown error"}");
+            AnsiConsole.MarkupLine(I18n.T("ProjectInit.Error", result.Error?.EscapeMarkup() ?? I18n.T("Common.UnknownError")));
         }
     }
 
@@ -109,7 +109,7 @@ public static class ProjectInitHandler
         ProjectTemplateDefinition template,
         SessionId? existingSessionId)
     {
-        return await AnsiConsole.Status().StartAsync("AI is thinking...", async ctx =>
+        return await AnsiConsole.Status().StartAsync(I18n.T("ProjectInit.AiThinking"), async ctx =>
         {
             SessionId sessionId;
             if (existingSessionId.HasValue)

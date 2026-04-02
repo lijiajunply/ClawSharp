@@ -15,10 +15,10 @@ public static class SpecKitCommands
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("speckit", "Run SpecKit workflows from the CLI");
+        var command = new Command("speckit", I18n.T("SpecKit.Description"));
 
-        var initCommand = new Command("init", "Create a new SpecKit feature scaffold");
-        var featureNameArgument = new Argument<string>("name", "Feature description");
+        var initCommand = new Command("init", I18n.T("SpecKit.Init.Description"));
+        var featureNameArgument = new Argument<string>("name", I18n.T("SpecKit.Init.NameArg"));
         initCommand.AddArgument(featureNameArgument);
         initCommand.SetHandler(async featureName =>
         {
@@ -29,9 +29,9 @@ public static class SpecKitCommands
             });
         }, featureNameArgument);
 
-        var scaffoldCommand = new Command("scaffold", "Analyze plan.md and generate scaffolded files");
-        var planArgument = new Argument<string?>("planPath", () => null, "Optional path to plan.md");
-        var yesOption = new Option<bool>("--yes", "Apply without interactive confirmation");
+        var scaffoldCommand = new Command("scaffold", I18n.T("SpecKit.Scaffold.Description"));
+        var planArgument = new Argument<string?>("planPath", () => null, I18n.T("SpecKit.Scaffold.PlanArg"));
+        var yesOption = new Option<bool>("--yes", I18n.T("SpecKit.Scaffold.YesOption"));
         scaffoldCommand.AddArgument(planArgument);
         scaffoldCommand.AddOption(yesOption);
         scaffoldCommand.SetHandler(async (planPath, yes) =>
@@ -43,7 +43,7 @@ public static class SpecKitCommands
             });
         }, planArgument, yesOption);
 
-        var watchCommand = new Command("watch", "Watch a plan.md file and prompt before scaffold generation");
+        var watchCommand = new Command("watch", I18n.T("SpecKit.Watch.Description"));
         watchCommand.AddArgument(planArgument);
         watchCommand.SetHandler(async planPath =>
         {
@@ -76,7 +76,7 @@ public static class SpecKitCommands
             case "init":
                 if (string.IsNullOrWhiteSpace(remainder))
                 {
-                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /speckit init <feature description>");
+                    AnsiConsole.MarkupLine(I18n.T("SpecKit.Usage.Init"));
                     return;
                 }
 
@@ -88,7 +88,7 @@ public static class SpecKitCommands
                     skipConfirmation: false, cancellationToken).ConfigureAwait(false);
                 return;
             default:
-                AnsiConsole.MarkupLine($"[yellow]Unknown /speckit subcommand:[/] {action.EscapeMarkup()}");
+                AnsiConsole.MarkupLine(I18n.T("SpecKit.UnknownSubcommand", action.EscapeMarkup()));
                 ShowOverview();
                 return;
         }
@@ -100,7 +100,7 @@ public static class SpecKitCommands
         var scriptPath = Path.Combine(workingDirectory, ".specify", "scripts", "bash", "create-new-feature.sh");
         if (!File.Exists(scriptPath))
         {
-            AnsiConsole.MarkupLine($"[red]SpecKit script not found:[/] {scriptPath.EscapeMarkup()}");
+            AnsiConsole.MarkupLine(I18n.T("SpecKit.ScriptMissing", scriptPath.EscapeMarkup()));
             return;
         }
 
@@ -112,11 +112,11 @@ public static class SpecKitCommands
 
         if (!result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"[red]SpecKit init failed:[/] {result.Error?.EscapeMarkup() ?? "Unknown error"}");
+            AnsiConsole.MarkupLine(I18n.T("SpecKit.InitFailed", result.Error?.EscapeMarkup() ?? I18n.T("Common.UnknownError")));
             return;
         }
 
-        AnsiConsole.MarkupLine("[green]SpecKit feature created successfully.[/]");
+        AnsiConsole.MarkupLine(I18n.T("SpecKit.InitSuccess"));
         if (!string.IsNullOrWhiteSpace(result.Value))
         {
             AnsiConsole.WriteLine(result.Value.Trim());
@@ -133,15 +133,15 @@ public static class SpecKitCommands
         if (!analysis.IsSuccess || analysis.Value is null)
         {
             AnsiConsole.MarkupLine(
-                $"[red]Plan analysis failed:[/] {analysis.Error?.EscapeMarkup() ?? "Unknown error"}");
+                I18n.T("SpecKit.PlanAnalysisFailed", analysis.Error?.EscapeMarkup() ?? I18n.T("Common.UnknownError")));
             return;
         }
 
         ShowPlanPreview(analysis.Value);
 
-        if (!skipConfirmation && !AnsiConsole.Confirm("Apply this scaffold plan?", false))
+        if (!skipConfirmation && !AnsiConsole.Confirm(I18n.T("SpecKit.ConfirmApply"), false))
         {
-            AnsiConsole.MarkupLine("[yellow]Scaffold generation cancelled.[/]");
+            AnsiConsole.MarkupLine(I18n.T("SpecKit.Cancelled"));
             return;
         }
 
@@ -149,18 +149,18 @@ public static class SpecKitCommands
         if (!result.IsSuccess)
         {
             AnsiConsole.MarkupLine(
-                $"[red]Scaffold generation failed:[/] {result.Error?.EscapeMarkup() ?? "Unknown error"}");
+                I18n.T("SpecKit.GenerationFailed", result.Error?.EscapeMarkup() ?? I18n.T("Common.UnknownError")));
             return;
         }
 
-        AnsiConsole.MarkupLine("[green]Scaffold generation completed.[/]");
+        AnsiConsole.MarkupLine(I18n.T("SpecKit.GenerationCompleted"));
     }
 
     private static async Task RunWatchAsync(IHost host, string planPath, CancellationToken cancellationToken)
     {
         var fullPlanPath = Path.GetFullPath(planPath);
         var directory = Path.GetDirectoryName(fullPlanPath)
-                        ?? throw new InvalidOperationException("plan.md must have a parent directory.");
+                        ?? throw new InvalidOperationException(I18n.T("SpecKit.PlanParentMissing"));
         var fileName = Path.GetFileName(fullPlanPath);
 
         var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -189,14 +189,14 @@ public static class SpecKitCommands
         watcher.Renamed += (_, _) => Trigger();
 
         AnsiConsole.MarkupLine(
-            $"[grey]Watching[/] {fullPlanPath.EscapeMarkup()} [grey]for changes. Press Ctrl+C to stop.[/]");
+            I18n.T("SpecKit.Watching", fullPlanPath.EscapeMarkup()));
 
         while (!cancellationToken.IsCancellationRequested)
         {
             await signal.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            AnsiConsole.MarkupLine("[blue]Detected plan update.[/]");
+            AnsiConsole.MarkupLine(I18n.T("SpecKit.PlanUpdated"));
             await RunScaffoldAsync(host, fullPlanPath, skipConfirmation: false, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -205,13 +205,13 @@ public static class SpecKitCommands
     private static void ShowPlanPreview(ScaffoldPlan plan)
     {
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("Item");
-        table.AddColumn("Value");
-        table.AddRow("Feature", $"{plan.Metadata.FeatureId} / {plan.Metadata.ShortName}");
-        table.AddRow("Branch", plan.GitBranchToCreate ?? "(skip)");
-        table.AddRow("Directories", plan.DirectoriesToCreate.Count.ToString());
-        table.AddRow("Files", plan.FilesToScaffold.Count.ToString());
-        table.AddRow("Tasks", plan.TasksToGenerate.Count.ToString());
+        table.AddColumn(I18n.T("Common.Item"));
+        table.AddColumn(I18n.T("Common.Value"));
+        table.AddRow(I18n.T("SpecKit.Preview.Feature"), $"{plan.Metadata.FeatureId} / {plan.Metadata.ShortName}");
+        table.AddRow(I18n.T("SpecKit.Preview.Branch"), plan.GitBranchToCreate ?? I18n.T("SpecKit.Preview.Skip"));
+        table.AddRow(I18n.T("SpecKit.Preview.Directories"), plan.DirectoriesToCreate.Count.ToString());
+        table.AddRow(I18n.T("SpecKit.Preview.Files"), plan.FilesToScaffold.Count.ToString());
+        table.AddRow(I18n.T("SpecKit.Preview.Tasks"), plan.TasksToGenerate.Count.ToString());
         AnsiConsole.Write(table);
 
         if (plan.FilesToScaffold.Count > 0)
@@ -219,18 +219,18 @@ public static class SpecKitCommands
             IRenderable fileList = new Rows(plan.FilesToScaffold.Take(10)
                 .Select(file => new Markup($"[grey]-[/] {file.Path.EscapeMarkup()}"))
                 .ToArray<IRenderable>());
-            AnsiConsole.Write(new Panel(fileList).Header("Planned Files"));
+            AnsiConsole.Write(new Panel(fileList).Header(I18n.T("SpecKit.Preview.PlannedFiles")));
         }
     }
 
     private static void ShowOverview()
     {
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("Command");
-        table.AddColumn("Description");
-        table.AddRow("/speckit init <name>".EscapeMarkup(), "Create a new feature spec directory".EscapeMarkup());
-        table.AddRow("/speckit scaffold [plan.md]".EscapeMarkup(), "Analyze plan.md, preview changes, and scaffold files".EscapeMarkup());
-        table.AddRow("/speckit watch [plan.md]".EscapeMarkup(), "Watch plan.md and prompt before scaffold generation".EscapeMarkup());
+        table.AddColumn(I18n.T("Common.Command"));
+        table.AddColumn(I18n.T("Common.Description"));
+        table.AddRow("/speckit init <name>".EscapeMarkup(), I18n.T("SpecKit.Overview.Init").EscapeMarkup());
+        table.AddRow("/speckit scaffold [plan.md]".EscapeMarkup(), I18n.T("SpecKit.Overview.Scaffold").EscapeMarkup());
+        table.AddRow("/speckit watch [plan.md]".EscapeMarkup(), I18n.T("SpecKit.Overview.Watch").EscapeMarkup());
         AnsiConsole.Write(table);
     }
 
@@ -268,7 +268,7 @@ public static class SpecKitCommands
         using var process = Process.Start(startInfo);
         if (process is null)
         {
-            return OperationResult<string>.Failure("Failed to start shell script.");
+            return OperationResult<string>.Failure(I18n.T("SpecKit.ShellStartFailed"));
         }
 
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
@@ -277,7 +277,7 @@ public static class SpecKitCommands
 
         return process.ExitCode == 0
             ? OperationResult<string>.Success(output)
-            : OperationResult<string>.Failure(string.IsNullOrWhiteSpace(error) ? "Shell script failed." : error.Trim());
+            : OperationResult<string>.Failure(string.IsNullOrWhiteSpace(error) ? I18n.T("SpecKit.ShellFailed") : error.Trim());
     }
 
     private static string EscapeShellArgument(string value) =>

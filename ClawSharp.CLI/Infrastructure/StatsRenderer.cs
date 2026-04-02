@@ -9,7 +9,7 @@ public static class StatsRenderer
     {
         if (trend.Count == 0 && snapshot.TotalSessions == 0 && snapshot.MessagesByRole.Count == 0)
         {
-            RenderNoData($"No analytics data found for {periodLabel}.");
+            RenderNoData(I18n.T("Stats.NoAnalytics", periodLabel));
             return;
         }
 
@@ -17,17 +17,17 @@ public static class StatsRenderer
         var totalOutput = trend.Sum(x => x.OutputTokens);
         var totalMessages = snapshot.MessagesByRole.Sum(x => x.Count);
 
-        var table = CreateTable("Metric", "Value");
-        table.AddRow("Period", periodLabel.EscapeMarkup());
-        table.AddRow("Input Tokens", totalInput.ToString("N0"));
-        table.AddRow("Output Tokens", totalOutput.ToString("N0"));
-        table.AddRow("Total Tokens", (totalInput + totalOutput).ToString("N0"));
-        table.AddRow("Sessions", snapshot.TotalSessions.ToString("N0"));
-        table.AddRow("Active Sessions", snapshot.ActiveSessions.ToString("N0"));
-        table.AddRow("Messages", totalMessages.ToString("N0"));
+        var table = CreateTable(I18n.T("Stats.Column.Metric"), I18n.T("Common.Value"));
+        table.AddRow(I18n.T("Stats.Column.Period"), periodLabel.EscapeMarkup());
+        table.AddRow(I18n.T("Stats.Column.InputTokens"), totalInput.ToString("N0"));
+        table.AddRow(I18n.T("Stats.Column.OutputTokens"), totalOutput.ToString("N0"));
+        table.AddRow(I18n.T("Stats.Column.TotalTokens"), (totalInput + totalOutput).ToString("N0"));
+        table.AddRow(I18n.T("Stats.Column.Sessions"), snapshot.TotalSessions.ToString("N0"));
+        table.AddRow(I18n.T("Stats.Column.ActiveSessions"), snapshot.ActiveSessions.ToString("N0"));
+        table.AddRow(I18n.T("Stats.Column.Messages"), totalMessages.ToString("N0"));
 
         AnsiConsole.Write(new Panel(table)
-            .Header($"[bold]claw stats[/] [grey]({periodLabel.EscapeMarkup()})[/]")
+            .Header(I18n.T("Stats.Summary.Header", periodLabel.EscapeMarkup()))
             .Border(BoxBorder.Rounded)
             .BorderStyle(new Style(Color.Blue)));
     }
@@ -36,11 +36,16 @@ public static class StatsRenderer
     {
         if (tools.Count == 0)
         {
-            RenderNoData($"No tool usage found for {periodLabel}.");
+            RenderNoData(I18n.T("Stats.NoTools", periodLabel));
             return;
         }
 
-        var table = CreateTable("Tool", "Calls", "Success", "Failure", "Success %");
+        var table = CreateTable(
+            I18n.T("Stats.Column.Tool"),
+            I18n.T("Stats.Column.Calls"),
+            I18n.T("Stats.Column.Success"),
+            I18n.T("Stats.Column.Failure"),
+            I18n.T("Stats.Column.SuccessRate"));
         foreach (var tool in tools)
         {
             var successRate = tool.CallCount == 0
@@ -55,7 +60,7 @@ public static class StatsRenderer
         }
 
         AnsiConsole.Write(new Panel(table)
-            .Header($"[bold]Tool Usage[/] [grey]({periodLabel.EscapeMarkup()})[/]")
+            .Header(I18n.T("Stats.Tools.Header", periodLabel.EscapeMarkup()))
             .Border(BoxBorder.Rounded)
             .BorderStyle(new Style(Color.Green)));
     }
@@ -64,11 +69,16 @@ public static class StatsRenderer
     {
         if (agents.Count == 0)
         {
-            RenderNoData($"No agent performance data found for {periodLabel}.");
+            RenderNoData(I18n.T("Stats.NoAgents", periodLabel));
             return;
         }
 
-        var table = CreateTable("Agent", "Avg ms", "Min ms", "Max ms", "Turns");
+        var table = CreateTable(
+            I18n.T("Stats.Column.Agent"),
+            I18n.T("Stats.Column.AvgMs"),
+            I18n.T("Stats.Column.MinMs"),
+            I18n.T("Stats.Column.MaxMs"),
+            I18n.T("Stats.Column.Turns"));
         foreach (var agent in agents)
         {
             table.AddRow(
@@ -80,7 +90,7 @@ public static class StatsRenderer
         }
 
         AnsiConsole.Write(new Panel(table)
-            .Header($"[bold]Agent Performance[/] [grey]({periodLabel.EscapeMarkup()})[/]")
+            .Header(I18n.T("Stats.Agents.Header", periodLabel.EscapeMarkup()))
             .Border(BoxBorder.Rounded)
             .BorderStyle(new Style(Color.Yellow)));
     }

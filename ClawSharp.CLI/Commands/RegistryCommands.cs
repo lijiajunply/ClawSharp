@@ -13,7 +13,7 @@ public static class RegistryCommands
 {
     public static Command CreateAgents(IHost host)
     {
-        var command = new Command("agents", "List all registered agents");
+        var command = new Command("agents", I18n.T("Registry.Agents.Description"));
         command.SetHandler(async () =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
@@ -22,9 +22,9 @@ public static class RegistryCommands
                 await runtime.InitializeAsync();
 
                 var options = host.Services.GetRequiredService<ClawOptions>();
-                AnsiConsole.MarkupLine($"[grey]Config BasePath: {Directory.GetCurrentDirectory().EscapeMarkup()}[/]");
-                AnsiConsole.MarkupLine($"[grey]Default Provider: {options.Providers.DefaultProvider.EscapeMarkup()}[/]");
-                AnsiConsole.MarkupLine($"[grey]Model Count: {options.Providers.Models.Count}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Registry.Agents.ConfigBasePath", Directory.GetCurrentDirectory().EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Registry.Agents.DefaultProvider", options.Providers.DefaultProvider.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Registry.Agents.ModelCount", options.Providers.Models.Count));
 
                 await RenderAgentsAsync(host.Services);
                 return 0;
@@ -44,18 +44,18 @@ public static class RegistryCommands
 
         if (agents.Length == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No registered agents were found.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Registry.Agents.Empty"));
             return;
         }
 
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("[yellow]ID[/]");
-        table.AddColumn("[yellow]Name[/]");
-        table.AddColumn("[yellow]Source[/]");
-        table.AddColumn("[yellow]Configured Provider[/]");
-        table.AddColumn("[yellow]Resolved Provider[/]");
-        table.AddColumn("[yellow]Resolved Model[/]");
-        table.AddColumn("[yellow]Version[/]");
+        table.AddColumn($"[yellow]{I18n.T("Common.ID")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Common.Name")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Skills.Column.Source")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Registry.Agents.Column.ConfiguredProvider")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Registry.Agents.Column.ResolvedProvider")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Registry.Agents.Column.ResolvedModel")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Common.Version")}[/]");
 
         foreach (var agent in agents)
         {
@@ -69,7 +69,7 @@ public static class RegistryCommands
             }
             catch (Exception ex)
             {
-                resolvedProvider = $"[red]Error: {ex.Message.EscapeMarkup()}[/]";
+                resolvedProvider = I18n.T("Registry.Agents.ResolveError", ex.Message);
                 resolvedModel = string.Empty;
             }
 
@@ -77,7 +77,7 @@ public static class RegistryCommands
                 agent.Id.EscapeMarkup(),
                 agent.Name.EscapeMarkup(),
                 agent.Source.ToString().EscapeMarkup(),
-                (agent.Provider ?? "[grey]default[/]").EscapeMarkup(),
+                (agent.Provider ?? I18n.T("Registry.Agents.DefaultProviderValue")).EscapeMarkup(),
                 resolvedProvider.EscapeMarkup(),
                 resolvedModel.EscapeMarkup(),
                 agent.Version.EscapeMarkup());
@@ -88,7 +88,7 @@ public static class RegistryCommands
 
     public static Command CreateSkills(IHost host)
     {
-        var command = new Command("skills", "List all registered skills");
+        var command = new Command("skills", I18n.T("Registry.Skills.Description"));
         command.SetHandler(async () =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
@@ -100,10 +100,10 @@ public static class RegistryCommands
                 var skills = kernel.Skills.GetAll();
 
                 var table = new Table();
-                table.AddColumn("ID");
-                table.AddColumn("Source");
-                table.AddColumn("Name");
-                table.AddColumn("Version");
+                table.AddColumn(I18n.T("Common.ID"));
+                table.AddColumn(I18n.T("Chat.Skills.Column.Source"));
+                table.AddColumn(I18n.T("Common.Name"));
+                table.AddColumn(I18n.T("Common.Version"));
 
                 foreach (var skill in skills)
                 {

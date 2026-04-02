@@ -11,7 +11,7 @@ public static class ListCommand
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("list", "List sessions in the default ThreadSpace");
+        var command = new Command("list", I18n.T("List.Description"));
 
         command.SetHandler(async () =>
         {
@@ -25,10 +25,10 @@ public static class ListCommand
                 var sessions = await kernel.ThreadSpaces.ListSessionsAsync(globalSpace.ThreadSpaceId);
 
                 var table = new Table();
-                table.AddColumn("Session ID");
-                table.AddColumn("Agent ID");
-                table.AddColumn("Started At");
-                table.AddColumn("Status");
+                table.AddColumn(I18n.T("List.Column.SessionId"));
+                table.AddColumn(I18n.T("List.Column.AgentId"));
+                table.AddColumn(I18n.T("List.Column.StartedAt"));
+                table.AddColumn(I18n.T("List.Column.Status"));
 
                 foreach (var session in sessions.OrderByDescending(s => s.StartedAt))
                 {

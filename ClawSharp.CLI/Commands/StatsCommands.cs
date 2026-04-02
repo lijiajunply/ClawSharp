@@ -12,14 +12,14 @@ public static class StatsCommands
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("stats", "Show analytics for the current ThreadSpace");
+        var command = new Command("stats", I18n.T("Stats.Description"));
         command.AddAlias("usage");
         command.AddAlias("metrics");
 
-        var periodOption = new Option<string>("--period", () => "24h", "Time window: 24h, 7d, 30d, all, or custom like 12h");
-        var toolsOption = new Option<bool>("--tools", "Show tool usage only");
-        var agentsOption = new Option<bool>("--agents", "Show agent performance only");
-        var formatOption = new Option<string>("--format", () => "table", "Output format: table or json");
+        var periodOption = new Option<string>("--period", () => "24h", I18n.T("Stats.Option.Period"));
+        var toolsOption = new Option<bool>("--tools", I18n.T("Stats.Option.Tools"));
+        var agentsOption = new Option<bool>("--agents", I18n.T("Stats.Option.Agents"));
+        var formatOption = new Option<string>("--format", () => "table", I18n.T("Stats.Option.Format"));
 
         command.AddOption(periodOption);
         command.AddOption(toolsOption);
@@ -107,7 +107,7 @@ public static class StatsCommands
 
         if (normalized == "all")
         {
-            return new StatsRange(DateTimeOffset.MinValue, end, "all time");
+            return new StatsRange(DateTimeOffset.MinValue, end, I18n.T("Stats.AllTime"));
         }
 
         if (normalized.EndsWith("h", StringComparison.Ordinal)
@@ -124,7 +124,7 @@ public static class StatsCommands
             return new StatsRange(end.AddDays(-days), end, $"{days}d");
         }
 
-        throw new ArgumentException($"Unsupported period '{rawPeriod}'. Use values like 24h, 7d, 30d, or all.");
+        throw new ArgumentException(I18n.T("Stats.UnsupportedPeriod", rawPeriod));
     }
 
     private static string NormalizeFormat(string format)
@@ -136,7 +136,7 @@ public static class StatsCommands
         return normalized switch
         {
             "table" or "json" => normalized,
-            _ => throw new ArgumentException($"Unsupported format '{format}'. Use 'table' or 'json'.")
+            _ => throw new ArgumentException(I18n.T("Stats.UnsupportedFormat", format))
         };
     }
 

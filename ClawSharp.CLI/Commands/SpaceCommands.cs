@@ -11,7 +11,7 @@ public static class SpaceCommands
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("spaces", "Manage ThreadSpaces (working containers for sessions)");
+        var command = new Command("spaces", I18n.T("Space.Description"));
 
         command.AddCommand(CreateListCommand(host));
         command.AddCommand(CreateAddCommand(host));
@@ -24,8 +24,8 @@ public static class SpaceCommands
 
     private static Command CreateListCommand(IHost host)
     {
-        var command = new Command("list", "List all ThreadSpaces");
-        var allOption = new Option<bool>("--all", "Include archived ThreadSpaces");
+        var command = new Command("list", I18n.T("Space.List.Description"));
+        var allOption = new Option<bool>("--all", I18n.T("Space.List.AllOption"));
         command.AddOption(allOption);
 
         command.SetHandler(async (includeArchived) =>
@@ -39,15 +39,17 @@ public static class SpaceCommands
                 var spaces = await spaceManager.ListAsync(includeArchived);
 
                 var table = new Table();
-                table.AddColumn("ID");
-                table.AddColumn("Name");
-                table.AddColumn("Path");
-                table.AddColumn("Created At");
-                table.AddColumn("Status");
+                table.AddColumn(I18n.T("Common.ID"));
+                table.AddColumn(I18n.T("Space.List.Column.Name"));
+                table.AddColumn(I18n.T("Space.List.Column.Path"));
+                table.AddColumn(I18n.T("Space.List.Column.CreatedAt"));
+                table.AddColumn(I18n.T("Space.List.Column.Status"));
 
                 foreach (var space in spaces)
                 {
-                    var status = space.ArchivedAt.HasValue ? "[grey]Archived[/]" : "[green]Active[/]";
+                    var status = space.ArchivedAt.HasValue
+                        ? $"[grey]{I18n.T("Common.Archived")}[/]"
+                        : $"[green]{I18n.T("Common.Active")}[/]";
                     table.AddRow(
                         space.ThreadSpaceId.Value,
                         space.Name.EscapeMarkup(),
@@ -65,9 +67,9 @@ public static class SpaceCommands
 
     private static Command CreateAddCommand(IHost host)
     {
-        var command = new Command("add", "Add a new ThreadSpace");
-        var nameArgument = new Argument<string>("name", "The name of the ThreadSpace");
-        var pathArgument = new Argument<string>("path", "The local folder path to bind");
+        var command = new Command("add", I18n.T("Space.Add.Description"));
+        var nameArgument = new Argument<string>("name", I18n.T("Space.Add.NameArg"));
+        var pathArgument = new Argument<string>("path", I18n.T("Space.Add.PathArg"));
         
         command.AddArgument(nameArgument);
         command.AddArgument(pathArgument);
@@ -85,9 +87,9 @@ public static class SpaceCommands
                 var request = new CreateThreadSpaceRequest(name, absolutePath);
                 var space = await spaceManager.CreateAsync(request);
 
-                AnsiConsole.MarkupLine($"[green]ThreadSpace '{space.Name}' created successfully.[/]");
-                AnsiConsole.MarkupLine($"[grey]ID: {space.ThreadSpaceId.Value}[/]");
-                AnsiConsole.MarkupLine($"[grey]Path: {space.BoundFolderPath}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Space.Add.Success", space.Name.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Space.Add.Id", space.ThreadSpaceId.Value));
+                AnsiConsole.MarkupLine(I18n.T("Space.Add.Path", space.BoundFolderPath.EscapeMarkup()));
                 
                 return 0;
             });
@@ -98,8 +100,8 @@ public static class SpaceCommands
 
     private static Command CreateShowCommand(IHost host)
     {
-        var command = new Command("show", "Show details of a ThreadSpace including its sessions");
-        var identifierArgument = new Argument<string>("identifier", "The name or ID of the ThreadSpace");
+        var command = new Command("show", I18n.T("Space.Show.Description"));
+        var identifierArgument = new Argument<string>("identifier", I18n.T("Space.Show.IdentifierArg"));
         command.AddArgument(identifierArgument);
 
         command.SetHandler(async (identifier) =>
@@ -129,7 +131,7 @@ public static class SpaceCommands
 
                 if (space == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]ThreadSpace '{identifier}' not found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Space.Show.NotFound", identifier.EscapeMarkup()));
                     return 1;
                 }
 
@@ -137,25 +139,25 @@ public static class SpaceCommands
                 grid.AddColumn();
                 grid.AddColumn();
                 grid.AddRow("[yellow]ID:[/]", space.ThreadSpaceId.Value);
-                grid.AddRow("[yellow]Name:[/]", space.Name.EscapeMarkup());
-                grid.AddRow("[yellow]Path:[/]", (space.BoundFolderPath ?? "[global]").EscapeMarkup());
-                grid.AddRow("[yellow]Created:[/]", space.CreatedAt.ToString("F"));
-                grid.AddRow("[yellow]Is Global:[/]", space.IsGlobal.ToString());
+                grid.AddRow(I18n.T("Space.Show.Row.Name"), space.Name.EscapeMarkup());
+                grid.AddRow(I18n.T("Space.Show.Row.Path"), (space.BoundFolderPath ?? I18n.T("Space.Show.GlobalPath")).EscapeMarkup());
+                grid.AddRow(I18n.T("Space.Show.Row.Created"), space.CreatedAt.ToString("F"));
+                grid.AddRow(I18n.T("Space.Show.Row.IsGlobal"), space.IsGlobal.ToString());
                 if (space.ArchivedAt.HasValue)
                 {
-                    grid.AddRow("[red]Archived:[/]", space.ArchivedAt.Value.ToString("F"));
+                    grid.AddRow(I18n.T("Space.Show.Row.Archived"), space.ArchivedAt.Value.ToString("F"));
                 }
                 
-                AnsiConsole.Write(new Panel(grid) { Header = new PanelHeader("ThreadSpace Details") });
+                AnsiConsole.Write(new Panel(grid) { Header = new PanelHeader(I18n.T("Common.Panel.ThreadSpaceDetails")) });
 
                 var sessions = await spaceManager.ListSessionsAsync(space.ThreadSpaceId);
                 if (sessions.Count > 0)
                 {
-                    var sessionTable = new Table().Title("Sessions");
-                    sessionTable.AddColumn("Session ID");
-                    sessionTable.AddColumn("Agent");
-                    sessionTable.AddColumn("Status");
-                    sessionTable.AddColumn("Started At");
+                    var sessionTable = new Table().Title(I18n.T("Common.Sessions"));
+                    sessionTable.AddColumn(I18n.T("List.Column.SessionId"));
+                    sessionTable.AddColumn(I18n.T("Chat.Sessions.Column.Agent"));
+                    sessionTable.AddColumn(I18n.T("Common.Status"));
+                    sessionTable.AddColumn(I18n.T("List.Column.StartedAt"));
 
                     foreach (var session in sessions)
                     {
@@ -169,7 +171,7 @@ public static class SpaceCommands
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine("[grey]No sessions found in this ThreadSpace.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Space.Show.EmptySessions"));
                 }
 
                 return 0;
@@ -181,10 +183,10 @@ public static class SpaceCommands
 
     private static Command CreateUpdateCommand(IHost host)
     {
-        var command = new Command("update", "Update a ThreadSpace's name or path");
-        var identifierArgument = new Argument<string>("identifier", "The name or ID of the ThreadSpace to update");
-        var nameOption = new Option<string>("--name", "The new name");
-        var pathOption = new Option<string>("--path", "The new local folder path to bind");
+        var command = new Command("update", I18n.T("Space.Update.Description"));
+        var identifierArgument = new Argument<string>("identifier", I18n.T("Space.Update.IdentifierArg"));
+        var nameOption = new Option<string>("--name", I18n.T("Space.Update.NameOption"));
+        var pathOption = new Option<string>("--path", I18n.T("Space.Update.PathOption"));
 
         command.AddArgument(identifierArgument);
         command.AddOption(nameOption);
@@ -202,13 +204,13 @@ public static class SpaceCommands
                 
                 if (spaceId == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]ThreadSpace '{identifier}' not found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Space.Show.NotFound", identifier.EscapeMarkup()));
                     return 1;
                 }
 
                 var updated = await spaceManager.UpdateAsync(spaceId.Value, newName, newPath);
 
-                AnsiConsole.MarkupLine($"[green]ThreadSpace '{updated.Name}' updated successfully.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Space.Update.Success", updated.Name.EscapeMarkup()));
                 return 0;
             });
         }, identifierArgument, nameOption, pathOption);
@@ -218,8 +220,8 @@ public static class SpaceCommands
 
     private static Command CreateRemoveCommand(IHost host)
     {
-        var command = new Command("remove", "Archive a ThreadSpace (soft delete)");
-        var identifierArgument = new Argument<string>("identifier", "The name or ID of the ThreadSpace to archive");
+        var command = new Command("remove", I18n.T("Space.Remove.Description"));
+        var identifierArgument = new Argument<string>("identifier", I18n.T("Space.Remove.IdentifierArg"));
         command.AddArgument(identifierArgument);
 
         command.SetHandler(async (identifier) =>
@@ -234,13 +236,13 @@ public static class SpaceCommands
                 
                 if (spaceId == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]ThreadSpace '{identifier}' not found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Space.Show.NotFound", identifier.EscapeMarkup()));
                     return 1;
                 }
 
                 await spaceManager.ArchiveAsync(spaceId.Value);
 
-                AnsiConsole.MarkupLine($"[green]ThreadSpace '{identifier}' has been archived.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Space.Remove.Success", identifier.EscapeMarkup()));
                 return 0;
             });
         }, identifierArgument);

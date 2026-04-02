@@ -12,7 +12,7 @@ public static class McpCommands
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("mcp", "Manage Model Context Protocol (MCP) servers");
+        var command = new Command("mcp", I18n.T("Mcp.Description"));
         command.AddCommand(CreateList(host));
         command.AddCommand(CreateSearch(host));
         command.AddCommand(CreateShow(host));
@@ -22,8 +22,8 @@ public static class McpCommands
 
     private static Command CreateInstall(IHost host)
     {
-        var command = new Command("install", "Install an MCP server from the Smithery marketplace");
-        var nameArg = new Argument<string>("name", "The qualified name of the server (e.g. owner/name)");
+        var command = new Command("install", I18n.T("Mcp.Install.Description"));
+        var nameArg = new Argument<string>("name", I18n.T("Mcp.Install.NameArg"));
         command.AddArgument(nameArg);
 
         command.SetHandler(async name =>
@@ -37,24 +37,22 @@ public static class McpCommands
 
                 if (server.McpConfig == null)
                 {
-                    AnsiConsole.MarkupLine("[red]Error: This server does not provide an automated MCP configuration.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Mcp.NoAutomatedConfig"));
                     return 0;
                 }
 
-                AnsiConsole.MarkupLine($"[blue]Installing {server.QualifiedName.EscapeMarkup()}...[/]");
+                AnsiConsole.MarkupLine(I18n.T("Mcp.Installing", server.QualifiedName.EscapeMarkup()));
 
                 var envVars = new Dictionary<string, string>();
                 if (server.McpConfig.Env?.Count > 0)
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]Configuration Required:[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Mcp.ConfigRequired"));
                     foreach (var env in server.McpConfig.Env)
                     {
-                        var prompt = $"Enter value for [yellow]{env.Key.EscapeMarkup()}[/]";
-                        if (!string.IsNullOrWhiteSpace(env.Value.Description))
-                        {
-                            prompt += $" ({env.Value.Description.EscapeMarkup()})";
-                        }
+                        var prompt = string.IsNullOrWhiteSpace(env.Value.Description)
+                            ? I18n.T("Mcp.EnvPrompt", env.Key.EscapeMarkup())
+                            : I18n.T("Mcp.EnvPromptWithDescription", env.Key.EscapeMarkup(), env.Value.Description.EscapeMarkup());
                         
                         string val;
                         if (env.Key.Contains("KEY") || env.Key.Contains("TOKEN") || env.Key.Contains("SECRET"))
@@ -71,9 +69,9 @@ public static class McpCommands
 
                 await installer.InstallAsync(server.Name, server.McpConfig.Command, server.McpConfig.Args, envVars);
                 
-                AnsiConsole.MarkupLine($"[green]Successfully installed {server.Name.EscapeMarkup()}![/]");
-                AnsiConsole.MarkupLine("The server has been added to [grey]~/.clawsharp/mcp.json[/].");
-                AnsiConsole.MarkupLine("Restart your session or use [blue]RELOAD[/] to apply changes.");
+                AnsiConsole.MarkupLine(I18n.T("Mcp.Install.Success", server.Name.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Mcp.Install.ConfigPath"));
+                AnsiConsole.MarkupLine(I18n.T("Mcp.Install.Reload"));
 
                 return 0;
             });
@@ -84,7 +82,7 @@ public static class McpCommands
 
     private static Command CreateList(IHost host)
     {
-        var command = new Command("list", "List locally configured MCP servers");
+        var command = new Command("list", I18n.T("Mcp.List.Description"));
         command.SetHandler(async () =>
         {
             await CliErrorHandler.ExecuteWithHandlingAsync(async () =>
@@ -94,15 +92,15 @@ public static class McpCommands
 
                 if (servers.Count == 0)
                 {
-                    AnsiConsole.MarkupLine("[yellow]No MCP servers configured.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Mcp.List.Empty"));
                     return 0;
                 }
 
                 var table = new Table().Border(TableBorder.Rounded);
-                table.AddColumn("Name");
-                table.AddColumn("Command");
-                table.AddColumn("Arguments");
-                table.AddColumn("Capabilities");
+                table.AddColumn(I18n.T("Common.Name"));
+                table.AddColumn(I18n.T("Common.Command"));
+                table.AddColumn(I18n.T("Mcp.List.Column.Arguments"));
+                table.AddColumn(I18n.T("Chat.Mcp.Column.Capabilities"));
 
                 foreach (var server in servers)
                 {
@@ -122,8 +120,8 @@ public static class McpCommands
 
     private static Command CreateSearch(IHost host)
     {
-        var command = new Command("search", "Search MCP servers in the Smithery marketplace");
-        var queryArg = new Argument<string?>("query", () => null, "Search query");
+        var command = new Command("search", I18n.T("Mcp.Search.Description"));
+        var queryArg = new Argument<string?>("query", () => null, I18n.T("Mcp.Search.QueryArg"));
         command.AddArgument(queryArg);
 
         command.SetHandler(async query =>
@@ -133,31 +131,34 @@ public static class McpCommands
                 var smithery = host.Services.GetRequiredService<ISmitheryClient>();
                 
                 await AnsiConsole.Status()
-                    .StartAsync("Searching Smithery...", async ctx =>
+                    .StartAsync(I18n.T("Mcp.Searching"), async ctx =>
                     {
                         var results = await smithery.SearchServersAsync(query);
 
                         if (results.Count == 0)
                         {
-                            AnsiConsole.MarkupLine("[yellow]No servers found in Smithery.[/]");
+                            AnsiConsole.MarkupLine(I18n.T("Mcp.Search.Empty"));
                             return;
                         }
 
                         var table = new Table().Border(TableBorder.Rounded).Expand();
-                        table.AddColumn("Qualified Name");
-                        table.AddColumn("Description");
-                        table.AddColumn("Author");
-                        table.AddColumn("Downloads");
-                        table.AddColumn("Verified");
+                        table.AddColumn(I18n.T("Chat.Mcp.Column.QualifiedName"));
+                        table.AddColumn(I18n.T("Common.Description"));
+                        table.AddColumn(I18n.T("Common.Author"));
+                        table.AddColumn(I18n.T("Mcp.Search.Column.Downloads"));
+                        table.AddColumn(I18n.T("Mcp.Search.Column.Verified"));
 
                         foreach (var server in results)
                         {
+                            var author = server.Author is null
+                                ? $"[grey]{I18n.T("Common.NotApplicable")}[/]"
+                                : server.Author.EscapeMarkup();
                             table.AddRow(
                                 $"[blue]{server.QualifiedName.EscapeMarkup()}[/]",
                                 server.Description.EscapeMarkup(),
-                                (server.Author ?? "[grey]n/a[/]").EscapeMarkup(),
-                                (server.DownloadCount?.ToString() ?? "[grey]0[/]"),
-                                server.Verified ? "[green]Yes[/]" : "[grey]No[/]");
+                                author,
+                                (server.DownloadCount?.ToString() ?? "0"),
+                                server.Verified ? $"[green]{I18n.T("Common.Yes")}[/]" : $"[grey]{I18n.T("Common.No")}[/]");
                         }
 
                         AnsiConsole.Write(table);
@@ -172,8 +173,8 @@ public static class McpCommands
 
     private static Command CreateShow(IHost host)
     {
-        var command = new Command("show", "Show detailed information for a Smithery MCP server");
-        var nameArg = new Argument<string>("name", "The qualified name of the server (e.g. owner/name)");
+        var command = new Command("show", I18n.T("Mcp.Show.Description"));
+        var nameArg = new Argument<string>("name", I18n.T("Mcp.Show.NameArg"));
         command.AddArgument(nameArg);
 
         command.SetHandler(async name =>
@@ -184,33 +185,42 @@ public static class McpCommands
                 
                 var server = await smithery.GetServerAsync(name);
 
-                var panelContent =
-                    $"[bold]{server.Name.EscapeMarkup()}[/] ([blue]{server.QualifiedName.EscapeMarkup()}[/]){Environment.NewLine}" +
-                    $"Author: {server.Author.EscapeMarkup() ?? "[grey]n/a[/]"}{Environment.NewLine}" +
-                    $"Homepage: [link]{server.Homepage.EscapeMarkup() ?? "[grey]n/a[/]"}[/]{Environment.NewLine}" +
-                    $"Downloads: {server.DownloadCount}{Environment.NewLine}" +
-                    $"Verified: {(server.Verified ? "[green]Yes[/]" : "[grey]No[/]")}{Environment.NewLine}{Environment.NewLine}" +
-                    $"{server.Description.EscapeMarkup()}";
+                var panelContent = I18n.T(
+                    "Mcp.Show.Summary",
+                    server.Name.EscapeMarkup(),
+                    server.QualifiedName.EscapeMarkup(),
+                    Environment.NewLine,
+                    (server.Author ?? I18n.T("Common.NotApplicable")).EscapeMarkup(),
+                    (server.Homepage ?? I18n.T("Common.NotApplicable")).EscapeMarkup(),
+                    server.DownloadCount?.ToString() ?? "0",
+                    server.Verified ? $"[green]{I18n.T("Common.Yes")}[/]" : $"[grey]{I18n.T("Common.No")}[/]",
+                    server.Description.EscapeMarkup());
 
                 AnsiConsole.Write(new Panel(new Markup(panelContent))
                 {
-                    Header = new PanelHeader("Smithery MCP Server"),
+                    Header = new PanelHeader(I18n.T("Mcp.Show.Panel")),
                     Border = BoxBorder.Rounded
                 });
 
                 if (server.McpConfig != null)
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]Installation Command:[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Mcp.Show.InstallCommand"));
                     AnsiConsole.MarkupLine($"[grey]{server.McpConfig.Command.EscapeMarkup()} {string.Join(" ", server.McpConfig.Args).EscapeMarkup()}[/]");
                     
                     if (server.McpConfig.Env?.Count > 0)
                     {
                         AnsiConsole.WriteLine();
-                        AnsiConsole.MarkupLine("[bold]Required Environment Variables:[/]");
+                        AnsiConsole.MarkupLine(I18n.T("Mcp.Show.RequiredEnv"));
                         foreach (var env in server.McpConfig.Env)
                         {
-                            AnsiConsole.MarkupLine($"  [yellow]{env.Key.EscapeMarkup()}[/]: {env.Value.Description.EscapeMarkup() ?? "[grey]No description[/]"} {(env.Value.Required ? "[red](Required)[/]" : "[grey](Optional)[/]")}");
+                            var description = string.IsNullOrWhiteSpace(env.Value.Description)
+                                ? $"[grey]{I18n.T("Mcp.Show.NoDescription")}[/]"
+                                : env.Value.Description.EscapeMarkup();
+                            var required = env.Value.Required
+                                ? $"[red]({I18n.T("Common.Required")})[/]"
+                                : $"[grey]({I18n.T("Common.Optional")})[/]";
+                            AnsiConsole.MarkupLine($"  [yellow]{env.Key.EscapeMarkup()}[/]: {description} {required}");
                         }
                     }
                 }
@@ -218,7 +228,7 @@ public static class McpCommands
                 if (!string.IsNullOrWhiteSpace(server.Readme))
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]README[/]");
+                    AnsiConsole.MarkupLine($"[bold]{I18n.T("Common.Readme")}[/]");
                     // Simple markdown rendering (we might want to use a more sophisticated renderer later)
                     AnsiConsole.WriteLine(server.Readme.Length > 1000 ? server.Readme[..1000] + "..." : server.Readme);
                 }

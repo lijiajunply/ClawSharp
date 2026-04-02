@@ -26,10 +26,10 @@ public static class BootstrapWizard
         // 检查是否存在 Local 配置 (FR-009)
         if (File.Exists(localJson))
         {
-            AnsiConsole.MarkupLine("[yellow]Warning:[/] [blue]appsettings.json[/] is missing, but [blue]appsettings.Local.json[/] was found.");
-            if (!AnsiConsole.Confirm("Do you want to use the existing local configuration and skip setup?"))
+            AnsiConsole.MarkupLine(I18n.T("Bootstrap.WarningExistingLocal"));
+            if (!AnsiConsole.Confirm(I18n.T("Bootstrap.ConfirmUseLocal")))
             {
-                AnsiConsole.MarkupLine("[grey]Proceeding with fresh configuration...[/]");
+                AnsiConsole.MarkupLine(I18n.T("Bootstrap.FreshConfig"));
             }
             else
             {
@@ -38,7 +38,7 @@ public static class BootstrapWizard
         }
 
         AnsiConsole.Write(new FigletText("ClawSharp").Color(Color.Blue));
-        AnsiConsole.MarkupLine("Welcome to [blue]ClawSharp[/]! Let's get you set up with a new configuration.");
+        AnsiConsole.MarkupLine(I18n.T("Bootstrap.Welcome"));
         AnsiConsole.WriteLine();
 
         var bootstrapper = new ConfigBootstrapper();
@@ -49,11 +49,11 @@ public static class BootstrapWizard
 
         if (discovery.HasLocalModelProvider)
         {
-            AnsiConsole.MarkupLine("[bold green]Detected local model services:[/]");
+            AnsiConsole.MarkupLine(I18n.T("Bootstrap.DetectedServices"));
             if (discovery.Ollama.Available)
             {
                 var modelSummary = discovery.Ollama.Models.Count == 0
-                    ? "no models reported"
+                    ? I18n.T("Bootstrap.NoModelsReported")
                     : string.Join(", ", discovery.Ollama.Models.Take(3));
                 AnsiConsole.MarkupLine($"[grey]- Ollama:[/] {discovery.Ollama.BaseUrl?.EscapeMarkup()} ({modelSummary.EscapeMarkup()})");
             }
@@ -61,7 +61,7 @@ public static class BootstrapWizard
             if (discovery.LlamaEdge.Available)
             {
                 var modelSummary = discovery.LlamaEdge.Models.Count == 0
-                    ? "no models reported"
+                    ? I18n.T("Bootstrap.NoModelsReported")
                     : string.Join(", ", discovery.LlamaEdge.Models.Take(3));
                 AnsiConsole.MarkupLine($"[grey]- LlamaEdge:[/] {discovery.LlamaEdge.BaseUrl?.EscapeMarkup()} ({modelSummary.EscapeMarkup()})");
             }
@@ -71,28 +71,28 @@ public static class BootstrapWizard
 
         // 1. Workspace Root (FR-003)
         config.WorkspaceRoot = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter [green]workspace root[/] path:")
+            new TextPrompt<string>(I18n.T("Bootstrap.WorkspaceRootPrompt"))
                 .DefaultValue(".")
                 .Validate(path => 
                 {
                     try { Path.GetFullPath(path); return ValidationResult.Success(); }
-                    catch { return ValidationResult.Error("[red]Invalid path format.[/]"); }
+                    catch { return ValidationResult.Error(I18n.T("Bootstrap.InvalidPath")); }
                 }));
 
         // 2. Data Path (FR-004)
         config.DataPath = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter [green]runtime data[/] directory name:")
+            new TextPrompt<string>(I18n.T("Bootstrap.DataPathPrompt"))
                 .DefaultValue(".clawsharp"));
 
         // 3. Provider Selection (FR-005, US3)
         var selectedTemplate = AnsiConsole.Prompt(
             new SelectionPrompt<ProviderTemplate>()
-                .Title("Select your [green]default AI provider[/]:")
+                .Title(I18n.T("Bootstrap.ProviderSelectTitle"))
                 .PageSize(10)
                 .AddChoices(templates)
                 .UseConverter(t =>
                 {
-                    var detected = !t.RequiresApiKey && !string.IsNullOrWhiteSpace(t.BaseUrl) ? " [green](Detected)[/]" : string.Empty;
+                    var detected = !t.RequiresApiKey && !string.IsNullOrWhiteSpace(t.BaseUrl) ? I18n.T("Bootstrap.ProviderDetected") : string.Empty;
                     return $"{t.Name}{detected}";
                 }));
 
@@ -108,7 +108,7 @@ public static class BootstrapWizard
         if (selectedTemplate.RequiresApiKey)
         {
             config.ApiKey = AnsiConsole.Prompt(
-                new TextPrompt<string>($"Enter [green]API Key[/] for {selectedTemplate.Name}:")
+                new TextPrompt<string>(I18n.T("Bootstrap.ApiKeyPrompt", selectedTemplate.Name))
                     .PromptStyle("red")
                     .Secret());
         }
@@ -116,29 +116,29 @@ public static class BootstrapWizard
         if (string.IsNullOrWhiteSpace(config.DefaultModel) && selectedTemplate.Id is "ollama-local" or "llamaedge-local")
         {
             config.DefaultModel = AnsiConsole.Prompt(
-                new TextPrompt<string>($"Enter [green]default model[/] for {selectedTemplate.Name}:")
+                new TextPrompt<string>(I18n.T("Bootstrap.DefaultModelPrompt", selectedTemplate.Name))
                     .Validate(value => string.IsNullOrWhiteSpace(value)
-                        ? ValidationResult.Error("[red]Model name is required for local providers.[/]")
+                        ? ValidationResult.Error(I18n.T("Bootstrap.ModelRequired"))
                         : ValidationResult.Success()));
         }
 
         // 5. Generate and Save (FR-007)
         await AnsiConsole.Status()
-            .StartAsync("Generating [blue]appsettings.json[/]...", async ctx =>
+            .StartAsync(I18n.T("Bootstrap.GeneratingConfig"), async ctx =>
             {
                 var json = bootstrapper.GenerateConfigJson(config);
                 await bootstrapper.SaveConfigAsync(primaryJson, json);
                 await Task.Delay(500); // Give user time to see the status
             });
 
-        AnsiConsole.MarkupLine("[bold green]Configuration generated successfully![/]");
+        AnsiConsole.MarkupLine(I18n.T("Bootstrap.Generated"));
         AnsiConsole.WriteLine();
 
         // 6. Optional: browser dependency installation (for web_browser tool)
-        if (AnsiConsole.Confirm("Would you like to install [green]Playwright[/] browser drivers now? (Required for [blue]web_browser[/] tool)"))
+        if (AnsiConsole.Confirm(I18n.T("Bootstrap.InstallPlaywrightConfirm")))
         {
             await AnsiConsole.Status()
-                .StartAsync("Installing [blue]Playwright[/] browser drivers...", async ctx =>
+                .StartAsync(I18n.T("Bootstrap.InstallPlaywrightProgress"), async ctx =>
                 {
                     try
                     {
@@ -156,17 +156,17 @@ public static class BootstrapWizard
                             await process.WaitForExitAsync();
                             if (process.ExitCode == 0)
                             {
-                                AnsiConsole.MarkupLine("[bold green]Playwright browsers installed successfully![/]");
+                                AnsiConsole.MarkupLine(I18n.T("Bootstrap.InstallPlaywrightSuccess"));
                             }
                             else
                             {
-                                AnsiConsole.MarkupLine("[bold red]Playwright installation failed. Please run the script manually: .specify/scripts/bash/install-playwright.sh[/]");
+                                AnsiConsole.MarkupLine(I18n.T("Bootstrap.InstallPlaywrightFailure", scriptPath.EscapeMarkup()));
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        AnsiConsole.MarkupLine($"[bold red]Error running installation script: {ex.Message}[/]");
+                        AnsiConsole.MarkupLine(I18n.T("Bootstrap.InstallPlaywrightError", ex.Message.EscapeMarkup()));
                     }
                 });
         }

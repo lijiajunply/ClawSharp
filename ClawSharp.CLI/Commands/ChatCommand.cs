@@ -20,8 +20,8 @@ public static class ChatCommand
 {
     public static Command Create(IHost host)
     {
-        var command = new Command("chat", "Start a new REPL session with an agent");
-        var agentIdArg = new Argument<string?>("agent-id", () => null, "The ID of the agent to chat with (optional)");
+        var command = new Command("chat", I18n.T("Chat.Description"));
+        var agentIdArg = new Argument<string?>("agent-id", () => null, I18n.T("Chat.AgentIdArg"));
         command.AddArgument(agentIdArg);
 
         command.SetHandler(async agentId =>
@@ -78,7 +78,7 @@ public static class ChatCommand
             var sessionsInSpace = await kernel.ThreadSpaces.ListSessionsAsync(currentThreadSpace.ThreadSpaceId);
             if (sessionsInSpace.Count > 1)
             {
-                AnsiConsole.MarkupLine("[grey]Tip: type /resume to continue last conversation.[/]");
+                AnsiConsole.MarkupLine($"[grey]{I18n.T("Chat.TipResume")}[/]");
             }
             AnsiConsole.WriteLine();
 
@@ -146,7 +146,7 @@ public static class ChatCommand
 
         if (string.IsNullOrWhiteSpace(finalAgentId))
         {
-            throw new InvalidOperationException("No agents found in the registry and no default agent is configured.");
+            throw new InvalidOperationException(I18n.T("Chat.NoAgentsFound"));
         }
 
         return finalAgentId;
@@ -202,14 +202,14 @@ public static class ChatCommand
                 var servers = catalog.GetAll();
                 if (servers.Count == 0)
                 {
-                    AnsiConsole.MarkupLine("[yellow]No MCP servers configured.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.NoServers"));
                 }
                 else
                 {
                     var table = new Table().Border(TableBorder.Rounded);
-                    table.AddColumn("Name");
-                    table.AddColumn("Command");
-                    table.AddColumn("Capabilities");
+                    table.AddColumn(I18n.T("Chat.Mcp.Column.Name"));
+                    table.AddColumn(I18n.T("Chat.Mcp.Column.Command"));
+                    table.AddColumn(I18n.T("Chat.Mcp.Column.Capabilities"));
                     foreach (var s in servers) table.AddRow(s.Name.EscapeMarkup(), s.Command.EscapeMarkup(), s.Capabilities.ToString());
                     AnsiConsole.Write(table);
                 }
@@ -218,22 +218,28 @@ public static class ChatCommand
             case "search":
                 if (string.IsNullOrWhiteSpace(remainder))
                 {
-                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp search <query>");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.Usage.Search"));
                     break;
                 }
-                await AnsiConsole.Status().StartAsync("Searching Smithery...", async ctx =>
+                await AnsiConsole.Status().StartAsync(I18n.T("Chat.Mcp.Searching"), async ctx =>
                 {
                     var results = await smithery.SearchServersAsync(remainder);
                     if (results.Count == 0)
                     {
-                        AnsiConsole.MarkupLine("[yellow]No servers found in Smithery.[/]");
+                        AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.NoSearchResults"));
                         return;
                     }
                     var table = new Table().Border(TableBorder.Rounded).Expand();
-                    table.AddColumn("Qualified Name");
-                    table.AddColumn("Description");
-                    table.AddColumn("Author");
-                    foreach (var s in results) table.AddRow($"[blue]{s.QualifiedName.EscapeMarkup()}[/]", s.Description.EscapeMarkup(), (s.Author ?? "[grey]n/a[/]").EscapeMarkup());
+                    table.AddColumn(I18n.T("Chat.Mcp.Column.QualifiedName"));
+                    table.AddColumn(I18n.T("Common.Description"));
+                    table.AddColumn(I18n.T("Chat.Mcp.Column.Author"));
+                    foreach (var s in results)
+                    {
+                        var author = s.Author is null
+                            ? $"[grey]{I18n.T("Common.NotApplicable")}[/]"
+                            : s.Author.EscapeMarkup();
+                        table.AddRow($"[blue]{s.QualifiedName.EscapeMarkup()}[/]", s.Description.EscapeMarkup(), author);
+                    }
                     AnsiConsole.Write(table);
                 });
                 break;
@@ -241,26 +247,27 @@ public static class ChatCommand
             case "install":
                 if (string.IsNullOrWhiteSpace(remainder))
                 {
-                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp install <qualified-name>");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.Usage.Install"));
                     break;
                 }
                 var installer = state.Host.Services.GetRequiredService<IMcpInstaller>();
                 var srv = await smithery.GetServerAsync(remainder);
                 if (srv.McpConfig == null)
                 {
-                    AnsiConsole.MarkupLine("[red]Error: This server does not provide an automated MCP configuration.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.NoAutomatedConfig"));
                     break;
                 }
-                AnsiConsole.MarkupLine($"[blue]Installing {srv.QualifiedName.EscapeMarkup()}...[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.Installing", srv.QualifiedName.EscapeMarkup()));
                 var envs = new Dictionary<string, string>();
                 if (srv.McpConfig.Env?.Count > 0)
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]Configuration Required:[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.ConfigRequired"));
                     foreach (var env in srv.McpConfig.Env)
                     {
-                        var prompt = $"Enter value for [yellow]{env.Key.EscapeMarkup()}[/]";
-                        if (!string.IsNullOrWhiteSpace(env.Value.Description)) prompt += $" ({env.Value.Description.EscapeMarkup()})";
+                        var prompt = string.IsNullOrWhiteSpace(env.Value.Description)
+                            ? I18n.T("Chat.Mcp.EnvPrompt", env.Key.EscapeMarkup())
+                            : I18n.T("Chat.Mcp.EnvPromptWithDescription", env.Key.EscapeMarkup(), env.Value.Description.EscapeMarkup());
                         string val;
                         if (env.Key.Contains("KEY") || env.Key.Contains("TOKEN") || env.Key.Contains("SECRET"))
                             val = AnsiConsole.Prompt(new TextPrompt<string>(prompt).PromptStyle("grey").Secret());
@@ -270,28 +277,36 @@ public static class ChatCommand
                     }
                 }
                 await installer.InstallAsync(srv.Name, srv.McpConfig.Command, srv.McpConfig.Args, envs);
-                AnsiConsole.MarkupLine($"[green]Successfully installed {srv.Name.EscapeMarkup()}![/]");
-                AnsiConsole.MarkupLine("The server has been added to [grey]~/.clawsharp/mcp.json[/].");
-                AnsiConsole.MarkupLine("Type [blue]/reload[/] to apply changes.");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.InstallSuccess", srv.Name.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.ConfigPathMessage"));
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.ReloadMessage"));
                 break;
 
             case "show":
                 if (string.IsNullOrWhiteSpace(remainder))
                 {
-                    AnsiConsole.MarkupLine("[yellow]Usage:[/] /mcp show <qualified-name>");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.Usage.Show"));
                     break;
                 }
                 var server = await smithery.GetServerAsync(remainder);
-                var panelContent = $"[bold]{server.Name.EscapeMarkup()}[/] ([blue]{server.QualifiedName.EscapeMarkup()}[/]){Environment.NewLine}" +
-                                 $"Author: {server.Author.EscapeMarkup() ?? "[grey]n/a[/]"}{Environment.NewLine}" +
-                                 $"Downloads: {server.DownloadCount}{Environment.NewLine}{Environment.NewLine}" +
-                                 $"{server.Description.EscapeMarkup()}";
-                AnsiConsole.Write(new Panel(new Markup(panelContent)) { Header = new PanelHeader("Smithery MCP Server"), Border = BoxBorder.Rounded });
+                var panelContent = I18n.T(
+                    "Chat.Mcp.ServerSummary",
+                    server.Name.EscapeMarkup(),
+                    server.QualifiedName.EscapeMarkup(),
+                    Environment.NewLine,
+                    (server.Author ?? I18n.T("Common.NotApplicable")).EscapeMarkup(),
+                    server.DownloadCount?.ToString() ?? "0",
+                    server.Description.EscapeMarkup());
+                AnsiConsole.Write(new Panel(new Markup(panelContent))
+                {
+                    Header = new PanelHeader(I18n.T("Chat.Mcp.ServerPanel")),
+                    Border = BoxBorder.Rounded
+                });
                 break;
 
             default:
-                AnsiConsole.MarkupLine($"[yellow]Unknown /mcp subcommand:[/] {action.EscapeMarkup()}");
-                AnsiConsole.MarkupLine("Supported: list, search, show");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.UnknownSubcommand", action.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Chat.Mcp.Supported"));
                 break;
         }
 
@@ -314,11 +329,11 @@ public static class ChatCommand
             var effective = sessionOverride ?? globalDefault;
 
             var table = new Table().Border(TableBorder.Rounded);
-            table.AddColumn("[yellow]Scope[/]");
-            table.AddColumn("[yellow]Language[/]");
-            table.AddRow("Current session override", sessionOverride?.EscapeMarkup() ?? "[grey]<none>[/]");
-            table.AddRow("Global default", globalDefault?.EscapeMarkup() ?? "[grey]<none>[/]");
-            table.AddRow("Effective output language", effective?.EscapeMarkup() ?? "[grey]<none>[/]");
+            table.AddColumn($"[yellow]{I18n.T("Chat.Language.Column.Scope")}[/]");
+            table.AddColumn($"[yellow]{I18n.T("Chat.Language.Column.Language")}[/]");
+            table.AddRow(I18n.T("Chat.Language.CurrentSession"), sessionOverride?.EscapeMarkup() ?? $"[grey]{I18n.T("Common.None")}[/]");
+            table.AddRow(I18n.T("Chat.Language.GlobalDefault"), globalDefault?.EscapeMarkup() ?? $"[grey]{I18n.T("Common.None")}[/]");
+            table.AddRow(I18n.T("Chat.Language.Effective"), effective?.EscapeMarkup() ?? $"[grey]{I18n.T("Common.None")}[/]");
             AnsiConsole.Write(table);
             return CommandDispatchResult.Handled();
         }
@@ -330,11 +345,11 @@ public static class ChatCommand
             var fallback = NormalizeOutputLanguage(state.Options.Runtime.OutputLanguage);
             if (fallback is null)
             {
-                AnsiConsole.MarkupLine("[green]Cleared the session language override. Subsequent replies are no longer language-constrained by CLI settings.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Language.ResetNoFallback"));
             }
             else
             {
-                AnsiConsole.MarkupLine($"[green]Cleared the session language override. Subsequent replies will default to {fallback.EscapeMarkup()}.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Language.ResetWithFallback", fallback.EscapeMarkup()));
             }
             return CommandDispatchResult.Handled();
         }
@@ -342,7 +357,7 @@ public static class ChatCommand
         var outputLanguage = NormalizeOutputLanguage(trimmed);
         state.Session = await state.Runtime.UpdateSessionOutputLanguageAsync(state.SessionId, outputLanguage);
         state.SessionId = state.Session.Record.SessionId;
-        AnsiConsole.MarkupLine($"[green]Updated this session's output language. Subsequent replies will default to {outputLanguage!.EscapeMarkup()}.[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Language.Updated", outputLanguage!.EscapeMarkup()));
         return CommandDispatchResult.Handled();
     }
 
@@ -357,7 +372,7 @@ public static class ChatCommand
         state.Session = await state.Runtime.StartSessionAsync(new StartSessionRequest(state.AgentId, state.CurrentThreadSpace.ThreadSpaceId));
         state.SessionId = state.Session.Record.SessionId;
         AnsiConsole.Clear();
-        AnsiConsole.MarkupLine("[green]New session started.[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.NewSessionStarted"));
         return CommandDispatchResult.Handled();
     }
 
@@ -371,12 +386,12 @@ public static class ChatCommand
 
         if (lastSession is null)
         {
-            AnsiConsole.MarkupLine("[yellow]No previous session found to resume.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Resume.None"));
             return CommandDispatchResult.Handled();
         }
 
         await ActivateSessionAsync(state, lastSession);
-        AnsiConsole.MarkupLine($"[green]Resumed session started at {lastSession.StartedAt:g}[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Resume.Success", lastSession.StartedAt.ToString("g")));
         await ReplayRecentHistoryAsync(state.Runtime, state.SessionId);
         return CommandDispatchResult.Handled();
     }
@@ -386,7 +401,7 @@ public static class ChatCommand
         var sessions = await state.Kernel.ThreadSpaces.ListSessionsAsync(state.CurrentThreadSpace.ThreadSpaceId);
         if (sessions.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No sessions found in this space.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Sessions.None"));
             return CommandDispatchResult.Handled();
         }
 
@@ -402,13 +417,13 @@ public static class ChatCommand
 
         if (!int.TryParse(arguments, out var selectedIndex) || selectedIndex < 1 || selectedIndex > orderedSessions.Length)
         {
-            AnsiConsole.MarkupLine($"[yellow]Session index must be between 1 and {orderedSessions.Length}.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Sessions.IndexOutOfRange", orderedSessions.Length));
             return CommandDispatchResult.Handled();
         }
 
         var selectedSession = orderedSessions[selectedIndex - 1];
         await ActivateSessionAsync(state, selectedSession);
-        AnsiConsole.MarkupLine($"[green]Switched to session {selectedIndex}: {ShortId(selectedSession.SessionId)}[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Sessions.Switched", selectedIndex, ShortId(selectedSession.SessionId)));
         await ReplayRecentHistoryAsync(state.Runtime, state.SessionId);
         return CommandDispatchResult.Handled();
     }
@@ -416,17 +431,17 @@ public static class ChatCommand
     private static async Task ShowSessionsTableAsync(ReplState state, IReadOnlyList<SessionRecord> sessions)
     {
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("[yellow]#[/]");
-        table.AddColumn("[yellow]Session ID[/]");
-        table.AddColumn("[yellow]Agent[/]");
-        table.AddColumn("[yellow]Started[/]");
-        table.AddColumn("[yellow]Last Message[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Sessions.Column.Index")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Sessions.Column.SessionId")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Sessions.Column.Agent")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Sessions.Column.Started")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Sessions.Column.LastMessage")}[/]");
 
         for (var index = 0; index < sessions.Count; index++)
         {
             var session = sessions[index];
             var history = await state.Kernel.History.ListAsync(session.SessionId);
-            var preview = history.LastOrDefault()?.Content ?? "(No messages yet)";
+            var preview = history.LastOrDefault()?.Content ?? I18n.T("Chat.Sessions.NoMessagesYet");
             if (preview.Length > 48)
             {
                 preview = preview[..45] + "...";
@@ -448,23 +463,23 @@ public static class ChatCommand
         var launchPlan = await state.Runtime.PrepareAgentAsync(new AgentLaunchRequest(state.Session.Record.AgentId, state.SessionId));
         if (launchPlan.Tools.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No authorized tools are available for this session.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Tools.None"));
             return CommandDispatchResult.Handled();
         }
 
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("[yellow]Tool[/]");
-        table.AddColumn("[yellow]Description[/]");
-        table.AddColumn("[yellow]Permission Status[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Tools.Column.Tool")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Tools.Column.Description")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Tools.Column.PermissionStatus")}[/]");
 
         foreach (var tool in launchPlan.Tools.OrderBy(tool => tool.Name, StringComparer.OrdinalIgnoreCase))
         {
             var capability = tool.Capabilities == ClawSharp.Lib.Tools.ToolCapability.None
-                ? "No extra capability"
+                ? I18n.T("Chat.Tools.NoExtraCapability")
                 : tool.Capabilities.ToString();
             var status = launchPlan.Session.EffectivePermissions?.ApprovalRequired == true
-                ? $"Authorized ({capability}, approval required)"
-                : $"Authorized ({capability})";
+                ? I18n.T("Chat.Tools.AuthorizedApproval", capability)
+                : I18n.T("Chat.Tools.Authorized", capability);
 
             table.AddRow(tool.Name.EscapeMarkup(), tool.Description.EscapeMarkup(), status.EscapeMarkup());
         }
@@ -481,7 +496,7 @@ public static class ChatCommand
         if (string.IsNullOrWhiteSpace(arguments))
         {
             await RegistryCommands.RenderAgentsAsync(state.Host.Services);
-            AnsiConsole.MarkupLine("[grey]Usage: /agents <#|id> to switch the active agent for this session.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Agents.Usage"));
             return CommandDispatchResult.Handled();
         }
 
@@ -497,7 +512,7 @@ public static class ChatCommand
 
         if (selectedAgent == null)
         {
-            AnsiConsole.MarkupLine($"[red]Agent '{arguments.EscapeMarkup()}' not found.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Agents.NotFound", arguments.EscapeMarkup()));
             return CommandDispatchResult.Handled();
         }
 
@@ -505,7 +520,7 @@ public static class ChatCommand
         state.Session = await state.Runtime.StartSessionAsync(new StartSessionRequest(state.AgentId, state.CurrentThreadSpace.ThreadSpaceId));
         state.SessionId = state.Session.Record.SessionId;
 
-        AnsiConsole.MarkupLine($"[green]Switched to agent:[/] [blue]{state.AgentId.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Agents.Switched", state.AgentId.EscapeMarkup()));
         return CommandDispatchResult.Handled();
     }
 
@@ -517,15 +532,15 @@ public static class ChatCommand
 
         if (skills.Length == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]No registered skills were found.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Skills.None"));
             return Task.FromResult(CommandDispatchResult.Handled());
         }
 
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("[yellow]ID[/]");
-        table.AddColumn("[yellow]Name[/]");
-        table.AddColumn("[yellow]Source[/]");
-        table.AddColumn("[yellow]Version[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Skills.Column.ID")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Skills.Column.Name")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Skills.Column.Source")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Skills.Column.Version")}[/]");
 
         foreach (var skill in skills)
         {
@@ -552,14 +567,14 @@ public static class ChatCommand
             {
                 var allConfigs = await configManager.GetAllAsync();
                 var table = new Table().Border(TableBorder.Rounded);
-                table.AddColumn("[yellow]Key[/]");
-                table.AddColumn("[yellow]Value[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Config.Column.Key")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Config.Column.Value")}[/]");
 
                 foreach (var key in allConfigs.Keys.OrderBy(k => k))
                 {
                     if (string.IsNullOrWhiteSpace(key)) continue;
                     var displayValue = configManager.IsSecret(key) ? "********" : allConfigs[key];
-                    table.AddRow(key.EscapeMarkup(), displayValue?.EscapeMarkup() ?? "[grey]<null>[/]");
+                    table.AddRow(key.EscapeMarkup(), displayValue?.EscapeMarkup() ?? $"[grey]{I18n.T("Common.Null")}[/]");
                 }
 
                 AnsiConsole.Write(table);
@@ -570,7 +585,7 @@ public static class ChatCommand
                 var key = argParts[1];
                 var value = configManager.Get(key);
                 if (value == null)
-                    AnsiConsole.MarkupLine($"[yellow]Key not found: {key.EscapeMarkup()}[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Config.KeyNotFound", key.EscapeMarkup()));
                 else
                     AnsiConsole.WriteLine(configManager.IsSecret(key) ? "********" : value);
                 break;
@@ -580,11 +595,11 @@ public static class ChatCommand
                 var key = argParts[1];
                 var value = argParts[2];
                 await configManager.SetAsync(key, value);
-                AnsiConsole.MarkupLine($"[green]Set {key.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Config.SetSuccess", key.EscapeMarkup()));
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /config [[list | get <key> | set <key> <value>]][/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Config.Usage"));
                 break;
         }
 
@@ -641,26 +656,28 @@ public static class ChatCommand
             case "list" or "":
             {
                 var table = new Table().Border(TableBorder.Rounded);
-                table.AddColumn("[yellow]#[/]");
-                table.AddColumn("[yellow]Name[/]");
-                table.AddColumn("[yellow]Path[/]");
-                table.AddColumn("[yellow]Created[/]");
-                table.AddColumn("[yellow]Status[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Spaces.Column.Index")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Spaces.Column.Name")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Spaces.Column.Path")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Spaces.Column.Created")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Spaces.Column.Status")}[/]");
 
                 for (int i = 0; i < orderedSpaces.Length; i++)
                 {
                     var sp = orderedSpaces[i];
-                    var status = sp.ArchivedAt.HasValue ? "[grey]Archived[/]" : "[green]Active[/]";
+                    var status = sp.ArchivedAt.HasValue
+                        ? $"[grey]{I18n.T("Common.Archived")}[/]"
+                        : $"[green]{I18n.T("Common.Active")}[/]";
                     table.AddRow(
                         (i + 1).ToString(),
                         sp.Name.EscapeMarkup(),
-                        (sp.BoundFolderPath ?? "[global]").EscapeMarkup(),
+                        (sp.BoundFolderPath ?? I18n.T("Chat.Spaces.GlobalPath")).EscapeMarkup(),
                         sp.CreatedAt.ToString("g"),
                         status);
                 }
 
                 AnsiConsole.Write(table);
-                AnsiConsole.MarkupLine("[grey]Usage: /spaces show <#|name> | /spaces remove <#|name> | /spaces add <name> <path>[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.Usage.List"));
                 break;
             }
             case "add" when argParts.Length >= 3:
@@ -668,7 +685,7 @@ public static class ChatCommand
                 var name = argParts[1];
                 var path = Path.GetFullPath(argParts[2]);
                 var created = await spaceManager.CreateAsync(new CreateThreadSpaceRequest(name, path));
-                AnsiConsole.MarkupLine($"[green]Created space '{created.Name.EscapeMarkup()}' at {path.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.Created", created.Name.EscapeMarkup(), path.EscapeMarkup()));
                 break;
             }
             case "show" when argParts.Length >= 2:
@@ -688,28 +705,28 @@ public static class ChatCommand
 
                 if (space == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]Space '{identifier.EscapeMarkup()}' not found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.NotFound", identifier.EscapeMarkup()));
                     break;
                 }
 
                 var grid = new Grid().AddColumn().AddColumn();
                 grid.AddRow("[yellow]ID:[/]", space.ThreadSpaceId.Value);
-                grid.AddRow("[yellow]Name:[/]", space.Name.EscapeMarkup());
-                grid.AddRow("[yellow]Path:[/]", (space.BoundFolderPath ?? "[global]").EscapeMarkup());
-                grid.AddRow("[yellow]Created:[/]", space.CreatedAt.ToString("F"));
-                grid.AddRow("[yellow]Is Global:[/]", space.IsGlobal.ToString());
+                grid.AddRow(I18n.T("Space.Show.Row.Name"), space.Name.EscapeMarkup());
+                grid.AddRow(I18n.T("Space.Show.Row.Path"), (space.BoundFolderPath ?? I18n.T("Chat.Spaces.GlobalPath")).EscapeMarkup());
+                grid.AddRow(I18n.T("Space.Show.Row.Created"), space.CreatedAt.ToString("F"));
+                grid.AddRow(I18n.T("Space.Show.Row.IsGlobal"), space.IsGlobal.ToString());
                 if (space.ArchivedAt.HasValue)
-                    grid.AddRow("[red]Archived:[/]", space.ArchivedAt.Value.ToString("F"));
-                AnsiConsole.Write(new Panel(grid) { Header = new PanelHeader("ThreadSpace Details") });
+                    grid.AddRow(I18n.T("Space.Show.Row.Archived"), space.ArchivedAt.Value.ToString("F"));
+                AnsiConsole.Write(new Panel(grid) { Header = new PanelHeader(I18n.T("Chat.Spaces.Panel.Header")) });
 
                 var sessions = await spaceManager.ListSessionsAsync(space.ThreadSpaceId);
                 if (sessions.Count > 0)
                 {
-                    var sessionTable = new Table().Title("Sessions").Border(TableBorder.Rounded);
-                    sessionTable.AddColumn("Session ID");
-                    sessionTable.AddColumn("Agent");
-                    sessionTable.AddColumn("Status");
-                    sessionTable.AddColumn("Started At");
+                    var sessionTable = new Table().Title(I18n.T("Chat.Spaces.SessionTable.Title")).Border(TableBorder.Rounded);
+                    sessionTable.AddColumn(I18n.T("Chat.Sessions.Column.SessionId"));
+                    sessionTable.AddColumn(I18n.T("Chat.Sessions.Column.Agent"));
+                    sessionTable.AddColumn(I18n.T("Common.Status"));
+                    sessionTable.AddColumn(I18n.T("List.Column.StartedAt"));
                     foreach (var s in sessions)
                     {
                         sessionTable.AddRow(
@@ -720,7 +737,7 @@ public static class ChatCommand
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine("[grey]No sessions in this space.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.NoSessions"));
                 }
                 break;
             }
@@ -741,16 +758,16 @@ public static class ChatCommand
 
                 if (spaceId == null)
                 {
-                    AnsiConsole.MarkupLine($"[red]Space '{identifier.EscapeMarkup()}' not found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.NotFound", identifier.EscapeMarkup()));
                     break;
                 }
 
                 await spaceManager.ArchiveAsync(spaceId.Value);
-                AnsiConsole.MarkupLine($"[green]Space '{identifier.EscapeMarkup()}' archived.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.Archived", identifier.EscapeMarkup()));
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /spaces [[list | add <name> <path> | show <#|id> | remove <#|id>]][/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Spaces.Usage"));
                 break;
         }
 
@@ -762,7 +779,7 @@ public static class ChatCommand
         var options = state.Host.Services.GetRequiredService<ClawOptions>();
         if (!options.Hub.Enabled || string.IsNullOrWhiteSpace(options.Hub.BaseUrl))
         {
-            AnsiConsole.MarkupLine("[yellow]ClawHub is not enabled. Set Hub:Enabled=true and Hub:BaseUrl to use hub commands.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Hub.NotEnabled"));
             return CommandDispatchResult.Handled();
         }
 
@@ -779,15 +796,15 @@ public static class ChatCommand
 
                 if (results.Count == 0)
                 {
-                    AnsiConsole.MarkupLine("[yellow]No skills found.[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Hub.NoSkills"));
                     break;
                 }
 
                 var table = new Table().Border(TableBorder.Rounded).Expand();
-                table.AddColumn("[yellow]ID[/]");
-                table.AddColumn("[yellow]Name[/]");
-                table.AddColumn("[yellow]Version[/]");
-                table.AddColumn("[yellow]Description[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Hub.Column.ID")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Hub.Column.Name")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Hub.Column.Version")}[/]");
+                table.AddColumn($"[yellow]{I18n.T("Chat.Hub.Column.Description")}[/]");
 
                 foreach (var skill in results)
                 {
@@ -805,16 +822,23 @@ public static class ChatCommand
             {
                 var skillId = argParts[1];
                 var skill = await hubClient.GetSkillAsync(skillId);
-                var content =
-                    $"[bold]{skill.Name.EscapeMarkup()}[/] ([blue]{skill.Id.EscapeMarkup()}[/]){Environment.NewLine}" +
-                    $"Latest: [green]{skill.LatestVersion.EscapeMarkup()}[/]{Environment.NewLine}" +
-                    $"Downloads: {skill.Downloads}{Environment.NewLine}" +
-                    $"{skill.Description.EscapeMarkup()}";
-                AnsiConsole.Write(new Panel(new Markup(content)) { Header = new PanelHeader("ClawHub Skill"), Border = BoxBorder.Rounded });
+                var content = I18n.T(
+                    "Chat.Hub.Summary",
+                    skill.Name.EscapeMarkup(),
+                    skill.Id.EscapeMarkup(),
+                    Environment.NewLine,
+                    skill.LatestVersion.EscapeMarkup(),
+                    skill.Downloads.ToString(),
+                    skill.Description.EscapeMarkup());
+                AnsiConsole.Write(new Panel(new Markup(content))
+                {
+                    Header = new PanelHeader(I18n.T("Chat.Hub.Panel.Header")),
+                    Border = BoxBorder.Rounded
+                });
                 if (!string.IsNullOrWhiteSpace(skill.Readme))
                 {
                     AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine("[bold]README[/]");
+                    AnsiConsole.MarkupLine($"[bold]{I18n.T("Common.Readme")}[/]");
                     AnsiConsole.WriteLine(skill.Readme);
                 }
                 break;
@@ -828,12 +852,12 @@ public static class ChatCommand
                 var resolvedVersion = string.IsNullOrWhiteSpace(version) ? detail.LatestVersion : version;
                 var package = await hubClient.DownloadSkillPackageAsync(skillId, resolvedVersion!);
                 var installed = await installer.InstallAsync(package, InstallTarget.UserHome, false);
-                AnsiConsole.MarkupLine($"[green]Installed[/] [blue]{installed.SkillId.EscapeMarkup()}[/] [grey]v{installed.Version.EscapeMarkup()}[/]");
-                AnsiConsole.MarkupLine($"Path: [grey]{installed.InstallPath.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Hub.Installed", installed.SkillId.EscapeMarkup(), installed.Version.EscapeMarkup()));
+                AnsiConsole.MarkupLine(I18n.T("Chat.Hub.Path", installed.InstallPath.EscapeMarkup()));
                 break;
             }
             default:
-                AnsiConsole.MarkupLine("[grey]Usage: /hub [[search [[query]] | show <skill-id> | install <skill-id> [[version]]]][/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Hub.Usage"));
                 break;
         }
 
@@ -850,14 +874,14 @@ public static class ChatCommand
         {
             if (string.IsNullOrWhiteSpace(arguments))
             {
-                AnsiConsole.MarkupLine("[red]Error: /cd requires a path argument. Use /home to switch to global space.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.ThreadSpaceSwitch.MissingPath"));
                 return CommandDispatchResult.Handled();
             }
 
             var path = Path.GetFullPath(arguments);
             if (!Directory.Exists(path))
             {
-                AnsiConsole.MarkupLine($"[red]Directory not found: {path.EscapeMarkup()}[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.ThreadSpaceSwitch.DirectoryMissing", path.EscapeMarkup()));
                 return CommandDispatchResult.Handled();
             }
 
@@ -869,7 +893,7 @@ public static class ChatCommand
         state.SessionId = state.Session.Record.SessionId;
         state.PromptHandler.CurrentDirectory = state.CurrentThreadSpace.BoundFolderPath;
 
-        AnsiConsole.MarkupLine($"[bold blue]Switched to space:[/] [green]{state.CurrentThreadSpace.Name.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.ThreadSpaceSwitch.Success", state.CurrentThreadSpace.Name.EscapeMarkup()));
         return CommandDispatchResult.Handled();
     }
 
@@ -880,7 +904,7 @@ public static class ChatCommand
 
         if (File.Exists(agentFile))
         {
-            AnsiConsole.MarkupLine($"[yellow]File already exists: {agentFile.EscapeMarkup()}[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.Init.FileExists", agentFile.EscapeMarkup()));
             return CommandDispatchResult.Handled();
         }
 
@@ -890,7 +914,7 @@ public static class ChatCommand
             : "---\nid: my-agent\nname: My Agent\n---\n\nHello, I am your new agent.";
 
         await File.WriteAllTextAsync(agentFile, template);
-        AnsiConsole.MarkupLine($"[green]Created agent definition:[/] [blue]{agentFile.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Init.Created", agentFile.EscapeMarkup()));
         await state.Runtime.InitializeAsync();
         return CommandDispatchResult.Handled();
     }
@@ -910,7 +934,7 @@ public static class ChatCommand
     private static async Task<CommandDispatchResult> HandleReloadAsync(ReplState state)
     {
         await state.Runtime.ReloadAsync();
-        AnsiConsole.MarkupLine("[green]Runtime definitions and MCP pools reloaded.[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Reload.Success"));
         return CommandDispatchResult.Handled();
     }
 
@@ -923,7 +947,7 @@ public static class ChatCommand
 
     private static async Task<CommandDispatchResult> HandlePasteAsync()
     {
-        AnsiConsole.MarkupLine("[grey]Paste mode: enter content, then submit with a single '.' line.[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.Paste.Mode"));
         var pastedContent = await MultilineInputCollector.CapturePasteAsync(ReadPasteLineAsync, "[bold magenta]Paste[/] > ");
         return string.IsNullOrWhiteSpace(pastedContent)
             ? CommandDispatchResult.Handled()
@@ -944,13 +968,13 @@ public static class ChatCommand
             }
 
             using var process = Process.Start(CreateEditorStartInfo(editor, tempFile))
-                ?? throw new InvalidOperationException($"Failed to start editor '{editor}'.");
+                ?? throw new InvalidOperationException(I18n.T("Chat.Edit.StartFailed", editor));
             await process.WaitForExitAsync();
 
             var editedContent = await File.ReadAllTextAsync(tempFile);
             if (string.IsNullOrWhiteSpace(editedContent))
             {
-                AnsiConsole.MarkupLine("[yellow]Editor closed without any content to send.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Chat.Edit.NoContent"));
                 return CommandDispatchResult.Handled();
             }
 
@@ -996,7 +1020,7 @@ public static class ChatCommand
 
     private static CommandDispatchResult HandleUnknownCommand(string command)
     {
-        AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}. Type /help to see available commands.[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.UnknownCommand", command.EscapeMarkup()));
         return CommandDispatchResult.Handled();
     }
 
@@ -1018,11 +1042,11 @@ public static class ChatCommand
 
         if (recentMessages.Length == 0)
         {
-            AnsiConsole.MarkupLine("[grey]No messages found in this session yet.[/]");
+            AnsiConsole.MarkupLine(I18n.T("Chat.History.None"));
             return;
         }
 
-        AnsiConsole.MarkupLine("[grey]Last few messages:[/]");
+        AnsiConsole.MarkupLine(I18n.T("Chat.History.Recent"));
         foreach (var message in recentMessages)
         {
             var roleColor = message.Role switch
@@ -1085,7 +1109,7 @@ public static class ChatCommand
 
         if (!hasTextOutput)
         {
-            AnsiConsole.Write(new StreamingAssistantRenderable(new Markdown("(No text response from agent)")));
+            AnsiConsole.Write(new StreamingAssistantRenderable(new Markdown(I18n.T("Chat.NoTextResponse"))));
         }
 
         if (performance is not null)
@@ -1096,7 +1120,7 @@ public static class ChatCommand
                 : performance.McpHandshakeAvoided
                     ? $"[green]{performance.ReusedMcpConnections}/{performance.TotalMcpConnections} reused[/]"
                     : "[yellow]cold[/]";
-            AnsiConsole.MarkupLine($"[grey]Turn summary:[/] plan cache {cacheStatus}, MCP {mcpStatus}");
+            AnsiConsole.MarkupLine(I18n.T("Chat.TurnSummary", cacheStatus, mcpStatus));
         }
 
         AnsiConsole.WriteLine();
@@ -1106,9 +1130,9 @@ public static class ChatCommand
     private static void ShowWelcomeHeader(string agentId, string threadSpaceName)
     {
         var grid = new Grid().AddColumn();
-        grid.AddRow(new Text("ClawSharp v1.0.0", new Style(Color.Blue, decoration: Decoration.Bold)));
-        grid.AddRow(new Markup($"[grey]Agent:[/] [green]{agentId.EscapeMarkup()}[/]   [grey]ThreadSpace:[/] [blue]{threadSpaceName.EscapeMarkup()}[/]"));
-        grid.AddRow(new Text("Type /help for commands", new Style(Color.Grey)));
+        grid.AddRow(new Text(I18n.T("Chat.WelcomeHeader"), new Style(Color.Blue, decoration: Decoration.Bold)));
+        grid.AddRow(new Markup($"[grey]{I18n.T("Chat.AgentLabel")}[/] [green]{agentId.EscapeMarkup()}[/]   [grey]{I18n.T("Chat.SpaceLabel")}[/] [blue]{threadSpaceName.EscapeMarkup()}[/]"));
+        grid.AddRow(new Text(I18n.T("Chat.TypeHelp"), new Style(Color.Grey)));
 
         var panel = new Panel(grid)
         {
@@ -1141,32 +1165,32 @@ public static class ChatCommand
     private static void ShowHelp()
     {
         var table = new Table().Border(TableBorder.Rounded);
-        table.AddColumn("[yellow]Command[/]");
-        table.AddColumn("[yellow]Description[/]");
-        table.AddRow("/help".EscapeMarkup(), "Show this help message".EscapeMarkup());
-        table.AddRow("/lang [bcp47|reset]".EscapeMarkup(), "Show or override this session's output language".EscapeMarkup());
-        table.AddRow("/new".EscapeMarkup(), "Start a new session in current space".EscapeMarkup());
-        table.AddRow("/resume".EscapeMarkup(), "Resume last session in current space".EscapeMarkup());
-        table.AddRow("/sessions".EscapeMarkup(), "List sessions in the current space".EscapeMarkup());
-        table.AddRow("/sessions <index>".EscapeMarkup(), "Switch to a session and replay recent history".EscapeMarkup());
-        table.AddRow("/agents".EscapeMarkup(), "List registered agents with provider details".EscapeMarkup());
-        table.AddRow("/skills".EscapeMarkup(), "List registered skills".EscapeMarkup());
-        table.AddRow("/tools".EscapeMarkup(), "List currently authorized tools".EscapeMarkup());
-        table.AddRow("/config [list|get|set]".EscapeMarkup(), "Manage configuration (e.g. /config get Providers:DefaultProvider)".EscapeMarkup());
-        table.AddRow("/history [session-id]".EscapeMarkup(), "View message history (defaults to current session)".EscapeMarkup());
-        table.AddRow("/stats [period]".EscapeMarkup(), "Show usage analytics (24h, 7d, 30d, all)".EscapeMarkup());
-        table.AddRow("/spaces [list|add|show|remove]".EscapeMarkup(), "Manage ThreadSpaces (e.g. /spaces add myspace /path)".EscapeMarkup());
-        table.AddRow("/hub [search|show|install]".EscapeMarkup(), "Browse and install skills from ClawHub".EscapeMarkup());
-        table.AddRow("/paste".EscapeMarkup(), "Enter multiline paste mode and submit with '.'".EscapeMarkup());
-        table.AddRow("/edit".EscapeMarkup(), "Compose a prompt in your external editor".EscapeMarkup());
-        table.AddRow("/cd <path>".EscapeMarkup(), "Switch to a directory-bound space".EscapeMarkup());
-        table.AddRow("/home".EscapeMarkup(), "Switch back to global space".EscapeMarkup());
-        table.AddRow("/clear".EscapeMarkup(), "Clear terminal screen".EscapeMarkup());
-        table.AddRow("/init".EscapeMarkup(), "Initialize an agent definition (agent.md) in current space".EscapeMarkup());
-        table.AddRow("/init-proj".EscapeMarkup(), "Scaffold a new project from templates".EscapeMarkup());
-        table.AddRow("/reload".EscapeMarkup(), "Reload agent/skill definitions and reset MCP pools".EscapeMarkup());
-        table.AddRow("/speckit".EscapeMarkup(), "Run SpecKit feature workflows".EscapeMarkup());
-        table.AddRow("/quit, /exit".EscapeMarkup(), "Exit the REPL".EscapeMarkup());
+        table.AddColumn($"[yellow]{I18n.T("Chat.Help.Title")}[/]");
+        table.AddColumn($"[yellow]{I18n.T("Chat.Help.Description")}[/]");
+        table.AddRow("/help".EscapeMarkup(), I18n.T("Chat.Help.ShowHelp").EscapeMarkup());
+        table.AddRow("/lang [bcp47|reset]".EscapeMarkup(), I18n.T("Chat.Help.Language").EscapeMarkup());
+        table.AddRow("/new".EscapeMarkup(), I18n.T("Chat.Help.New").EscapeMarkup());
+        table.AddRow("/resume".EscapeMarkup(), I18n.T("Chat.Help.Resume").EscapeMarkup());
+        table.AddRow("/sessions".EscapeMarkup(), I18n.T("Chat.Help.Sessions").EscapeMarkup());
+        table.AddRow("/sessions <index>".EscapeMarkup(), I18n.T("Chat.Help.SessionSwitch").EscapeMarkup());
+        table.AddRow("/agents".EscapeMarkup(), I18n.T("Chat.Help.Agents").EscapeMarkup());
+        table.AddRow("/skills".EscapeMarkup(), I18n.T("Chat.Help.Skills").EscapeMarkup());
+        table.AddRow("/tools".EscapeMarkup(), I18n.T("Chat.Help.Tools").EscapeMarkup());
+        table.AddRow("/config [list|get|set]".EscapeMarkup(), I18n.T("Chat.Help.Config").EscapeMarkup());
+        table.AddRow("/history [session-id]".EscapeMarkup(), I18n.T("Chat.Help.History").EscapeMarkup());
+        table.AddRow("/stats [period]".EscapeMarkup(), I18n.T("Chat.Help.Stats").EscapeMarkup());
+        table.AddRow("/spaces [list|add|show|remove]".EscapeMarkup(), I18n.T("Chat.Help.Spaces").EscapeMarkup());
+        table.AddRow("/hub [search|show|install]".EscapeMarkup(), I18n.T("Chat.Help.Hub").EscapeMarkup());
+        table.AddRow("/paste".EscapeMarkup(), I18n.T("Chat.Help.Paste").EscapeMarkup());
+        table.AddRow("/edit".EscapeMarkup(), I18n.T("Chat.Help.Edit").EscapeMarkup());
+        table.AddRow("/cd <path>".EscapeMarkup(), I18n.T("Chat.Help.Cd").EscapeMarkup());
+        table.AddRow("/home".EscapeMarkup(), I18n.T("Chat.Help.Home").EscapeMarkup());
+        table.AddRow("/clear".EscapeMarkup(), I18n.T("Chat.Help.Clear").EscapeMarkup());
+        table.AddRow("/init".EscapeMarkup(), I18n.T("Chat.Help.Init").EscapeMarkup());
+        table.AddRow("/init-proj".EscapeMarkup(), I18n.T("Chat.Help.InitProj").EscapeMarkup());
+        table.AddRow("/reload".EscapeMarkup(), I18n.T("Chat.Help.Reload").EscapeMarkup());
+        table.AddRow("/speckit".EscapeMarkup(), I18n.T("Chat.Help.SpecKit").EscapeMarkup());
+        table.AddRow("/quit, /exit".EscapeMarkup(), I18n.T("Chat.Help.Exit").EscapeMarkup());
         AnsiConsole.Write(table);
     }
 
@@ -1229,7 +1253,7 @@ public static class ChatCommand
         {
             var rows = new List<IRenderable>
             {
-                new Markup("[bold yellow]Agent >[/]")
+                new Markup(I18n.T("Chat.AgentPromptHeader"))
             };
 
             if (!string.IsNullOrWhiteSpace(markdown.Content))
@@ -1291,12 +1315,12 @@ public static class ChatCommand
                     }
                     catch (Exception ex)
                     {
-                        AnsiConsole.MarkupLine($"[yellow]Warning: Could not read file {relativePath}: {ex.Message}[/]");
+                        AnsiConsole.MarkupLine(I18n.T("Chat.Input.WarningReadFile", relativePath.EscapeMarkup(), ex.Message.EscapeMarkup()));
                     }
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine($"[yellow]Warning: File not found: {relativePath}[/]");
+                    AnsiConsole.MarkupLine(I18n.T("Chat.Input.WarningFileMissing", relativePath.EscapeMarkup()));
                 }
             }
 

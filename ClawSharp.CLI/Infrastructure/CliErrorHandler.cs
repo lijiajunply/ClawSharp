@@ -9,28 +9,28 @@ public static class CliErrorHandler
     {
         if (ex is ValidationException validationEx)
         {
-            AnsiConsole.MarkupLine($"[red]Validation Error:[/] {validationEx.Message.EscapeMarkup()}");
+            AnsiConsole.MarkupLine(I18n.T("Errors.Validation", validationEx.Message.EscapeMarkup()));
         }
         else if (ex is EnvironmentDependencyException envEx)
         {
-            AnsiConsole.MarkupLine($"[bold red]Environment Error:[/] {envEx.Message.EscapeMarkup()}");
+            AnsiConsole.MarkupLine(I18n.T("Errors.Environment", envEx.Message.EscapeMarkup()));
             if (!string.IsNullOrEmpty(envEx.FixCommand))
             {
                 AnsiConsole.WriteLine();
                 var panel = new Panel(new Text(envEx.FixCommand, new Style(Color.Green)))
                 {
-                    Header = new PanelHeader("Recommended Fix"),
+                    Header = new PanelHeader(I18n.T("Errors.RecommendedFix")),
                     Border = BoxBorder.Rounded,
                     Padding = new Padding(1, 0, 1, 0)
                 };
                 AnsiConsole.Write(panel);
-                AnsiConsole.MarkupLine("[grey]Please run the command above to install missing dependencies.[/]");
+                AnsiConsole.MarkupLine(I18n.T("Errors.RunFix"));
             }
         }
         else
         {
-            AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message.EscapeMarkup()}");
-            if (AnsiConsole.Confirm("Show stack trace?"))
+            AnsiConsole.MarkupLine(I18n.T("Errors.Generic", ex.Message.EscapeMarkup()));
+            if (AnsiConsole.Confirm(I18n.T("Errors.ShowStackTrace")))
             {
                 AnsiConsole.WriteException(ex);
             }
