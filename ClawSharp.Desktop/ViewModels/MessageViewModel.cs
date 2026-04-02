@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using LiveMarkdown.Avalonia;
 using ReactiveUI;
 
 namespace ClawSharp.Desktop.ViewModels;
@@ -9,8 +11,16 @@ public class MessageViewModel : ViewModelBase
     public string Content
     {
         get => _content;
-        set => this.RaiseAndSetIfChanged(ref _content, value);
+        set 
+        {
+            if (EqualityComparer<string>.Default.Equals(_content, value)) return;
+            this.RaiseAndSetIfChanged(ref _content, value);
+            MarkdownBuilder.Clear();
+            MarkdownBuilder.Append(value);
+        }
     }
+
+    public ObservableStringBuilder MarkdownBuilder { get; } = new();
 
     private string _sender = string.Empty;
     public string Sender
@@ -35,7 +45,8 @@ public class MessageViewModel : ViewModelBase
 
     public MessageViewModel(string content, string sender, bool isAi)
     {
-        Content = content;
+        _content = content;
+        MarkdownBuilder.Append(content);
         Sender = sender;
         IsAi = isAi;
         Timestamp = DateTime.Now;

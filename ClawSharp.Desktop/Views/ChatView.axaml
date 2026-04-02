@@ -6,7 +6,7 @@
              xmlns:v="clr-namespace:ClawSharp.Desktop.Views"
              xmlns:rt="using:ClawSharp.Lib.Runtime"
              xmlns:sessions="using:ClawSharp.Lib.Runtime"
-             xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+             xmlns:md="clr-namespace:LiveMarkdown.Avalonia;assembly=LiveMarkdown.Avalonia"
              xmlns:infra="clr-namespace:ClawSharp.Desktop.Infrastructure"
              xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
@@ -36,28 +36,37 @@
                 </suki:GlassCard>
 
                 <!-- Session History -->
-                <ListBox Grid.Row="1" 
-                         ItemsSource="{Binding RecentSessions}" 
-                         SelectedItem="{Binding SelectedSession}"
-                         Background="Transparent" BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="rt:SessionRecord">
-                            <Grid ColumnDefinitions="Auto,*" Margin="5">
-                                <suki:GlassCard Grid.Column="0" Width="32" Height="32" CornerRadius="16" Padding="0">
-                                    <TextBlock Text="💬" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </suki:GlassCard>
-                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding AgentId}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding StartedAt, StringFormat='{}{0:MM-dd HH:mm}'}" FontSize="10" Opacity="0.5" />
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <Grid Grid.Row="1" RowDefinitions="Auto,*">
+                    <TextBlock Grid.Row="0" Text="Recent Sessions" FontSize="12" FontWeight="Bold" Opacity="0.6" Margin="15,10,15,5" />
+                    <ListBox Grid.Row="1" 
+                             ItemsSource="{Binding RecentSessions}" 
+                             SelectedItem="{Binding SelectedSession}"
+                             Background="Transparent" BorderThickness="0">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="2" />
+                                <Setter Property="CornerRadius" Value="8" />
+                            </Style>
+                        </ListBox.Styles>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="rt:SessionRecord">
+                                <Grid ColumnDefinitions="Auto,*" Margin="8,5">
+                                    <TextBlock Grid.Column="0" Text="💬" VerticalAlignment="Center" FontSize="16" />
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AgentId}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding StartedAt, StringFormat='{}{0:MM-dd HH:mm}'}" FontSize="10" Opacity="0.5" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
 
                 <!-- Bottom Controls: New Chat & Agent Selection -->
                 <suki:GlassCard Grid.Row="2" Margin="10" Padding="10">
                     <StackPanel Spacing="10">
+                        <TextBlock Text="Agent" FontSize="12" FontWeight="Bold" Opacity="0.6" Margin="2,0" />
                         <ComboBox ItemsSource="{Binding Agents}" 
                                   SelectedItem="{Binding CurrentAgent}"
                                   HorizontalAlignment="Stretch">
@@ -83,14 +92,19 @@
                 <ItemsControl ItemsSource="{Binding Messages}" Margin="20,10">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:MessageViewModel">
-                            <suki:GlassCard Margin="0,10" Padding="15" 
-                                           HorizontalAlignment="{Binding IsAi, Converter={StaticResource AiAlignmentConverter}}"
-                                           MaxWidth="900">
-                                <StackPanel Spacing="5">
-                                    <TextBlock Text="{Binding Sender}" FontWeight="Bold" FontSize="12" Opacity="0.7" />
-                                    <md:MarkdownScrollViewer Markdown="{Binding Content}" />
-                                </StackPanel>
-                            </suki:GlassCard>
+                            <Grid HorizontalAlignment="{Binding IsAi, Converter={StaticResource AiAlignmentConverter}}">
+                                <suki:GlassCard Margin="0,10" Padding="15" 
+                                               MaxWidth="900" 
+                                               CornerRadius="12">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="{Binding Sender}" 
+                                                   FontSize="11" 
+                                                   FontWeight="Bold" 
+                                                   Opacity="0.5" 
+                                                   HorizontalAlignment="{Binding IsAi, Converter={StaticResource AiAlignmentConverter}}" />
+                                                   <md:MarkdownRenderer MarkdownBuilder="{Binding MarkdownBuilder}" />
+                                                   </StackPanel>                                </suki:GlassCard>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

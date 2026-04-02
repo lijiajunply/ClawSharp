@@ -8,9 +8,14 @@
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
-        <conv:AiBackgroundConverter x:Key="AiBackgroundConverter" />
-        <conv:AiAlignmentConverter x:Key="AiAlignmentConverter" />
-        <conv:SecretConverter x:Key="SecretConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://LiveMarkdown.Avalonia/Defaults.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <conv:AiBackgroundConverter x:Key="AiBackgroundConverter" />
+            <conv:AiAlignmentConverter x:Key="AiAlignmentConverter" />
+            <conv:SecretConverter x:Key="SecretConverter" />
+        </ResourceDictionary>
     </Application.Resources>
 
     <Application.DataTemplates>
@@ -20,5 +25,6 @@
     <Application.Styles>
         <sukiUi:SukiTheme ThemeColor="Blue"  />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude Source="avares://LiveMarkdown.Avalonia/Styles.axaml"/>
     </Application.Styles>
 </Application>

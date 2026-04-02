@@ -19,26 +19,37 @@
                          ItemsSource="{Binding MenuItems}" 
                          SelectedItem="{Binding SelectedMenuItem}">
         <sukiUi:SukiSideMenu.HeaderContent>
-            <TextBlock Text="CS" 
-                       HorizontalAlignment="Center" 
-                       FontSize="24" FontWeight="Bold" 
-                       Margin="10,20" />
+            <Border Height="40" Margin="0,20">
+                <TextBlock Text="CS" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           FontSize="18" FontWeight="ExtraBold" />
+            </Border>
         </sukiUi:SukiSideMenu.HeaderContent>
         
         <sukiUi:SukiSideMenu.ItemTemplate>
             <DataTemplate x:DataType="vm:MenuItemViewModel">
-                <StackPanel Orientation="Horizontal" Spacing="15">
-                    <TextBlock Text="{Binding Icon}" FontSize="18" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
-                </StackPanel>
+                <Grid ColumnDefinitions="40,*" HorizontalAlignment="Left">
+                    <TextBlock Grid.Column="0" Text="{Binding Icon}" 
+                               FontSize="20" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Header}" 
+                               VerticalAlignment="Center" 
+                               Margin="10,0,0,0" />
+                </Grid>
             </DataTemplate>
         </sukiUi:SukiSideMenu.ItemTemplate>
 
         <sukiUi:SukiSideMenu.FooterContent>
-            <Button Command="{Binding ToggleThemeCommand}" 
-                    Content="🌓" 
-                    ToolTip.Tip="Toggle Theme"
-                    Margin="10" />
+            <StackPanel HorizontalAlignment="Center" Margin="0,10">
+                <Button Command="{Binding ToggleThemeCommand}" 
+                        Classes="Basic"
+                        Padding="8"
+                        ToolTip.Tip="Toggle Theme">
+                    <TextBlock Text="🌓" FontSize="18" />
+                </Button>
+            </StackPanel>
         </sukiUi:SukiSideMenu.FooterContent>
 
         <!-- Main Content Area -->
