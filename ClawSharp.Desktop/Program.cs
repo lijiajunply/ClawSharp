@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.ReactiveUI;
 using System;
+using Microsoft.Extensions.Hosting;
 
 namespace ClawSharp.Desktop;
 
@@ -12,9 +13,22 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        Infrastructure.ServiceConfigurator.Configure();
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        Infrastructure.I18n.InitializeForBootstrap();
+        
+        var host = Infrastructure.ServiceConfigurator.BuildHost(args);
+        Infrastructure.I18n.Initialize(host);
+        
+        try
+        {
+            host.Start();
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        finally
+        {
+            host.StopAsync().GetAwaiter().GetResult();
+            host.Dispose();
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

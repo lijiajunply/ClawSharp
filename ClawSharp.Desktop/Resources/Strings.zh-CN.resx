@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common.None" xml:space="preserve"><value>&lt;无&gt;</value></data>
+  <data name="Common.NotSet" xml:space="preserve"><value>&lt;未设置&gt;</value></data>
+  <data name="Common.Null" xml:space="preserve"><value>&lt;null&gt;</value></data>
+  <data name="Common.NotApplicable" xml:space="preserve"><value>不适用</value></data>
+  <data name="Common.UnknownError" xml:space="preserve"><value>未知错误</value></data>
+  <data name="Common.Readme" xml:space="preserve"><value>README</value></data>
+  <data name="Common.Command" xml:space="preserve"><value>命令</value></data>
+  <data name="Common.Description" xml:space="preserve"><value>说明</value></data>
+  <data name="Common.Path" xml:space="preserve"><value>路径</value></data>
+  <data name="Common.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Common.Status" xml:space="preserve"><value>状态</value></data>
+  <data name="Common.Created" xml:space="preserve"><value>创建时间</value></data>
+  <data name="Common.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Common.Version" xml:space="preserve"><value>版本</value></data>
+  <data name="Common.Item" xml:space="preserve"><value>项目</value></data>
+  <data name="Common.Value" xml:space="preserve"><value>值</value></data>
+  <data name="Common.Author" xml:space="preserve"><value>作者</value></data>
+  <data name="Common.Downloads" xml:space="preserve"><value>下载量</value></data>
+  <data name="Common.Latest" xml:space="preserve"><value>最新</value></data>
+  <data name="Common.Versions" xml:space="preserve"><value>版本列表</value></data>
+  <data name="Common.Tags" xml:space="preserve"><value>标签</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>是</value></data>
+  <data name="Common.No" xml:space="preserve"><value>否</value></data>
+  <data name="Common.Required" xml:space="preserve"><value>必填</value></data>
+  <data name="Common.Optional" xml:space="preserve"><value>可选</value></data>
+  <data name="Common.Active" xml:space="preserve"><value>启用</value></data>
+  <data name="Common.Archived" xml:space="preserve"><value>已归档</value></data>
+  <data name="Common.Sessions" xml:space="preserve"><value>会话</value></data>
+  <data name="Common.Panel.ThreadSpaceDetails" xml:space="preserve"><value>ThreadSpace 详情</value></data>
+  <data name="RootCommand.Description" xml:space="preserve"><value>ClawSharp CLI - 本地优先的 AI 应用内核</value></data>
+  <data name="Chat.Description" xml:space="preserve"><value>启动与智能体的新 REPL 会话</value></data>
+  <data name="Chat.AgentIdArg" xml:space="preserve"><value>要对话的智能体 ID（可选）</value></data>
+  <data name="Chat.NoAgentsFound" xml:space="preserve"><value>注册表中未发现智能体，且未配置默认智能体。</value></data>
+  <data name="Chat.WelcomeHeader" xml:space="preserve"><value>ClawSharp v1.0.0</value></data>
+  <data name="Chat.TypeHelp" xml:space="preserve"><value>输入 /help 查看命令</value></data>
+  <data name="Chat.AgentLabel" xml:space="preserve"><value>智能体:</value></data>
+  <data name="Chat.SpaceLabel" xml:space="preserve"><value>线程空间:</value></data>
+  <data name="Chat.TipResume" xml:space="preserve"><value>提示：输入 /resume 继续上一次对话。</value></data>
+  <data name="Chat.Help.Title" xml:space="preserve"><value>命令</value></data>
+  <data name="Chat.Help.Description" xml:space="preserve"><value>说明</value></data>
+  <data name="Chat.Help.ShowHelp" xml:space="preserve"><value>显示这份帮助信息</value></data>
+  <data name="Chat.Help.Language" xml:space="preserve"><value>查看或覆盖当前会话的输出语言</value></data>
+  <data name="Chat.Help.New" xml:space="preserve"><value>在当前空间中启动新会话</value></data>
+  <data name="Chat.Help.Resume" xml:space="preserve"><value>恢复当前空间中的最近会话</value></data>
+  <data name="Chat.Help.Sessions" xml:space="preserve"><value>列出当前空间中的会话</value></data>
+  <data name="Chat.Help.SessionSwitch" xml:space="preserve"><value>切换到指定会话并回放最近历史</value></data>
+  <data name="Chat.Help.Agents" xml:space="preserve"><value>列出已注册智能体及其 Provider 详情</value></data>
+  <data name="Chat.Help.Skills" xml:space="preserve"><value>列出已注册技能</value></data>
+  <data name="Chat.Help.Tools" xml:space="preserve"><value>列出当前会话已授权工具</value></data>
+  <data name="Chat.Help.Config" xml:space="preserve"><value>管理配置（例如：/config get Providers:DefaultProvider）</value></data>
+  <data name="Chat.Help.History" xml:space="preserve"><value>查看消息历史（默认当前会话）</value></data>
+  <data name="Chat.Help.Stats" xml:space="preserve"><value>显示使用分析（24h、7d、30d、all）</value></data>
+  <data name="Chat.Help.Spaces" xml:space="preserve"><value>管理 ThreadSpace（例如：/spaces add myspace /path）</value></data>
+  <data name="Chat.Help.Hub" xml:space="preserve"><value>浏览并安装 ClawHub 技能</value></data>
+  <data name="Chat.Help.Paste" xml:space="preserve"><value>进入多行粘贴模式，并用 '.' 提交</value></data>
+  <data name="Chat.Help.Edit" xml:space="preserve"><value>在外部编辑器中编写提示词</value></data>
+  <data name="Chat.Help.Cd" xml:space="preserve"><value>切换到绑定目录的空间</value></data>
+  <data name="Chat.Help.Home" xml:space="preserve"><value>切回全局空间</value></data>
+  <data name="Chat.Help.Clear" xml:space="preserve"><value>清空终端屏幕</value></data>
+  <data name="Chat.Help.Init" xml:space="preserve"><value>在当前空间初始化智能体定义（agent.md）</value></data>
+  <data name="Chat.Help.InitProj" xml:space="preserve"><value>基于模板生成新项目</value></data>
+  <data name="Chat.Help.Reload" xml:space="preserve"><value>重载智能体/技能定义并重置 MCP 连接池</value></data>
+  <data name="Chat.Help.SpecKit" xml:space="preserve"><value>运行 SpecKit 工作流</value></data>
+  <data name="Chat.Help.Exit" xml:space="preserve"><value>退出 REPL</value></data>
+  <data name="Chat.Mcp.NoServers" xml:space="preserve"><value>[yellow]当前未配置 MCP 服务。[/]</value></data>
+  <data name="Chat.Mcp.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Chat.Mcp.Column.Command" xml:space="preserve"><value>命令</value></data>
+  <data name="Chat.Mcp.Column.Capabilities" xml:space="preserve"><value>能力</value></data>
+  <data name="Chat.Mcp.Usage.Search" xml:space="preserve"><value>[yellow]用法:[/] /mcp search &lt;query&gt;</value></data>
+  <data name="Chat.Mcp.Searching" xml:space="preserve"><value>正在搜索 Smithery...</value></data>
+  <data name="Chat.Mcp.NoSearchResults" xml:space="preserve"><value>[yellow]Smithery 中未找到服务。[/]</value></data>
+  <data name="Chat.Mcp.Column.QualifiedName" xml:space="preserve"><value>限定名称</value></data>
+  <data name="Chat.Mcp.Column.Author" xml:space="preserve"><value>作者</value></data>
+  <data name="Chat.Mcp.Usage.Install" xml:space="preserve"><value>[yellow]用法:[/] /mcp install &lt;qualified-name&gt;</value></data>
+  <data name="Chat.Mcp.NoAutomatedConfig" xml:space="preserve"><value>[red]错误：该服务不提供自动化 MCP 配置。[/]</value></data>
+  <data name="Chat.Mcp.Installing" xml:space="preserve"><value>[blue]正在安装 {0}...[/]</value></data>
+  <data name="Chat.Mcp.ConfigRequired" xml:space="preserve"><value>[bold]需要配置：[/]</value></data>
+  <data name="Chat.Mcp.EnvPrompt" xml:space="preserve"><value>请输入 [yellow]{0}[/] 的值</value></data>
+  <data name="Chat.Mcp.EnvPromptWithDescription" xml:space="preserve"><value>请输入 [yellow]{0}[/] 的值（{1}）</value></data>
+  <data name="Chat.Mcp.InstallSuccess" xml:space="preserve"><value>[green]已成功安装 {0}![/]</value></data>
+  <data name="Chat.Mcp.ConfigPathMessage" xml:space="preserve"><value>服务已添加到 [grey]~/.clawsharp/mcp.json[/]。</value></data>
+  <data name="Chat.Mcp.ReloadMessage" xml:space="preserve"><value>输入 [blue]/reload[/] 应用更改。</value></data>
+  <data name="Chat.Mcp.Usage.Show" xml:space="preserve"><value>[yellow]用法:[/] /mcp show &lt;qualified-name&gt;</value></data>
+  <data name="Chat.Mcp.ServerPanel" xml:space="preserve"><value>Smithery MCP 服务</value></data>
+  <data name="Chat.Mcp.ServerSummary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}作者: {3}{2}下载量: {4}{2}{2}{5}</value></data>
+  <data name="Chat.Mcp.UnknownSubcommand" xml:space="preserve"><value>[yellow]未知的 /mcp 子命令:[/] {0}</value></data>
+  <data name="Chat.Mcp.Supported" xml:space="preserve"><value>支持：list、search、show、install</value></data>
+  <data name="Chat.Language.Column.Scope" xml:space="preserve"><value>范围</value></data>
+  <data name="Chat.Language.Column.Language" xml:space="preserve"><value>语言</value></data>
+  <data name="Chat.Language.CurrentSession" xml:space="preserve"><value>当前会话覆盖</value></data>
+  <data name="Chat.Language.GlobalDefault" xml:space="preserve"><value>全局默认</value></data>
+  <data name="Chat.Language.Effective" xml:space="preserve"><value>最终输出语言</value></data>
+  <data name="Chat.Language.ResetNoFallback" xml:space="preserve"><value>[green]已清除当前会话的语言覆盖，后续回复不再受 CLI 语言设置约束。[/]</value></data>
+  <data name="Chat.Language.ResetWithFallback" xml:space="preserve"><value>[green]已清除当前会话的语言覆盖，后续回复将默认使用 {0}。[/]</value></data>
+  <data name="Chat.Language.Updated" xml:space="preserve"><value>[green]已更新当前会话的输出语言，后续回复将默认使用 {0}。[/]</value></data>
+  <data name="Chat.NewSessionStarted" xml:space="preserve"><value>[green]已启动新会话。[/]</value></data>
+  <data name="Chat.Resume.None" xml:space="preserve"><value>[yellow]没有可恢复的历史会话。[/]</value></data>
+  <data name="Chat.Resume.Success" xml:space="preserve"><value>[green]已恢复开始于 {0} 的会话[/]</value></data>
+  <data name="Chat.Sessions.None" xml:space="preserve"><value>[yellow]当前空间中没有会话。[/]</value></data>
+  <data name="Chat.Sessions.IndexOutOfRange" xml:space="preserve"><value>[yellow]会话序号必须在 1 到 {0} 之间。[/]</value></data>
+  <data name="Chat.Sessions.Switched" xml:space="preserve"><value>[green]已切换到会话 {0}: {1}[/]</value></data>
+  <data name="Chat.Sessions.Column.Index" xml:space="preserve"><value>#</value></data>
+  <data name="Chat.Sessions.Column.SessionId" xml:space="preserve"><value>会话 ID</value></data>
+  <data name="Chat.Sessions.Column.Agent" xml:space="preserve"><value>智能体</value></data>
+  <data name="Chat.Sessions.Column.Started" xml:space="preserve"><value>开始时间</value></data>
+  <data name="Chat.Sessions.Column.LastMessage" xml:space="preserve"><value>最后消息</value></data>
+  <data name="Chat.Sessions.NoMessagesYet" xml:space="preserve"><value>（暂无消息）</value></data>
+  <data name="Chat.Tools.None" xml:space="preserve"><value>[yellow]当前会话没有可用的已授权工具。[/]</value></data>
+  <data name="Chat.Tools.Column.Tool" xml:space="preserve"><value>工具</value></data>
+  <data name="Chat.Tools.Column.Description" xml:space="preserve"><value>说明</value></data>
+  <data name="Chat.Tools.Column.PermissionStatus" xml:space="preserve"><value>权限状态</value></data>
+  <data name="Chat.Tools.NoExtraCapability" xml:space="preserve"><value>无额外能力</value></data>
+  <data name="Chat.Tools.Authorized" xml:space="preserve"><value>已授权（{0}）</value></data>
+  <data name="Chat.Tools.AuthorizedApproval" xml:space="preserve"><value>已授权（{0}，需要审批）</value></data>
+  <data name="Chat.Agents.Usage" xml:space="preserve"><value>[grey]用法: /agents &lt;#|id&gt; 切换当前会话使用的智能体。[/]</value></data>
+  <data name="Chat.Agents.NotFound" xml:space="preserve"><value>[red]未找到智能体 '{0}'。[/]</value></data>
+  <data name="Chat.Agents.Switched" xml:space="preserve"><value>[green]已切换到智能体:[/] [blue]{0}[/]</value></data>
+  <data name="Chat.Skills.None" xml:space="preserve"><value>[yellow]未找到已注册技能。[/]</value></data>
+  <data name="Chat.Skills.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Chat.Skills.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Chat.Skills.Column.Source" xml:space="preserve"><value>来源</value></data>
+  <data name="Chat.Skills.Column.Version" xml:space="preserve"><value>版本</value></data>
+  <data name="Chat.Config.Column.Key" xml:space="preserve"><value>键</value></data>
+  <data name="Chat.Config.Column.Value" xml:space="preserve"><value>值</value></data>
+  <data name="Chat.Config.KeyNotFound" xml:space="preserve"><value>[yellow]未找到键: {0}[/]</value></data>
+  <data name="Chat.Config.SetSuccess" xml:space="preserve"><value>[green]已设置 {0}[/]</value></data>
+  <data name="Chat.Config.Usage" xml:space="preserve"><value>[grey]用法: /config [[list | get &lt;key&gt; | set &lt;key&gt; &lt;value&gt;]][/]</value></data>
+  <data name="Chat.Spaces.Column.Index" xml:space="preserve"><value>#</value></data>
+  <data name="Chat.Spaces.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Chat.Spaces.Column.Path" xml:space="preserve"><value>路径</value></data>
+  <data name="Chat.Spaces.Column.Created" xml:space="preserve"><value>创建时间</value></data>
+  <data name="Chat.Spaces.Column.Status" xml:space="preserve"><value>状态</value></data>
+  <data name="Chat.Spaces.GlobalPath" xml:space="preserve"><value>[global]</value></data>
+  <data name="Chat.Spaces.Usage.List" xml:space="preserve"><value>[grey]用法: /spaces show &lt;#|name&gt; | /spaces remove &lt;#|name&gt; | /spaces add &lt;name&gt; &lt;path&gt;[/]</value></data>
+  <data name="Chat.Spaces.Created" xml:space="preserve"><value>[green]已创建空间 '{0}'，路径为 {1}[/]</value></data>
+  <data name="Chat.Spaces.NotFound" xml:space="preserve"><value>[red]未找到空间 '{0}'。[/]</value></data>
+  <data name="Chat.Spaces.NoSessions" xml:space="preserve"><value>[grey]该空间中没有会话。[/]</value></data>
+  <data name="Chat.Spaces.Archived" xml:space="preserve"><value>[green]已归档空间 '{0}'。[/]</value></data>
+  <data name="Chat.Spaces.Usage" xml:space="preserve"><value>[grey]用法: /spaces [[list | add &lt;name&gt; &lt;path&gt; | show &lt;#|id&gt; | remove &lt;#|id&gt;]][/]</value></data>
+  <data name="Chat.Spaces.Panel.Header" xml:space="preserve"><value>ThreadSpace 详情</value></data>
+  <data name="Chat.Spaces.SessionTable.Title" xml:space="preserve"><value>会话</value></data>
+  <data name="Chat.Hub.NotEnabled" xml:space="preserve"><value>[yellow]ClawHub 未启用。请设置 Hub:Enabled=true 和 Hub:BaseUrl 后再使用 hub 命令。[/]</value></data>
+  <data name="Chat.Hub.NoSkills" xml:space="preserve"><value>[yellow]未找到技能。[/]</value></data>
+  <data name="Chat.Hub.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Chat.Hub.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Chat.Hub.Column.Version" xml:space="preserve"><value>版本</value></data>
+  <data name="Chat.Hub.Column.Description" xml:space="preserve"><value>说明</value></data>
+  <data name="Chat.Hub.Panel.Header" xml:space="preserve"><value>ClawHub 技能</value></data>
+  <data name="Chat.Hub.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}最新: [green]{3}[/]{2}下载量: {4}{2}{5}</value></data>
+  <data name="Chat.Hub.Installed" xml:space="preserve"><value>[green]已安装[/] [blue]{0}[/] [grey]v{1}[/]</value></data>
+  <data name="Chat.Hub.Path" xml:space="preserve"><value>路径: [grey]{0}[/]</value></data>
+  <data name="Chat.Hub.Usage" xml:space="preserve"><value>[grey]用法: /hub [[search [[query]] | show &lt;skill-id&gt; | install &lt;skill-id&gt; [[version]]]][/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.MissingPath" xml:space="preserve"><value>[red]错误：/cd 需要路径参数。使用 /home 可切换到全局空间。[/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.DirectoryMissing" xml:space="preserve"><value>[red]目录不存在: {0}[/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.Success" xml:space="preserve"><value>[bold blue]已切换到空间:[/] [green]{0}[/]</value></data>
+  <data name="Chat.Init.FileExists" xml:space="preserve"><value>[yellow]文件已存在: {0}[/]</value></data>
+  <data name="Chat.Init.Created" xml:space="preserve"><value>[green]已创建智能体定义:[/] [blue]{0}[/]</value></data>
+  <data name="Chat.Reload.Success" xml:space="preserve"><value>[green]已重载运行时定义和 MCP 连接池。[/]</value></data>
+  <data name="Chat.Paste.Mode" xml:space="preserve"><value>[grey]粘贴模式：输入内容后，单独输入一行 '.' 提交。[/]</value></data>
+  <data name="Chat.Edit.StartFailed" xml:space="preserve"><value>启动编辑器 '{0}' 失败。</value></data>
+  <data name="Chat.Edit.NoContent" xml:space="preserve"><value>[yellow]编辑器关闭时没有可发送内容。[/]</value></data>
+  <data name="Chat.UnknownCommand" xml:space="preserve"><value>[yellow]未知命令: {0}。输入 /help 查看可用命令。[/]</value></data>
+  <data name="Chat.History.None" xml:space="preserve"><value>[grey]当前会话还没有消息。[/]</value></data>
+  <data name="Chat.History.Recent" xml:space="preserve"><value>[grey]最近几条消息：[/]</value></data>
+  <data name="Chat.NoTextResponse" xml:space="preserve"><value>（智能体没有返回文本内容）</value></data>
+  <data name="Chat.TurnSummary" xml:space="preserve"><value>[grey]本轮摘要:[/] 计划缓存 {0}，MCP {1}</value></data>
+  <data name="Chat.AgentPromptHeader" xml:space="preserve"><value>[bold yellow]Agent &gt;[/]</value></data>
+  <data name="Chat.Input.WarningReadFile" xml:space="preserve"><value>[yellow]警告：无法读取文件 {0}: {1}[/]</value></data>
+  <data name="Chat.Input.WarningFileMissing" xml:space="preserve"><value>[yellow]警告：文件不存在: {0}[/]</value></data>
+  <data name="Hub.Description" xml:space="preserve"><value>浏览并安装 ClawHub 技能</value></data>
+  <data name="Hub.Search.Description" xml:space="preserve"><value>在 ClawHub 中搜索技能</value></data>
+  <data name="Hub.Search.QueryArg" xml:space="preserve"><value>可选搜索词</value></data>
+  <data name="Hub.Search.Empty" xml:space="preserve"><value>[yellow]ClawHub 中未找到技能。[/]</value></data>
+  <data name="Hub.Search.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Hub.Search.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Hub.Search.Column.LatestVersion" xml:space="preserve"><value>最新版本</value></data>
+  <data name="Hub.Search.Column.Description" xml:space="preserve"><value>说明</value></data>
+  <data name="Hub.Show.Description" xml:space="preserve"><value>显示 ClawHub 技能详细信息</value></data>
+  <data name="Hub.Show.SkillArg" xml:space="preserve"><value>要查看的技能 ID</value></data>
+  <data name="Hub.Show.Panel" xml:space="preserve"><value>ClawHub 技能</value></data>
+  <data name="Hub.Show.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}最新: [green]{3}[/]{2}下载量: {4}{2}版本: {5}{2}标签: {6}{2}{2}{7}</value></data>
+  <data name="Hub.Install.Description" xml:space="preserve"><value>下载并安装 ClawHub 技能</value></data>
+  <data name="Hub.Install.SkillArg" xml:space="preserve"><value>要安装的技能 ID</value></data>
+  <data name="Hub.Install.VersionOption" xml:space="preserve"><value>安装指定版本</value></data>
+  <data name="Hub.Install.ForceOption" xml:space="preserve"><value>覆盖现有安装</value></data>
+  <data name="Hub.Install.Success" xml:space="preserve"><value>[green]已安装[/] [blue]{0}[/] [grey]v{1}[/]</value></data>
+  <data name="Hub.Install.Path" xml:space="preserve"><value>路径: [grey]{0}[/]</value></data>
+  <data name="Hub.Install.RegistryId" xml:space="preserve"><value>注册表 ID: [grey]user.{0}[/]</value></data>
+  <data name="Hub.Disabled" xml:space="preserve"><value>ClawHub 集成已禁用。请设置 Hub:Enabled=true 后再使用 hub 命令。</value></data>
+  <data name="Hub.BaseUrlRequired" xml:space="preserve"><value>使用 hub 命令前必须配置 Hub:BaseUrl。</value></data>
+  <data name="Mcp.Description" xml:space="preserve"><value>管理 Model Context Protocol（MCP）服务</value></data>
+  <data name="Mcp.Install.Description" xml:space="preserve"><value>从 Smithery 市场安装 MCP 服务</value></data>
+  <data name="Mcp.Install.NameArg" xml:space="preserve"><value>服务限定名称（例如：owner/name）</value></data>
+  <data name="Mcp.List.Description" xml:space="preserve"><value>列出本地已配置的 MCP 服务</value></data>
+  <data name="Mcp.Search.Description" xml:space="preserve"><value>在 Smithery 市场中搜索 MCP 服务</value></data>
+  <data name="Mcp.Search.QueryArg" xml:space="preserve"><value>搜索词</value></data>
+  <data name="Mcp.Show.Description" xml:space="preserve"><value>显示 Smithery MCP 服务详细信息</value></data>
+  <data name="Mcp.Show.NameArg" xml:space="preserve"><value>服务限定名称（例如：owner/name）</value></data>
+  <data name="Mcp.NoAutomatedConfig" xml:space="preserve"><value>[red]错误：该服务不提供自动化 MCP 配置。[/]</value></data>
+  <data name="Mcp.Installing" xml:space="preserve"><value>[blue]正在安装 {0}...[/]</value></data>
+  <data name="Mcp.ConfigRequired" xml:space="preserve"><value>[bold]需要配置：[/]</value></data>
+  <data name="Mcp.EnvPrompt" xml:space="preserve"><value>请输入 [yellow]{0}[/] 的值</value></data>
+  <data name="Mcp.EnvPromptWithDescription" xml:space="preserve"><value>请输入 [yellow]{0}[/] 的值（{1}）</value></data>
+  <data name="Mcp.Install.Success" xml:space="preserve"><value>[green]已成功安装 {0}![/]</value></data>
+  <data name="Mcp.Install.ConfigPath" xml:space="preserve"><value>服务已添加到 [grey]~/.clawsharp/mcp.json[/]。</value></data>
+  <data name="Mcp.Install.Reload" xml:space="preserve"><value>重启会话或使用 [blue]/reload[/] 应用更改。</value></data>
+  <data name="Mcp.List.Empty" xml:space="preserve"><value>[yellow]当前未配置 MCP 服务。[/]</value></data>
+  <data name="Mcp.List.Column.Arguments" xml:space="preserve"><value>参数</value></data>
+  <data name="Mcp.Searching" xml:space="preserve"><value>正在搜索 Smithery...</value></data>
+  <data name="Mcp.Search.Empty" xml:space="preserve"><value>[yellow]Smithery 中未找到服务。[/]</value></data>
+  <data name="Mcp.Search.Column.Downloads" xml:space="preserve"><value>下载量</value></data>
+  <data name="Mcp.Search.Column.Verified" xml:space="preserve"><value>已验证</value></data>
+  <data name="Mcp.Show.Panel" xml:space="preserve"><value>Smithery MCP 服务</value></data>
+  <data name="Mcp.Show.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}作者: {3}{2}主页: [link]{4}[/]{2}下载量: {5}{2}已验证: {6}{2}{2}{7}</value></data>
+  <data name="Mcp.Show.InstallCommand" xml:space="preserve"><value>[bold]安装命令：[/]</value></data>
+  <data name="Mcp.Show.RequiredEnv" xml:space="preserve"><value>[bold]必需环境变量：[/]</value></data>
+  <data name="Mcp.Show.NoDescription" xml:space="preserve"><value>无描述</value></data>
+  <data name="Stats.Description" xml:space="preserve"><value>显示当前 ThreadSpace 的分析统计</value></data>
+  <data name="Stats.Option.Period" xml:space="preserve"><value>时间范围：24h、7d、30d、all，或类似 12h 的自定义值</value></data>
+  <data name="Stats.Option.Tools" xml:space="preserve"><value>仅显示工具使用情况</value></data>
+  <data name="Stats.Option.Agents" xml:space="preserve"><value>仅显示智能体性能</value></data>
+  <data name="Stats.Option.Format" xml:space="preserve"><value>输出格式：table 或 json</value></data>
+  <data name="Stats.AllTime" xml:space="preserve"><value>全部时间</value></data>
+  <data name="Stats.UnsupportedPeriod" xml:space="preserve"><value>不支持的时间范围 '{0}'。请使用 24h、7d、30d 或 all。</value></data>
+  <data name="Stats.UnsupportedFormat" xml:space="preserve"><value>不支持的格式 '{0}'。请使用 'table' 或 'json'。</value></data>
+  <data name="Stats.NoAnalytics" xml:space="preserve"><value>{0} 内没有分析数据。</value></data>
+  <data name="Stats.NoTools" xml:space="preserve"><value>{0} 内没有工具使用数据。</value></data>
+  <data name="Stats.NoAgents" xml:space="preserve"><value>{0} 内没有智能体性能数据。</value></data>
+  <data name="Stats.Summary.Header" xml:space="preserve"><value>[bold]claw stats[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Tools.Header" xml:space="preserve"><value>[bold]工具使用[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Agents.Header" xml:space="preserve"><value>[bold]智能体性能[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Column.Metric" xml:space="preserve"><value>指标</value></data>
+  <data name="Stats.Column.Period" xml:space="preserve"><value>周期</value></data>
+  <data name="Stats.Column.InputTokens" xml:space="preserve"><value>输入 Tokens</value></data>
+  <data name="Stats.Column.OutputTokens" xml:space="preserve"><value>输出 Tokens</value></data>
+  <data name="Stats.Column.TotalTokens" xml:space="preserve"><value>总 Tokens</value></data>
+  <data name="Stats.Column.Sessions" xml:space="preserve"><value>会话数</value></data>
+  <data name="Stats.Column.ActiveSessions" xml:space="preserve"><value>活跃会话数</value></data>
+  <data name="Stats.Column.Messages" xml:space="preserve"><value>消息数</value></data>
+  <data name="Stats.Column.Tool" xml:space="preserve"><value>工具</value></data>
+  <data name="Stats.Column.Calls" xml:space="preserve"><value>调用次数</value></data>
+  <data name="Stats.Column.Success" xml:space="preserve"><value>成功</value></data>
+  <data name="Stats.Column.Failure" xml:space="preserve"><value>失败</value></data>
+  <data name="Stats.Column.SuccessRate" xml:space="preserve"><value>成功率</value></data>
+  <data name="Stats.Column.Agent" xml:space="preserve"><value>智能体</value></data>
+  <data name="Stats.Column.AvgMs" xml:space="preserve"><value>平均毫秒</value></data>
+  <data name="Stats.Column.MinMs" xml:space="preserve"><value>最小毫秒</value></data>
+  <data name="Stats.Column.MaxMs" xml:space="preserve"><value>最大毫秒</value></data>
+  <data name="Stats.Column.Turns" xml:space="preserve"><value>轮次</value></data>
+  <data name="Init.Description" xml:space="preserve"><value>初始化命令</value></data>
+  <data name="Init.Space.Description" xml:space="preserve"><value>在当前目录初始化 ThreadSpace（默认）</value></data>
+  <data name="Init.Space.PathOption" xml:space="preserve"><value>要初始化的目录</value></data>
+  <data name="Init.Space.Start" xml:space="preserve"><value>[bold blue]正在初始化 ThreadSpace 于:[/] [green]{0}[/]</value></data>
+  <data name="Init.Space.Working" xml:space="preserve"><value>处理中...</value></data>
+  <data name="Init.Space.Success" xml:space="preserve"><value>[bold green]成功！[/] ThreadSpace 基础设施已初始化。</value></data>
+  <data name="Init.Project.Description" xml:space="preserve"><value>使用模板和 AI 辅助创建新项目</value></data>
+  <data name="Init.Project.NameArg" xml:space="preserve"><value>项目名称</value></data>
+  <data name="Init.Project.TemplateOption" xml:space="preserve"><value>要使用的模板 ID</value></data>
+  <data name="Init.Project.PathOption" xml:space="preserve"><value>目标目录</value></data>
+  <data name="Registry.Agents.Description" xml:space="preserve"><value>列出所有已注册智能体</value></data>
+  <data name="Registry.Agents.ConfigBasePath" xml:space="preserve"><value>[grey]配置基路径: {0}[/]</value></data>
+  <data name="Registry.Agents.DefaultProvider" xml:space="preserve"><value>[grey]默认 Provider: {0}[/]</value></data>
+  <data name="Registry.Agents.ModelCount" xml:space="preserve"><value>[grey]模型数量: {0}[/]</value></data>
+  <data name="Registry.Agents.Empty" xml:space="preserve"><value>[yellow]未找到已注册智能体。[/]</value></data>
+  <data name="Registry.Agents.Column.ConfiguredProvider" xml:space="preserve"><value>配置 Provider</value></data>
+  <data name="Registry.Agents.Column.ResolvedProvider" xml:space="preserve"><value>解析后 Provider</value></data>
+  <data name="Registry.Agents.Column.ResolvedModel" xml:space="preserve"><value>解析后模型</value></data>
+  <data name="Registry.Agents.ResolveError" xml:space="preserve"><value>错误: {0}</value></data>
+  <data name="Registry.Agents.DefaultProviderValue" xml:space="preserve"><value>默认</value></data>
+  <data name="Registry.Skills.Description" xml:space="preserve"><value>列出所有已注册技能</value></data>
+  <data name="Space.Description" xml:space="preserve"><value>管理 ThreadSpace（会话工作容器）</value></data>
+  <data name="Space.List.Description" xml:space="preserve"><value>列出所有 ThreadSpace</value></data>
+  <data name="Space.List.AllOption" xml:space="preserve"><value>包含已归档的 ThreadSpace</value></data>
+  <data name="Space.List.Column.Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Space.List.Column.Path" xml:space="preserve"><value>路径</value></data>
+  <data name="Space.List.Column.CreatedAt" xml:space="preserve"><value>创建时间</value></data>
+  <data name="Space.List.Column.Status" xml:space="preserve"><value>状态</value></data>
+  <data name="Space.Add.Description" xml:space="preserve"><value>新增 ThreadSpace</value></data>
+  <data name="Space.Add.NameArg" xml:space="preserve"><value>ThreadSpace 名称</value></data>
+  <data name="Space.Add.PathArg" xml:space="preserve"><value>要绑定的本地目录路径</value></data>
+  <data name="Space.Add.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' 创建成功。[/]</value></data>
+  <data name="Space.Add.Id" xml:space="preserve"><value>[grey]ID: {0}[/]</value></data>
+  <data name="Space.Add.Path" xml:space="preserve"><value>[grey]路径: {0}[/]</value></data>
+  <data name="Space.Show.Description" xml:space="preserve"><value>显示 ThreadSpace 详情及其会话</value></data>
+  <data name="Space.Show.IdentifierArg" xml:space="preserve"><value>ThreadSpace 名称或 ID</value></data>
+  <data name="Space.Show.NotFound" xml:space="preserve"><value>[red]未找到 ThreadSpace '{0}'。[/]</value></data>
+  <data name="Space.Show.Row.Name" xml:space="preserve"><value>[yellow]名称:[/]</value></data>
+  <data name="Space.Show.Row.Path" xml:space="preserve"><value>[yellow]路径:[/]</value></data>
+  <data name="Space.Show.Row.Created" xml:space="preserve"><value>[yellow]创建时间:[/]</value></data>
+  <data name="Space.Show.Row.IsGlobal" xml:space="preserve"><value>[yellow]是否全局:[/]</value></data>
+  <data name="Space.Show.Row.Archived" xml:space="preserve"><value>[red]归档时间:[/]</value></data>
+  <data name="Space.Show.GlobalPath" xml:space="preserve"><value>[global]</value></data>
+  <data name="Space.Show.EmptySessions" xml:space="preserve"><value>[grey]该 ThreadSpace 中没有会话。[/]</value></data>
+  <data name="Space.Update.Description" xml:space="preserve"><value>更新 ThreadSpace 名称或路径</value></data>
+  <data name="Space.Update.IdentifierArg" xml:space="preserve"><value>要更新的 ThreadSpace 名称或 ID</value></data>
+  <data name="Space.Update.NameOption" xml:space="preserve"><value>新名称</value></data>
+  <data name="Space.Update.PathOption" xml:space="preserve"><value>新的本地绑定路径</value></data>
+  <data name="Space.Update.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' 更新成功。[/]</value></data>
+  <data name="Space.Remove.Description" xml:space="preserve"><value>归档 ThreadSpace（软删除）</value></data>
+  <data name="Space.Remove.IdentifierArg" xml:space="preserve"><value>要归档的 ThreadSpace 名称或 ID</value></data>
+  <data name="Space.Remove.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' 已归档。[/]</value></data>
+  <data name="Config.Description" xml:space="preserve"><value>管理 ClawSharp 配置项</value></data>
+  <data name="Config.List.Description" xml:space="preserve"><value>显示所有配置项</value></data>
+  <data name="Config.List.AllOption" xml:space="preserve"><value>显示所有支持的键，即使当前未显式设置</value></data>
+  <data name="Config.Get.Description" xml:space="preserve"><value>获取指定配置项的值</value></data>
+  <data name="Config.Get.KeyArg" xml:space="preserve"><value>要读取的配置键</value></data>
+  <data name="Config.Get.KeyMissing" xml:space="preserve"><value>[yellow]未找到该键或尚未设置: {0}[/]</value></data>
+  <data name="Config.Set.Description" xml:space="preserve"><value>设置配置项</value></data>
+  <data name="Config.Set.KeyArg" xml:space="preserve"><value>要设置的配置键</value></data>
+  <data name="Config.Set.ValueArg" xml:space="preserve"><value>要设置的值（对 secret 可省略，随后会触发输入）</value></data>
+  <data name="Config.Set.Prompt" xml:space="preserve"><value>请输入 [blue]{0}[/] 的值:</value></data>
+  <data name="Config.Set.ValueRequired" xml:space="preserve"><value>[red]必须提供值。[/]</value></data>
+  <data name="Config.Set.Success" xml:space="preserve"><value>[green]已成功设置 {0}[/]</value></data>
+  <data name="Config.Reset.Description" xml:space="preserve"><value>重置配置为默认值</value></data>
+  <data name="Config.Reset.AllOption" xml:space="preserve"><value>重置所有本地设置</value></data>
+  <data name="Config.Reset.KeyOption" xml:space="preserve"><value>重置指定键</value></data>
+  <data name="Config.Reset.ForceOption" xml:space="preserve"><value>跳过确认提示</value></data>
+  <data name="Config.Reset.MissingTarget" xml:space="preserve"><value>[red]必须指定 --all 或 --key。[/]</value></data>
+  <data name="Config.Reset.ConfirmAll" xml:space="preserve"><value>确定要重置全部设置吗？</value></data>
+  <data name="Config.Reset.ConfirmKey" xml:space="preserve"><value>确定要重置 [blue]{0}[/] 吗？</value></data>
+  <data name="Config.Reset.Cancelled" xml:space="preserve"><value>[grey]操作已取消。[/]</value></data>
+  <data name="Config.Reset.Success" xml:space="preserve"><value>[green]重置完成。[/]</value></data>
+  <data name="List.Description" xml:space="preserve"><value>列出默认 ThreadSpace 中的会话</value></data>
+  <data name="List.Column.SessionId" xml:space="preserve"><value>会话 ID</value></data>
+  <data name="List.Column.AgentId" xml:space="preserve"><value>智能体 ID</value></data>
+  <data name="List.Column.StartedAt" xml:space="preserve"><value>开始时间</value></data>
+  <data name="List.Column.Status" xml:space="preserve"><value>状态</value></data>
+  <data name="History.Description" xml:space="preserve"><value>查看指定会话的消息历史</value></data>
+  <data name="History.SessionIdArg" xml:space="preserve"><value>要查看的会话 ID</value></data>
+  <data name="History.User" xml:space="preserve"><value>[bold green]用户:[/]</value></data>
+  <data name="History.Agent" xml:space="preserve"><value>[bold blue]智能体:[/]</value></data>
+  <data name="Bootstrap.WarningExistingLocal" xml:space="preserve"><value>[yellow]警告:[/] 缺少 [blue]appsettings.json[/]，但找到了 [blue]appsettings.Local.json[/]。</value></data>
+  <data name="Bootstrap.ConfirmUseLocal" xml:space="preserve"><value>是否使用现有本地配置并跳过初始化？</value></data>
+  <data name="Bootstrap.FreshConfig" xml:space="preserve"><value>[grey]将继续生成全新配置...[/]</value></data>
+  <data name="Bootstrap.Welcome" xml:space="preserve"><value>欢迎使用 [blue]ClawSharp[/]！我们先来完成一份新的配置。</value></data>
+  <data name="Bootstrap.DetectedServices" xml:space="preserve"><value>[bold green]检测到本地模型服务：[/]</value></data>
+  <data name="Bootstrap.NoModelsReported" xml:space="preserve"><value>未报告模型</value></data>
+  <data name="Bootstrap.WorkspaceRootPrompt" xml:space="preserve"><value>请输入 [green]workspace root[/] 路径:</value></data>
+  <data name="Bootstrap.InvalidPath" xml:space="preserve"><value>[red]路径格式无效。[/]</value></data>
+  <data name="Bootstrap.DataPathPrompt" xml:space="preserve"><value>请输入 [green]runtime data[/] 目录名:</value></data>
+  <data name="Bootstrap.ProviderSelectTitle" xml:space="preserve"><value>请选择默认的 [green]AI Provider[/]:</value></data>
+  <data name="Bootstrap.ProviderDetected" xml:space="preserve"><value> [green](已检测到)[/]</value></data>
+  <data name="Bootstrap.ApiKeyPrompt" xml:space="preserve"><value>请输入 {0} 的 [green]API Key[/]:</value></data>
+  <data name="Bootstrap.DefaultModelPrompt" xml:space="preserve"><value>请输入 {0} 的 [green]默认模型[/]:</value></data>
+  <data name="Bootstrap.ModelRequired" xml:space="preserve"><value>[red]本地 Provider 必须填写模型名称。[/]</value></data>
+  <data name="Bootstrap.GeneratingConfig" xml:space="preserve"><value>正在生成 [blue]appsettings.json[/]...</value></data>
+  <data name="Bootstrap.Generated" xml:space="preserve"><value>[bold green]配置已成功生成！[/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightConfirm" xml:space="preserve"><value>现在是否安装 [green]Playwright[/] 浏览器驱动？（[blue]web_browser[/] 工具需要）</value></data>
+  <data name="Bootstrap.InstallPlaywrightProgress" xml:space="preserve"><value>正在安装 [blue]Playwright[/] 浏览器驱动...</value></data>
+  <data name="Bootstrap.InstallPlaywrightSuccess" xml:space="preserve"><value>[bold green]Playwright 浏览器安装成功！[/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightFailure" xml:space="preserve"><value>[bold red]Playwright 安装失败。请手动运行脚本: {0}[/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightError" xml:space="preserve"><value>[bold red]运行安装脚本出错: {0}[/]</value></data>
+  <data name="Permissions.Capability.Request" xml:space="preserve"><value>[bold yellow]权限请求[/]{0}智能体 [green]{1}[/] 正尝试使用 [blue]{2}[/]，该工具需要 [red]{3}[/]。{0}当前尚未向该智能体授予此能力。</value></data>
+  <data name="Permissions.Capability.Confirm" xml:space="preserve"><value>是否为当前会话授予该能力？</value></data>
+  <data name="Permissions.Approval.Header" xml:space="preserve"><value>[bold yellow]需要审批: {0}[/]</value></data>
+  <data name="Permissions.Approval.CommandPanel" xml:space="preserve"><value>待执行命令</value></data>
+  <data name="Permissions.Approval.TargetPath" xml:space="preserve"><value>目标路径: {0}</value></data>
+  <data name="Permissions.Approval.ContentUnavailable" xml:space="preserve"><value>（内容不可用）</value></data>
+  <data name="Permissions.Approval.ContentPanel" xml:space="preserve"><value>文件内容预览</value></data>
+  <data name="Permissions.Approval.Confirm" xml:space="preserve"><value>允许智能体 [green]{0}[/] 继续吗？</value></data>
+  <data name="Permissions.Approval.Allow" xml:space="preserve"><value>允许</value></data>
+  <data name="Permissions.Approval.Deny" xml:space="preserve"><value>拒绝</value></data>
+  <data name="Permissions.Approval.AlwaysAllow" xml:space="preserve"><value>始终允许（本会话）</value></data>
+  <data name="Errors.Validation" xml:space="preserve"><value>[red]校验错误:[/] {0}</value></data>
+  <data name="Errors.Environment" xml:space="preserve"><value>[bold red]环境错误:[/] {0}</value></data>
+  <data name="Errors.RecommendedFix" xml:space="preserve"><value>建议修复命令</value></data>
+  <data name="Errors.RunFix" xml:space="preserve"><value>[grey]请运行上面的命令安装缺失依赖。[/]</value></data>
+  <data name="Errors.Generic" xml:space="preserve"><value>[bold red]错误:[/] {0}</value></data>
+  <data name="Errors.ShowStackTrace" xml:space="preserve"><value>显示堆栈跟踪？</value></data>
+  <data name="ProjectInit.NoTemplates" xml:space="preserve"><value>[yellow]未找到项目模板。[/]</value></data>
+  <data name="ProjectInit.TemplateTitle" xml:space="preserve"><value>请选择一个 [green]项目模板[/]:</value></data>
+  <data name="ProjectInit.ProjectNamePrompt" xml:space="preserve"><value>请输入项目名称:</value></data>
+  <data name="ProjectInit.UseAi" xml:space="preserve"><value>是否使用 [blue]AI 辅助[/] 生成项目描述和 README 内容？</value></data>
+  <data name="ProjectInit.DescribeIdea" xml:space="preserve"><value>请描述你的项目想法（连按两次回车结束）：</value></data>
+  <data name="ProjectInit.AiGenerated" xml:space="preserve"><value>[green]AI 内容已生成，并将应用到项目中。[/]</value></data>
+  <data name="ProjectInit.Success" xml:space="preserve"><value>[bold green]成功！[/] 项目 '{0}' 已创建于 [blue]{1}[/]</value></data>
+  <data name="ProjectInit.SwitchTip" xml:space="preserve"><value>[grey]输入 /cd &lt;path&gt; 切换到新项目空间。[/]</value></data>
+  <data name="ProjectInit.Error" xml:space="preserve"><value>[red]错误:[/] {0}</value></data>
+  <data name="ProjectInit.AiThinking" xml:space="preserve"><value>AI 正在思考...</value></data>
+  <data name="SpecKit.Description" xml:space="preserve"><value>从 CLI 运行 SpecKit 工作流</value></data>
+  <data name="SpecKit.Init.Description" xml:space="preserve"><value>创建新的 SpecKit 功能脚手架</value></data>
+  <data name="SpecKit.Init.NameArg" xml:space="preserve"><value>功能描述</value></data>
+  <data name="SpecKit.Scaffold.Description" xml:space="preserve"><value>分析 plan.md 并生成脚手架文件</value></data>
+  <data name="SpecKit.Scaffold.PlanArg" xml:space="preserve"><value>可选的 plan.md 路径</value></data>
+  <data name="SpecKit.Scaffold.YesOption" xml:space="preserve"><value>无需交互确认，直接应用</value></data>
+  <data name="SpecKit.Watch.Description" xml:space="preserve"><value>监听 plan.md，并在生成前提示确认</value></data>
+  <data name="SpecKit.Usage.Init" xml:space="preserve"><value>[yellow]用法:[/] /speckit init &lt;feature description&gt;</value></data>
+  <data name="SpecKit.UnknownSubcommand" xml:space="preserve"><value>[yellow]未知的 /speckit 子命令:[/] {0}</value></data>
+  <data name="SpecKit.ScriptMissing" xml:space="preserve"><value>[red]未找到 SpecKit 脚本:[/] {0}</value></data>
+  <data name="SpecKit.InitFailed" xml:space="preserve"><value>[red]SpecKit init 失败:[/] {0}</value></data>
+  <data name="SpecKit.InitSuccess" xml:space="preserve"><value>[green]SpecKit 功能创建成功。[/]</value></data>
+  <data name="SpecKit.PlanAnalysisFailed" xml:space="preserve"><value>[red]Plan 分析失败:[/] {0}</value></data>
+  <data name="SpecKit.ConfirmApply" xml:space="preserve"><value>是否应用这个脚手架计划？</value></data>
+  <data name="SpecKit.Cancelled" xml:space="preserve"><value>[yellow]脚手架生成已取消。[/]</value></data>
+  <data name="SpecKit.GenerationFailed" xml:space="preserve"><value>[red]脚手架生成失败:[/] {0}</value></data>
+  <data name="SpecKit.GenerationCompleted" xml:space="preserve"><value>[green]脚手架生成完成。[/]</value></data>
+  <data name="SpecKit.PlanParentMissing" xml:space="preserve"><value>plan.md 必须位于某个父目录中。</value></data>
+  <data name="SpecKit.Watching" xml:space="preserve"><value>[grey]正在监听[/] {0} [grey] 的变化。按 Ctrl+C 停止。[/]</value></data>
+  <data name="SpecKit.PlanUpdated" xml:space="preserve"><value>[blue]检测到 plan 更新。[/]</value></data>
+  <data name="SpecKit.Preview.Feature" xml:space="preserve"><value>功能</value></data>
+  <data name="SpecKit.Preview.Branch" xml:space="preserve"><value>分支</value></data>
+  <data name="SpecKit.Preview.Directories" xml:space="preserve"><value>目录</value></data>
+  <data name="SpecKit.Preview.Files" xml:space="preserve"><value>文件</value></data>
+  <data name="SpecKit.Preview.Tasks" xml:space="preserve"><value>任务</value></data>
+  <data name="SpecKit.Preview.Skip" xml:space="preserve"><value>（跳过）</value></data>
+  <data name="SpecKit.Preview.PlannedFiles" xml:space="preserve"><value>计划生成的文件</value></data>
+  <data name="SpecKit.Overview.Init" xml:space="preserve"><value>创建新的功能规格目录</value></data>
+  <data name="SpecKit.Overview.Scaffold" xml:space="preserve"><value>分析 plan.md、预览改动并生成文件</value></data>
+  <data name="SpecKit.Overview.Watch" xml:space="preserve"><value>监听 plan.md，并在生成前提示确认</value></data>
+  <data name="SpecKit.ShellStartFailed" xml:space="preserve"><value>启动 Shell 脚本失败。</value></data>
+  <data name="SpecKit.ShellFailed" xml:space="preserve"><value>Shell 脚本执行失败。</value></data>
+  <data name="Test.Formatted" xml:space="preserve"><value>你好 {0}</value></data>
+</root>

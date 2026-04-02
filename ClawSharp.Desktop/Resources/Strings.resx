@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common.None" xml:space="preserve"><value>&lt;none&gt;</value></data>
+  <data name="Common.NotSet" xml:space="preserve"><value>&lt;not set&gt;</value></data>
+  <data name="Common.Null" xml:space="preserve"><value>&lt;null&gt;</value></data>
+  <data name="Common.NotApplicable" xml:space="preserve"><value>n/a</value></data>
+  <data name="Common.UnknownError" xml:space="preserve"><value>Unknown error</value></data>
+  <data name="Common.Readme" xml:space="preserve"><value>README</value></data>
+  <data name="Common.Command" xml:space="preserve"><value>Command</value></data>
+  <data name="Common.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Common.Path" xml:space="preserve"><value>Path</value></data>
+  <data name="Common.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Common.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Common.Created" xml:space="preserve"><value>Created</value></data>
+  <data name="Common.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Common.Version" xml:space="preserve"><value>Version</value></data>
+  <data name="Common.Item" xml:space="preserve"><value>Item</value></data>
+  <data name="Common.Value" xml:space="preserve"><value>Value</value></data>
+  <data name="Common.Author" xml:space="preserve"><value>Author</value></data>
+  <data name="Common.Downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="Common.Latest" xml:space="preserve"><value>Latest</value></data>
+  <data name="Common.Versions" xml:space="preserve"><value>Versions</value></data>
+  <data name="Common.Tags" xml:space="preserve"><value>Tags</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common.No" xml:space="preserve"><value>No</value></data>
+  <data name="Common.Required" xml:space="preserve"><value>Required</value></data>
+  <data name="Common.Optional" xml:space="preserve"><value>Optional</value></data>
+  <data name="Common.Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Common.Archived" xml:space="preserve"><value>Archived</value></data>
+  <data name="Common.Sessions" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Common.Panel.ThreadSpaceDetails" xml:space="preserve"><value>ThreadSpace Details</value></data>
+  <data name="RootCommand.Description" xml:space="preserve"><value>ClawSharp CLI - Local-first AI application kernel</value></data>
+  <data name="Chat.Description" xml:space="preserve"><value>Start a new REPL session with an agent</value></data>
+  <data name="Chat.AgentIdArg" xml:space="preserve"><value>The ID of the agent to chat with (optional)</value></data>
+  <data name="Chat.NoAgentsFound" xml:space="preserve"><value>No agents found in the registry and no default agent is configured.</value></data>
+  <data name="Chat.WelcomeHeader" xml:space="preserve"><value>ClawSharp v1.0.0</value></data>
+  <data name="Chat.TypeHelp" xml:space="preserve"><value>Type /help for commands</value></data>
+  <data name="Chat.AgentLabel" xml:space="preserve"><value>Agent:</value></data>
+  <data name="Chat.SpaceLabel" xml:space="preserve"><value>ThreadSpace:</value></data>
+  <data name="Chat.TipResume" xml:space="preserve"><value>Tip: type /resume to continue the last conversation.</value></data>
+  <data name="Chat.Help.Title" xml:space="preserve"><value>Command</value></data>
+  <data name="Chat.Help.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Chat.Help.ShowHelp" xml:space="preserve"><value>Show this help message</value></data>
+  <data name="Chat.Help.Language" xml:space="preserve"><value>Show or override this session's output language</value></data>
+  <data name="Chat.Help.New" xml:space="preserve"><value>Start a new session in the current space</value></data>
+  <data name="Chat.Help.Resume" xml:space="preserve"><value>Resume the last session in the current space</value></data>
+  <data name="Chat.Help.Sessions" xml:space="preserve"><value>List sessions in the current space</value></data>
+  <data name="Chat.Help.SessionSwitch" xml:space="preserve"><value>Switch to a session and replay recent history</value></data>
+  <data name="Chat.Help.Agents" xml:space="preserve"><value>List registered agents with provider details</value></data>
+  <data name="Chat.Help.Skills" xml:space="preserve"><value>List registered skills</value></data>
+  <data name="Chat.Help.Tools" xml:space="preserve"><value>List currently authorized tools</value></data>
+  <data name="Chat.Help.Config" xml:space="preserve"><value>Manage configuration (for example: /config get Providers:DefaultProvider)</value></data>
+  <data name="Chat.Help.History" xml:space="preserve"><value>View message history (defaults to the current session)</value></data>
+  <data name="Chat.Help.Stats" xml:space="preserve"><value>Show usage analytics (24h, 7d, 30d, all)</value></data>
+  <data name="Chat.Help.Spaces" xml:space="preserve"><value>Manage ThreadSpaces (for example: /spaces add myspace /path)</value></data>
+  <data name="Chat.Help.Hub" xml:space="preserve"><value>Browse and install skills from ClawHub</value></data>
+  <data name="Chat.Help.Paste" xml:space="preserve"><value>Enter multiline paste mode and submit with '.'</value></data>
+  <data name="Chat.Help.Edit" xml:space="preserve"><value>Compose a prompt in your external editor</value></data>
+  <data name="Chat.Help.Cd" xml:space="preserve"><value>Switch to a directory-bound space</value></data>
+  <data name="Chat.Help.Home" xml:space="preserve"><value>Switch back to the global space</value></data>
+  <data name="Chat.Help.Clear" xml:space="preserve"><value>Clear the terminal screen</value></data>
+  <data name="Chat.Help.Init" xml:space="preserve"><value>Initialize an agent definition (agent.md) in the current space</value></data>
+  <data name="Chat.Help.InitProj" xml:space="preserve"><value>Scaffold a new project from templates</value></data>
+  <data name="Chat.Help.Reload" xml:space="preserve"><value>Reload agent/skill definitions and reset MCP pools</value></data>
+  <data name="Chat.Help.SpecKit" xml:space="preserve"><value>Run SpecKit feature workflows</value></data>
+  <data name="Chat.Help.Exit" xml:space="preserve"><value>Exit the REPL</value></data>
+  <data name="Chat.Mcp.NoServers" xml:space="preserve"><value>[yellow]No MCP servers configured.[/]</value></data>
+  <data name="Chat.Mcp.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Chat.Mcp.Column.Command" xml:space="preserve"><value>Command</value></data>
+  <data name="Chat.Mcp.Column.Capabilities" xml:space="preserve"><value>Capabilities</value></data>
+  <data name="Chat.Mcp.Usage.Search" xml:space="preserve"><value>[yellow]Usage:[/] /mcp search &lt;query&gt;</value></data>
+  <data name="Chat.Mcp.Searching" xml:space="preserve"><value>Searching Smithery...</value></data>
+  <data name="Chat.Mcp.NoSearchResults" xml:space="preserve"><value>[yellow]No servers found in Smithery.[/]</value></data>
+  <data name="Chat.Mcp.Column.QualifiedName" xml:space="preserve"><value>Qualified Name</value></data>
+  <data name="Chat.Mcp.Column.Author" xml:space="preserve"><value>Author</value></data>
+  <data name="Chat.Mcp.Usage.Install" xml:space="preserve"><value>[yellow]Usage:[/] /mcp install &lt;qualified-name&gt;</value></data>
+  <data name="Chat.Mcp.NoAutomatedConfig" xml:space="preserve"><value>[red]Error: This server does not provide an automated MCP configuration.[/]</value></data>
+  <data name="Chat.Mcp.Installing" xml:space="preserve"><value>[blue]Installing {0}...[/]</value></data>
+  <data name="Chat.Mcp.ConfigRequired" xml:space="preserve"><value>[bold]Configuration Required:[/]</value></data>
+  <data name="Chat.Mcp.EnvPrompt" xml:space="preserve"><value>Enter value for [yellow]{0}[/]</value></data>
+  <data name="Chat.Mcp.EnvPromptWithDescription" xml:space="preserve"><value>Enter value for [yellow]{0}[/] ({1})</value></data>
+  <data name="Chat.Mcp.InstallSuccess" xml:space="preserve"><value>[green]Successfully installed {0}![/]</value></data>
+  <data name="Chat.Mcp.ConfigPathMessage" xml:space="preserve"><value>The server has been added to [grey]~/.clawsharp/mcp.json[/].</value></data>
+  <data name="Chat.Mcp.ReloadMessage" xml:space="preserve"><value>Type [blue]/reload[/] to apply changes.</value></data>
+  <data name="Chat.Mcp.Usage.Show" xml:space="preserve"><value>[yellow]Usage:[/] /mcp show &lt;qualified-name&gt;</value></data>
+  <data name="Chat.Mcp.ServerPanel" xml:space="preserve"><value>Smithery MCP Server</value></data>
+  <data name="Chat.Mcp.ServerSummary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}Author: {3}{2}Downloads: {4}{2}{2}{5}</value></data>
+  <data name="Chat.Mcp.UnknownSubcommand" xml:space="preserve"><value>[yellow]Unknown /mcp subcommand:[/] {0}</value></data>
+  <data name="Chat.Mcp.Supported" xml:space="preserve"><value>Supported: list, search, show, install</value></data>
+  <data name="Chat.Language.Column.Scope" xml:space="preserve"><value>Scope</value></data>
+  <data name="Chat.Language.Column.Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Chat.Language.CurrentSession" xml:space="preserve"><value>Current session override</value></data>
+  <data name="Chat.Language.GlobalDefault" xml:space="preserve"><value>Global default</value></data>
+  <data name="Chat.Language.Effective" xml:space="preserve"><value>Effective output language</value></data>
+  <data name="Chat.Language.ResetNoFallback" xml:space="preserve"><value>[green]Cleared the session language override. Subsequent replies are no longer language-constrained by CLI settings.[/]</value></data>
+  <data name="Chat.Language.ResetWithFallback" xml:space="preserve"><value>[green]Cleared the session language override. Subsequent replies will default to {0}.[/]</value></data>
+  <data name="Chat.Language.Updated" xml:space="preserve"><value>[green]Updated this session's output language. Subsequent replies will default to {0}.[/]</value></data>
+  <data name="Chat.NewSessionStarted" xml:space="preserve"><value>[green]New session started.[/]</value></data>
+  <data name="Chat.Resume.None" xml:space="preserve"><value>[yellow]No previous session found to resume.[/]</value></data>
+  <data name="Chat.Resume.Success" xml:space="preserve"><value>[green]Resumed session started at {0}[/]</value></data>
+  <data name="Chat.Sessions.None" xml:space="preserve"><value>[yellow]No sessions found in this space.[/]</value></data>
+  <data name="Chat.Sessions.IndexOutOfRange" xml:space="preserve"><value>[yellow]Session index must be between 1 and {0}.[/]</value></data>
+  <data name="Chat.Sessions.Switched" xml:space="preserve"><value>[green]Switched to session {0}: {1}[/]</value></data>
+  <data name="Chat.Sessions.Column.Index" xml:space="preserve"><value>#</value></data>
+  <data name="Chat.Sessions.Column.SessionId" xml:space="preserve"><value>Session ID</value></data>
+  <data name="Chat.Sessions.Column.Agent" xml:space="preserve"><value>Agent</value></data>
+  <data name="Chat.Sessions.Column.Started" xml:space="preserve"><value>Started</value></data>
+  <data name="Chat.Sessions.Column.LastMessage" xml:space="preserve"><value>Last Message</value></data>
+  <data name="Chat.Sessions.NoMessagesYet" xml:space="preserve"><value>(No messages yet)</value></data>
+  <data name="Chat.Tools.None" xml:space="preserve"><value>[yellow]No authorized tools are available for this session.[/]</value></data>
+  <data name="Chat.Tools.Column.Tool" xml:space="preserve"><value>Tool</value></data>
+  <data name="Chat.Tools.Column.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Chat.Tools.Column.PermissionStatus" xml:space="preserve"><value>Permission Status</value></data>
+  <data name="Chat.Tools.NoExtraCapability" xml:space="preserve"><value>No extra capability</value></data>
+  <data name="Chat.Tools.Authorized" xml:space="preserve"><value>Authorized ({0})</value></data>
+  <data name="Chat.Tools.AuthorizedApproval" xml:space="preserve"><value>Authorized ({0}, approval required)</value></data>
+  <data name="Chat.Agents.Usage" xml:space="preserve"><value>[grey]Usage: /agents &lt;#|id&gt; to switch the active agent for this session.[/]</value></data>
+  <data name="Chat.Agents.NotFound" xml:space="preserve"><value>[red]Agent '{0}' not found.[/]</value></data>
+  <data name="Chat.Agents.Switched" xml:space="preserve"><value>[green]Switched to agent:[/] [blue]{0}[/]</value></data>
+  <data name="Chat.Skills.None" xml:space="preserve"><value>[yellow]No registered skills were found.[/]</value></data>
+  <data name="Chat.Skills.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Chat.Skills.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Chat.Skills.Column.Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Chat.Skills.Column.Version" xml:space="preserve"><value>Version</value></data>
+  <data name="Chat.Config.Column.Key" xml:space="preserve"><value>Key</value></data>
+  <data name="Chat.Config.Column.Value" xml:space="preserve"><value>Value</value></data>
+  <data name="Chat.Config.KeyNotFound" xml:space="preserve"><value>[yellow]Key not found: {0}[/]</value></data>
+  <data name="Chat.Config.SetSuccess" xml:space="preserve"><value>[green]Set {0}[/]</value></data>
+  <data name="Chat.Config.Usage" xml:space="preserve"><value>[grey]Usage: /config [[list | get &lt;key&gt; | set &lt;key&gt; &lt;value&gt;]][/]</value></data>
+  <data name="Chat.Spaces.Column.Index" xml:space="preserve"><value>#</value></data>
+  <data name="Chat.Spaces.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Chat.Spaces.Column.Path" xml:space="preserve"><value>Path</value></data>
+  <data name="Chat.Spaces.Column.Created" xml:space="preserve"><value>Created</value></data>
+  <data name="Chat.Spaces.Column.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Chat.Spaces.GlobalPath" xml:space="preserve"><value>[global]</value></data>
+  <data name="Chat.Spaces.Usage.List" xml:space="preserve"><value>[grey]Usage: /spaces show &lt;#|name&gt; | /spaces remove &lt;#|name&gt; | /spaces add &lt;name&gt; &lt;path&gt;[/]</value></data>
+  <data name="Chat.Spaces.Created" xml:space="preserve"><value>[green]Created space '{0}' at {1}[/]</value></data>
+  <data name="Chat.Spaces.NotFound" xml:space="preserve"><value>[red]Space '{0}' not found.[/]</value></data>
+  <data name="Chat.Spaces.NoSessions" xml:space="preserve"><value>[grey]No sessions in this space.[/]</value></data>
+  <data name="Chat.Spaces.Archived" xml:space="preserve"><value>[green]Space '{0}' archived.[/]</value></data>
+  <data name="Chat.Spaces.Usage" xml:space="preserve"><value>[grey]Usage: /spaces [[list | add &lt;name&gt; &lt;path&gt; | show &lt;#|id&gt; | remove &lt;#|id&gt;]][/]</value></data>
+  <data name="Chat.Spaces.Panel.Header" xml:space="preserve"><value>ThreadSpace Details</value></data>
+  <data name="Chat.Spaces.SessionTable.Title" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Chat.Hub.NotEnabled" xml:space="preserve"><value>[yellow]ClawHub is not enabled. Set Hub:Enabled=true and Hub:BaseUrl to use hub commands.[/]</value></data>
+  <data name="Chat.Hub.NoSkills" xml:space="preserve"><value>[yellow]No skills found.[/]</value></data>
+  <data name="Chat.Hub.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Chat.Hub.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Chat.Hub.Column.Version" xml:space="preserve"><value>Version</value></data>
+  <data name="Chat.Hub.Column.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Chat.Hub.Panel.Header" xml:space="preserve"><value>ClawHub Skill</value></data>
+  <data name="Chat.Hub.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}Latest: [green]{3}[/]{2}Downloads: {4}{2}{5}</value></data>
+  <data name="Chat.Hub.Installed" xml:space="preserve"><value>[green]Installed[/] [blue]{0}[/] [grey]v{1}[/]</value></data>
+  <data name="Chat.Hub.Path" xml:space="preserve"><value>Path: [grey]{0}[/]</value></data>
+  <data name="Chat.Hub.Usage" xml:space="preserve"><value>[grey]Usage: /hub [[search [[query]] | show &lt;skill-id&gt; | install &lt;skill-id&gt; [[version]]]][/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.MissingPath" xml:space="preserve"><value>[red]Error: /cd requires a path argument. Use /home to switch to the global space.[/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.DirectoryMissing" xml:space="preserve"><value>[red]Directory not found: {0}[/]</value></data>
+  <data name="Chat.ThreadSpaceSwitch.Success" xml:space="preserve"><value>[bold blue]Switched to space:[/] [green]{0}[/]</value></data>
+  <data name="Chat.Init.FileExists" xml:space="preserve"><value>[yellow]File already exists: {0}[/]</value></data>
+  <data name="Chat.Init.Created" xml:space="preserve"><value>[green]Created agent definition:[/] [blue]{0}[/]</value></data>
+  <data name="Chat.Reload.Success" xml:space="preserve"><value>[green]Runtime definitions and MCP pools reloaded.[/]</value></data>
+  <data name="Chat.Paste.Mode" xml:space="preserve"><value>[grey]Paste mode: enter content, then submit with a single '.' line.[/]</value></data>
+  <data name="Chat.Edit.StartFailed" xml:space="preserve"><value>Failed to start editor '{0}'.</value></data>
+  <data name="Chat.Edit.NoContent" xml:space="preserve"><value>[yellow]Editor closed without any content to send.[/]</value></data>
+  <data name="Chat.UnknownCommand" xml:space="preserve"><value>[yellow]Unknown command: {0}. Type /help to see available commands.[/]</value></data>
+  <data name="Chat.History.None" xml:space="preserve"><value>[grey]No messages found in this session yet.[/]</value></data>
+  <data name="Chat.History.Recent" xml:space="preserve"><value>[grey]Last few messages:[/]</value></data>
+  <data name="Chat.NoTextResponse" xml:space="preserve"><value>(No text response from agent)</value></data>
+  <data name="Chat.TurnSummary" xml:space="preserve"><value>[grey]Turn summary:[/] plan cache {0}, MCP {1}</value></data>
+  <data name="Chat.AgentPromptHeader" xml:space="preserve"><value>[bold yellow]Agent &gt;[/]</value></data>
+  <data name="Chat.Input.WarningReadFile" xml:space="preserve"><value>[yellow]Warning: Could not read file {0}: {1}[/]</value></data>
+  <data name="Chat.Input.WarningFileMissing" xml:space="preserve"><value>[yellow]Warning: File not found: {0}[/]</value></data>
+  <data name="Hub.Description" xml:space="preserve"><value>Browse and install skills from ClawHub</value></data>
+  <data name="Hub.Search.Description" xml:space="preserve"><value>Search skills in ClawHub</value></data>
+  <data name="Hub.Search.QueryArg" xml:space="preserve"><value>Optional search query</value></data>
+  <data name="Hub.Search.Empty" xml:space="preserve"><value>[yellow]No skills found in ClawHub.[/]</value></data>
+  <data name="Hub.Search.Column.ID" xml:space="preserve"><value>ID</value></data>
+  <data name="Hub.Search.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Hub.Search.Column.LatestVersion" xml:space="preserve"><value>Latest Version</value></data>
+  <data name="Hub.Search.Column.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Hub.Show.Description" xml:space="preserve"><value>Show detailed information for a ClawHub skill</value></data>
+  <data name="Hub.Show.SkillArg" xml:space="preserve"><value>The skill id to inspect</value></data>
+  <data name="Hub.Show.Panel" xml:space="preserve"><value>ClawHub Skill</value></data>
+  <data name="Hub.Show.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}Latest: [green]{3}[/]{2}Downloads: {4}{2}Versions: {5}{2}Tags: {6}{2}{2}{7}</value></data>
+  <data name="Hub.Install.Description" xml:space="preserve"><value>Download and install a ClawHub skill</value></data>
+  <data name="Hub.Install.SkillArg" xml:space="preserve"><value>The skill id to install</value></data>
+  <data name="Hub.Install.VersionOption" xml:space="preserve"><value>Install a specific version</value></data>
+  <data name="Hub.Install.ForceOption" xml:space="preserve"><value>Replace an existing installation</value></data>
+  <data name="Hub.Install.Success" xml:space="preserve"><value>[green]Installed[/] [blue]{0}[/] [grey]v{1}[/]</value></data>
+  <data name="Hub.Install.Path" xml:space="preserve"><value>Path: [grey]{0}[/]</value></data>
+  <data name="Hub.Install.RegistryId" xml:space="preserve"><value>Registry ID: [grey]user.{0}[/]</value></data>
+  <data name="Hub.Disabled" xml:space="preserve"><value>ClawHub integration is disabled. Set Hub:Enabled=true to use hub commands.</value></data>
+  <data name="Hub.BaseUrlRequired" xml:space="preserve"><value>Hub:BaseUrl is required before using hub commands.</value></data>
+  <data name="Mcp.Description" xml:space="preserve"><value>Manage Model Context Protocol (MCP) servers</value></data>
+  <data name="Mcp.Install.Description" xml:space="preserve"><value>Install an MCP server from the Smithery marketplace</value></data>
+  <data name="Mcp.Install.NameArg" xml:space="preserve"><value>The qualified name of the server (for example: owner/name)</value></data>
+  <data name="Mcp.List.Description" xml:space="preserve"><value>List locally configured MCP servers</value></data>
+  <data name="Mcp.Search.Description" xml:space="preserve"><value>Search MCP servers in the Smithery marketplace</value></data>
+  <data name="Mcp.Search.QueryArg" xml:space="preserve"><value>Search query</value></data>
+  <data name="Mcp.Show.Description" xml:space="preserve"><value>Show detailed information for a Smithery MCP server</value></data>
+  <data name="Mcp.Show.NameArg" xml:space="preserve"><value>The qualified name of the server (for example: owner/name)</value></data>
+  <data name="Mcp.NoAutomatedConfig" xml:space="preserve"><value>[red]Error: This server does not provide an automated MCP configuration.[/]</value></data>
+  <data name="Mcp.Installing" xml:space="preserve"><value>[blue]Installing {0}...[/]</value></data>
+  <data name="Mcp.ConfigRequired" xml:space="preserve"><value>[bold]Configuration Required:[/]</value></data>
+  <data name="Mcp.EnvPrompt" xml:space="preserve"><value>Enter value for [yellow]{0}[/]</value></data>
+  <data name="Mcp.EnvPromptWithDescription" xml:space="preserve"><value>Enter value for [yellow]{0}[/] ({1})</value></data>
+  <data name="Mcp.Install.Success" xml:space="preserve"><value>[green]Successfully installed {0}![/]</value></data>
+  <data name="Mcp.Install.ConfigPath" xml:space="preserve"><value>The server has been added to [grey]~/.clawsharp/mcp.json[/].</value></data>
+  <data name="Mcp.Install.Reload" xml:space="preserve"><value>Restart your session or use [blue]/reload[/] to apply changes.</value></data>
+  <data name="Mcp.List.Empty" xml:space="preserve"><value>[yellow]No MCP servers configured.[/]</value></data>
+  <data name="Mcp.List.Column.Arguments" xml:space="preserve"><value>Arguments</value></data>
+  <data name="Mcp.Searching" xml:space="preserve"><value>Searching Smithery...</value></data>
+  <data name="Mcp.Search.Empty" xml:space="preserve"><value>[yellow]No servers found in Smithery.[/]</value></data>
+  <data name="Mcp.Search.Column.Downloads" xml:space="preserve"><value>Downloads</value></data>
+  <data name="Mcp.Search.Column.Verified" xml:space="preserve"><value>Verified</value></data>
+  <data name="Mcp.Show.Panel" xml:space="preserve"><value>Smithery MCP Server</value></data>
+  <data name="Mcp.Show.Summary" xml:space="preserve"><value>[bold]{0}[/] ([blue]{1}[/]){2}Author: {3}{2}Homepage: [link]{4}[/]{2}Downloads: {5}{2}Verified: {6}{2}{2}{7}</value></data>
+  <data name="Mcp.Show.InstallCommand" xml:space="preserve"><value>[bold]Installation Command:[/]</value></data>
+  <data name="Mcp.Show.RequiredEnv" xml:space="preserve"><value>[bold]Required Environment Variables:[/]</value></data>
+  <data name="Mcp.Show.NoDescription" xml:space="preserve"><value>No description</value></data>
+  <data name="Stats.Description" xml:space="preserve"><value>Show analytics for the current ThreadSpace</value></data>
+  <data name="Stats.Option.Period" xml:space="preserve"><value>Time window: 24h, 7d, 30d, all, or custom like 12h</value></data>
+  <data name="Stats.Option.Tools" xml:space="preserve"><value>Show tool usage only</value></data>
+  <data name="Stats.Option.Agents" xml:space="preserve"><value>Show agent performance only</value></data>
+  <data name="Stats.Option.Format" xml:space="preserve"><value>Output format: table or json</value></data>
+  <data name="Stats.AllTime" xml:space="preserve"><value>all time</value></data>
+  <data name="Stats.UnsupportedPeriod" xml:space="preserve"><value>Unsupported period '{0}'. Use values like 24h, 7d, 30d, or all.</value></data>
+  <data name="Stats.UnsupportedFormat" xml:space="preserve"><value>Unsupported format '{0}'. Use 'table' or 'json'.</value></data>
+  <data name="Stats.NoAnalytics" xml:space="preserve"><value>No analytics data found for {0}.</value></data>
+  <data name="Stats.NoTools" xml:space="preserve"><value>No tool usage found for {0}.</value></data>
+  <data name="Stats.NoAgents" xml:space="preserve"><value>No agent performance data found for {0}.</value></data>
+  <data name="Stats.Summary.Header" xml:space="preserve"><value>[bold]claw stats[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Tools.Header" xml:space="preserve"><value>[bold]Tool Usage[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Agents.Header" xml:space="preserve"><value>[bold]Agent Performance[/] [grey]({0})[/]</value></data>
+  <data name="Stats.Column.Metric" xml:space="preserve"><value>Metric</value></data>
+  <data name="Stats.Column.Period" xml:space="preserve"><value>Period</value></data>
+  <data name="Stats.Column.InputTokens" xml:space="preserve"><value>Input Tokens</value></data>
+  <data name="Stats.Column.OutputTokens" xml:space="preserve"><value>Output Tokens</value></data>
+  <data name="Stats.Column.TotalTokens" xml:space="preserve"><value>Total Tokens</value></data>
+  <data name="Stats.Column.Sessions" xml:space="preserve"><value>Sessions</value></data>
+  <data name="Stats.Column.ActiveSessions" xml:space="preserve"><value>Active Sessions</value></data>
+  <data name="Stats.Column.Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Stats.Column.Tool" xml:space="preserve"><value>Tool</value></data>
+  <data name="Stats.Column.Calls" xml:space="preserve"><value>Calls</value></data>
+  <data name="Stats.Column.Success" xml:space="preserve"><value>Success</value></data>
+  <data name="Stats.Column.Failure" xml:space="preserve"><value>Failure</value></data>
+  <data name="Stats.Column.SuccessRate" xml:space="preserve"><value>Success %</value></data>
+  <data name="Stats.Column.Agent" xml:space="preserve"><value>Agent</value></data>
+  <data name="Stats.Column.AvgMs" xml:space="preserve"><value>Avg ms</value></data>
+  <data name="Stats.Column.MinMs" xml:space="preserve"><value>Min ms</value></data>
+  <data name="Stats.Column.MaxMs" xml:space="preserve"><value>Max ms</value></data>
+  <data name="Stats.Column.Turns" xml:space="preserve"><value>Turns</value></data>
+  <data name="Init.Description" xml:space="preserve"><value>Initialization commands</value></data>
+  <data name="Init.Space.Description" xml:space="preserve"><value>Initialize a ThreadSpace in the current folder (default)</value></data>
+  <data name="Init.Space.PathOption" xml:space="preserve"><value>The directory to initialize</value></data>
+  <data name="Init.Space.Start" xml:space="preserve"><value>[bold blue]Initializing ThreadSpace at:[/] [green]{0}[/]</value></data>
+  <data name="Init.Space.Working" xml:space="preserve"><value>Working...</value></data>
+  <data name="Init.Space.Success" xml:space="preserve"><value>[bold green]Success![/] ThreadSpace infrastructure initialized.</value></data>
+  <data name="Init.Project.Description" xml:space="preserve"><value>Create a new project from a template with AI assistance</value></data>
+  <data name="Init.Project.NameArg" xml:space="preserve"><value>The name of the project</value></data>
+  <data name="Init.Project.TemplateOption" xml:space="preserve"><value>The template ID to use</value></data>
+  <data name="Init.Project.PathOption" xml:space="preserve"><value>The target directory</value></data>
+  <data name="Registry.Agents.Description" xml:space="preserve"><value>List all registered agents</value></data>
+  <data name="Registry.Agents.ConfigBasePath" xml:space="preserve"><value>[grey]Config BasePath: {0}[/]</value></data>
+  <data name="Registry.Agents.DefaultProvider" xml:space="preserve"><value>[grey]Default Provider: {0}[/]</value></data>
+  <data name="Registry.Agents.ModelCount" xml:space="preserve"><value>[grey]Model Count: {0}[/]</value></data>
+  <data name="Registry.Agents.Empty" xml:space="preserve"><value>[yellow]No registered agents were found.[/]</value></data>
+  <data name="Registry.Agents.Column.ConfiguredProvider" xml:space="preserve"><value>Configured Provider</value></data>
+  <data name="Registry.Agents.Column.ResolvedProvider" xml:space="preserve"><value>Resolved Provider</value></data>
+  <data name="Registry.Agents.Column.ResolvedModel" xml:space="preserve"><value>Resolved Model</value></data>
+  <data name="Registry.Agents.ResolveError" xml:space="preserve"><value>Error: {0}</value></data>
+  <data name="Registry.Agents.DefaultProviderValue" xml:space="preserve"><value>default</value></data>
+  <data name="Registry.Skills.Description" xml:space="preserve"><value>List all registered skills</value></data>
+  <data name="Space.Description" xml:space="preserve"><value>Manage ThreadSpaces (working containers for sessions)</value></data>
+  <data name="Space.List.Description" xml:space="preserve"><value>List all ThreadSpaces</value></data>
+  <data name="Space.List.AllOption" xml:space="preserve"><value>Include archived ThreadSpaces</value></data>
+  <data name="Space.List.Column.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Space.List.Column.Path" xml:space="preserve"><value>Path</value></data>
+  <data name="Space.List.Column.CreatedAt" xml:space="preserve"><value>Created At</value></data>
+  <data name="Space.List.Column.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Space.Add.Description" xml:space="preserve"><value>Add a new ThreadSpace</value></data>
+  <data name="Space.Add.NameArg" xml:space="preserve"><value>The name of the ThreadSpace</value></data>
+  <data name="Space.Add.PathArg" xml:space="preserve"><value>The local folder path to bind</value></data>
+  <data name="Space.Add.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' created successfully.[/]</value></data>
+  <data name="Space.Add.Id" xml:space="preserve"><value>[grey]ID: {0}[/]</value></data>
+  <data name="Space.Add.Path" xml:space="preserve"><value>[grey]Path: {0}[/]</value></data>
+  <data name="Space.Show.Description" xml:space="preserve"><value>Show details of a ThreadSpace including its sessions</value></data>
+  <data name="Space.Show.IdentifierArg" xml:space="preserve"><value>The name or ID of the ThreadSpace</value></data>
+  <data name="Space.Show.NotFound" xml:space="preserve"><value>[red]ThreadSpace '{0}' not found.[/]</value></data>
+  <data name="Space.Show.Row.Name" xml:space="preserve"><value>[yellow]Name:[/]</value></data>
+  <data name="Space.Show.Row.Path" xml:space="preserve"><value>[yellow]Path:[/]</value></data>
+  <data name="Space.Show.Row.Created" xml:space="preserve"><value>[yellow]Created:[/]</value></data>
+  <data name="Space.Show.Row.IsGlobal" xml:space="preserve"><value>[yellow]Is Global:[/]</value></data>
+  <data name="Space.Show.Row.Archived" xml:space="preserve"><value>[red]Archived:[/]</value></data>
+  <data name="Space.Show.GlobalPath" xml:space="preserve"><value>[global]</value></data>
+  <data name="Space.Show.EmptySessions" xml:space="preserve"><value>[grey]No sessions found in this ThreadSpace.[/]</value></data>
+  <data name="Space.Update.Description" xml:space="preserve"><value>Update a ThreadSpace's name or path</value></data>
+  <data name="Space.Update.IdentifierArg" xml:space="preserve"><value>The name or ID of the ThreadSpace to update</value></data>
+  <data name="Space.Update.NameOption" xml:space="preserve"><value>The new name</value></data>
+  <data name="Space.Update.PathOption" xml:space="preserve"><value>The new local folder path to bind</value></data>
+  <data name="Space.Update.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' updated successfully.[/]</value></data>
+  <data name="Space.Remove.Description" xml:space="preserve"><value>Archive a ThreadSpace (soft delete)</value></data>
+  <data name="Space.Remove.IdentifierArg" xml:space="preserve"><value>The name or ID of the ThreadSpace to archive</value></data>
+  <data name="Space.Remove.Success" xml:space="preserve"><value>[green]ThreadSpace '{0}' has been archived.[/]</value></data>
+  <data name="Config.Description" xml:space="preserve"><value>Manage ClawSharp configuration settings</value></data>
+  <data name="Config.List.Description" xml:space="preserve"><value>Show all configuration settings</value></data>
+  <data name="Config.List.AllOption" xml:space="preserve"><value>Show all supported keys, even if not explicitly set</value></data>
+  <data name="Config.Get.Description" xml:space="preserve"><value>Retrieve the value of a specific setting</value></data>
+  <data name="Config.Get.KeyArg" xml:space="preserve"><value>The configuration key to retrieve</value></data>
+  <data name="Config.Get.KeyMissing" xml:space="preserve"><value>[yellow]Key not found or not set: {0}[/]</value></data>
+  <data name="Config.Set.Description" xml:space="preserve"><value>Set a configuration value</value></data>
+  <data name="Config.Set.KeyArg" xml:space="preserve"><value>The configuration key to set</value></data>
+  <data name="Config.Set.ValueArg" xml:space="preserve"><value>The value to set (optional for secrets, will trigger a prompt)</value></data>
+  <data name="Config.Set.Prompt" xml:space="preserve"><value>Enter value for [blue]{0}[/]:</value></data>
+  <data name="Config.Set.ValueRequired" xml:space="preserve"><value>[red]Value is required.[/]</value></data>
+  <data name="Config.Set.Success" xml:space="preserve"><value>[green]Successfully set {0}[/]</value></data>
+  <data name="Config.Reset.Description" xml:space="preserve"><value>Reset configuration to defaults</value></data>
+  <data name="Config.Reset.AllOption" xml:space="preserve"><value>Reset all local settings</value></data>
+  <data name="Config.Reset.KeyOption" xml:space="preserve"><value>Reset a specific key</value></data>
+  <data name="Config.Reset.ForceOption" xml:space="preserve"><value>Skip the confirmation prompt</value></data>
+  <data name="Config.Reset.MissingTarget" xml:space="preserve"><value>[red]Either --all or --key must be specified.[/]</value></data>
+  <data name="Config.Reset.ConfirmAll" xml:space="preserve"><value>Are you sure you want to reset ALL settings?</value></data>
+  <data name="Config.Reset.ConfirmKey" xml:space="preserve"><value>Are you sure you want to reset [blue]{0}[/]?</value></data>
+  <data name="Config.Reset.Cancelled" xml:space="preserve"><value>[grey]Operation cancelled.[/]</value></data>
+  <data name="Config.Reset.Success" xml:space="preserve"><value>[green]Reset completed successfully.[/]</value></data>
+  <data name="List.Description" xml:space="preserve"><value>List sessions in the default ThreadSpace</value></data>
+  <data name="List.Column.SessionId" xml:space="preserve"><value>Session ID</value></data>
+  <data name="List.Column.AgentId" xml:space="preserve"><value>Agent ID</value></data>
+  <data name="List.Column.StartedAt" xml:space="preserve"><value>Started At</value></data>
+  <data name="List.Column.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="History.Description" xml:space="preserve"><value>View message history for a session</value></data>
+  <data name="History.SessionIdArg" xml:space="preserve"><value>The ID of the session to view</value></data>
+  <data name="History.User" xml:space="preserve"><value>[bold green]User:[/]</value></data>
+  <data name="History.Agent" xml:space="preserve"><value>[bold blue]Agent:[/]</value></data>
+  <data name="Bootstrap.WarningExistingLocal" xml:space="preserve"><value>[yellow]Warning:[/] [blue]appsettings.json[/] is missing, but [blue]appsettings.Local.json[/] was found.</value></data>
+  <data name="Bootstrap.ConfirmUseLocal" xml:space="preserve"><value>Do you want to use the existing local configuration and skip setup?</value></data>
+  <data name="Bootstrap.FreshConfig" xml:space="preserve"><value>[grey]Proceeding with fresh configuration...[/]</value></data>
+  <data name="Bootstrap.Welcome" xml:space="preserve"><value>Welcome to [blue]ClawSharp[/]! Let's get you set up with a new configuration.</value></data>
+  <data name="Bootstrap.DetectedServices" xml:space="preserve"><value>[bold green]Detected local model services:[/]</value></data>
+  <data name="Bootstrap.NoModelsReported" xml:space="preserve"><value>no models reported</value></data>
+  <data name="Bootstrap.WorkspaceRootPrompt" xml:space="preserve"><value>Enter [green]workspace root[/] path:</value></data>
+  <data name="Bootstrap.InvalidPath" xml:space="preserve"><value>[red]Invalid path format.[/]</value></data>
+  <data name="Bootstrap.DataPathPrompt" xml:space="preserve"><value>Enter [green]runtime data[/] directory name:</value></data>
+  <data name="Bootstrap.ProviderSelectTitle" xml:space="preserve"><value>Select your [green]default AI provider[/]:</value></data>
+  <data name="Bootstrap.ProviderDetected" xml:space="preserve"><value> [green](Detected)[/]</value></data>
+  <data name="Bootstrap.ApiKeyPrompt" xml:space="preserve"><value>Enter [green]API Key[/] for {0}:</value></data>
+  <data name="Bootstrap.DefaultModelPrompt" xml:space="preserve"><value>Enter [green]default model[/] for {0}:</value></data>
+  <data name="Bootstrap.ModelRequired" xml:space="preserve"><value>[red]Model name is required for local providers.[/]</value></data>
+  <data name="Bootstrap.GeneratingConfig" xml:space="preserve"><value>Generating [blue]appsettings.json[/]...</value></data>
+  <data name="Bootstrap.Generated" xml:space="preserve"><value>[bold green]Configuration generated successfully![/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightConfirm" xml:space="preserve"><value>Would you like to install [green]Playwright[/] browser drivers now? (Required for [blue]web_browser[/] tool)</value></data>
+  <data name="Bootstrap.InstallPlaywrightProgress" xml:space="preserve"><value>Installing [blue]Playwright[/] browser drivers...</value></data>
+  <data name="Bootstrap.InstallPlaywrightSuccess" xml:space="preserve"><value>[bold green]Playwright browsers installed successfully![/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightFailure" xml:space="preserve"><value>[bold red]Playwright installation failed. Please run the script manually: {0}[/]</value></data>
+  <data name="Bootstrap.InstallPlaywrightError" xml:space="preserve"><value>[bold red]Error running installation script: {0}[/]</value></data>
+  <data name="Permissions.Capability.Request" xml:space="preserve"><value>[bold yellow]PERMISSION REQUEST[/]{0}Agent [green]{1}[/] is attempting to use [blue]{2}[/] which requires [red]{3}[/].{0}This capability is not currently granted to the agent.</value></data>
+  <data name="Permissions.Capability.Confirm" xml:space="preserve"><value>Do you want to grant this capability for the current session?</value></data>
+  <data name="Permissions.Approval.Header" xml:space="preserve"><value>[bold yellow]APPROVAL REQUIRED: {0}[/]</value></data>
+  <data name="Permissions.Approval.CommandPanel" xml:space="preserve"><value>Proposed Command</value></data>
+  <data name="Permissions.Approval.TargetPath" xml:space="preserve"><value>Target Path: {0}</value></data>
+  <data name="Permissions.Approval.ContentUnavailable" xml:space="preserve"><value>(Content not available)</value></data>
+  <data name="Permissions.Approval.ContentPanel" xml:space="preserve"><value>File Content Preview</value></data>
+  <data name="Permissions.Approval.Confirm" xml:space="preserve"><value>Allow Agent [green]{0}[/] to proceed?</value></data>
+  <data name="Permissions.Approval.Allow" xml:space="preserve"><value>Allow</value></data>
+  <data name="Permissions.Approval.Deny" xml:space="preserve"><value>Deny</value></data>
+  <data name="Permissions.Approval.AlwaysAllow" xml:space="preserve"><value>Always Allow (Session)</value></data>
+  <data name="Errors.Validation" xml:space="preserve"><value>[red]Validation Error:[/] {0}</value></data>
+  <data name="Errors.Environment" xml:space="preserve"><value>[bold red]Environment Error:[/] {0}</value></data>
+  <data name="Errors.RecommendedFix" xml:space="preserve"><value>Recommended Fix</value></data>
+  <data name="Errors.RunFix" xml:space="preserve"><value>[grey]Please run the command above to install missing dependencies.[/]</value></data>
+  <data name="Errors.Generic" xml:space="preserve"><value>[bold red]Error:[/] {0}</value></data>
+  <data name="Errors.ShowStackTrace" xml:space="preserve"><value>Show stack trace?</value></data>
+  <data name="ProjectInit.NoTemplates" xml:space="preserve"><value>[yellow]No project templates found.[/]</value></data>
+  <data name="ProjectInit.TemplateTitle" xml:space="preserve"><value>Select a [green]project template[/]:</value></data>
+  <data name="ProjectInit.ProjectNamePrompt" xml:space="preserve"><value>Enter project name:</value></data>
+  <data name="ProjectInit.UseAi" xml:space="preserve"><value>Use [blue]AI assistance[/] to generate project description and README content?</value></data>
+  <data name="ProjectInit.DescribeIdea" xml:space="preserve"><value>Describe your project idea (press Enter twice to finish):</value></data>
+  <data name="ProjectInit.AiGenerated" xml:space="preserve"><value>[green]AI content generated and will be applied to the project.[/]</value></data>
+  <data name="ProjectInit.Success" xml:space="preserve"><value>[bold green]Success![/] Project '{0}' created at [blue]{1}[/]</value></data>
+  <data name="ProjectInit.SwitchTip" xml:space="preserve"><value>[grey]Type /cd &lt;path&gt; to switch to the new project space.[/]</value></data>
+  <data name="ProjectInit.Error" xml:space="preserve"><value>[red]Error:[/] {0}</value></data>
+  <data name="ProjectInit.AiThinking" xml:space="preserve"><value>AI is thinking...</value></data>
+  <data name="SpecKit.Description" xml:space="preserve"><value>Run SpecKit workflows from the CLI</value></data>
+  <data name="SpecKit.Init.Description" xml:space="preserve"><value>Create a new SpecKit feature scaffold</value></data>
+  <data name="SpecKit.Init.NameArg" xml:space="preserve"><value>Feature description</value></data>
+  <data name="SpecKit.Scaffold.Description" xml:space="preserve"><value>Analyze plan.md and generate scaffolded files</value></data>
+  <data name="SpecKit.Scaffold.PlanArg" xml:space="preserve"><value>Optional path to plan.md</value></data>
+  <data name="SpecKit.Scaffold.YesOption" xml:space="preserve"><value>Apply without interactive confirmation</value></data>
+  <data name="SpecKit.Watch.Description" xml:space="preserve"><value>Watch a plan.md file and prompt before scaffold generation</value></data>
+  <data name="SpecKit.Usage.Init" xml:space="preserve"><value>[yellow]Usage:[/] /speckit init &lt;feature description&gt;</value></data>
+  <data name="SpecKit.UnknownSubcommand" xml:space="preserve"><value>[yellow]Unknown /speckit subcommand:[/] {0}</value></data>
+  <data name="SpecKit.ScriptMissing" xml:space="preserve"><value>[red]SpecKit script not found:[/] {0}</value></data>
+  <data name="SpecKit.InitFailed" xml:space="preserve"><value>[red]SpecKit init failed:[/] {0}</value></data>
+  <data name="SpecKit.InitSuccess" xml:space="preserve"><value>[green]SpecKit feature created successfully.[/]</value></data>
+  <data name="SpecKit.PlanAnalysisFailed" xml:space="preserve"><value>[red]Plan analysis failed:[/] {0}</value></data>
+  <data name="SpecKit.ConfirmApply" xml:space="preserve"><value>Apply this scaffold plan?</value></data>
+  <data name="SpecKit.Cancelled" xml:space="preserve"><value>[yellow]Scaffold generation cancelled.[/]</value></data>
+  <data name="SpecKit.GenerationFailed" xml:space="preserve"><value>[red]Scaffold generation failed:[/] {0}</value></data>
+  <data name="SpecKit.GenerationCompleted" xml:space="preserve"><value>[green]Scaffold generation completed.[/]</value></data>
+  <data name="SpecKit.PlanParentMissing" xml:space="preserve"><value>plan.md must have a parent directory.</value></data>
+  <data name="SpecKit.Watching" xml:space="preserve"><value>[grey]Watching[/] {0} [grey]for changes. Press Ctrl+C to stop.[/]</value></data>
+  <data name="SpecKit.PlanUpdated" xml:space="preserve"><value>[blue]Detected plan update.[/]</value></data>
+  <data name="SpecKit.Preview.Feature" xml:space="preserve"><value>Feature</value></data>
+  <data name="SpecKit.Preview.Branch" xml:space="preserve"><value>Branch</value></data>
+  <data name="SpecKit.Preview.Directories" xml:space="preserve"><value>Directories</value></data>
+  <data name="SpecKit.Preview.Files" xml:space="preserve"><value>Files</value></data>
+  <data name="SpecKit.Preview.Tasks" xml:space="preserve"><value>Tasks</value></data>
+  <data name="SpecKit.Preview.Skip" xml:space="preserve"><value>(skip)</value></data>
+  <data name="SpecKit.Preview.PlannedFiles" xml:space="preserve"><value>Planned Files</value></data>
+  <data name="SpecKit.Overview.Init" xml:space="preserve"><value>Create a new feature spec directory</value></data>
+  <data name="SpecKit.Overview.Scaffold" xml:space="preserve"><value>Analyze plan.md, preview changes, and scaffold files</value></data>
+  <data name="SpecKit.Overview.Watch" xml:space="preserve"><value>Watch plan.md and prompt before scaffold generation</value></data>
+  <data name="SpecKit.ShellStartFailed" xml:space="preserve"><value>Failed to start the shell script.</value></data>
+  <data name="SpecKit.ShellFailed" xml:space="preserve"><value>Shell script failed.</value></data>
+  <data name="Test.EnglishOnly" xml:space="preserve"><value>English fallback</value></data>
+  <data name="Test.Formatted" xml:space="preserve"><value>Hello {0}</value></data>
+</root>

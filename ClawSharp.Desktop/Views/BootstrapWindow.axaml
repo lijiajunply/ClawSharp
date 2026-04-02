@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ClawSharp.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:lib="clr-namespace:ClawSharp.Lib.Configuration;assembly=ClawSharp.Lib"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+        x:Class="ClawSharp.Desktop.Views.BootstrapWindow"
+        x:DataType="vm:BootstrapViewModel"
+        Title="ClawSharp Initial Setup"
+        Width="600" Height="500"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="5" Margin="0,0,0,20">
+            <TextBlock Text="Welcome to ClawSharp" FontSize="24" FontWeight="Bold" Foreground="#3297FD" />
+            <TextBlock Text="Let's get your environment set up." Foreground="#CCCCCC" />
+        </StackPanel>
+        
+        <!-- Body / Form -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="15">
+                
+                <!-- Workspace -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Workspace Root Path" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBox Text="{Binding WorkspaceRoot}" Watermark="e.g. . or /path/to/workspace" />
+                </StackPanel>
+                
+                <!-- Data Path -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="ClawSharp Data Path" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBox Text="{Binding DataPath}" Watermark="e.g. .clawsharp" />
+                </StackPanel>
+                
+                <!-- Provider Selection -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="AI Provider" FontWeight="SemiBold" Foreground="White"/>
+                    <ComboBox ItemsSource="{Binding AvailableProviders}"
+                              SelectedItem="{Binding SelectedProvider}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="lib:ProviderTemplate">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- API Key -->
+                <StackPanel Spacing="5" IsVisible="{Binding RequiresApiKey}">
+                    <TextBlock Text="API Key" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBox Text="{Binding ApiKey}" PasswordChar="*" Watermark="Enter your API Key" />
+                </StackPanel>
+
+                <!-- Default Model -->
+                <StackPanel Spacing="5" IsVisible="{Binding NeedsCustomModel}">
+                    <TextBlock Text="Default Model" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBox Text="{Binding DefaultModel}" Watermark="Enter a model name (e.g. llama3)" />
+                </StackPanel>
+
+                <Panel Margin="0,10" IsVisible="{Binding IsLoading}">
+                    <TextBlock Text="{Binding LoadingMessage}" Foreground="#3297FD" HorizontalAlignment="Center" FontStyle="Italic"/>
+                </Panel>
+                
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,20,0,0">
+            <Button Grid.Column="1" 
+                    Command="{Binding FinishCommand}"
+                    Content="Save &amp; Continue" 
+                    Classes="accent"
+                    Background="#007ACC" Foreground="White" Padding="20,8"/>
+        </Grid>
+    </Grid>
+</Window>
