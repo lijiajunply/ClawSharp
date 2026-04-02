@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ClawSharp.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sukiUi="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             xmlns:lib="clr-namespace:ClawSharp.Lib.Core;assembly=ClawSharp.Lib"
+             xmlns:rt="clr-namespace:ClawSharp.Lib.Runtime;assembly=ClawSharp.Lib"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ClawSharp.Desktop.Views.HistoryView"
+             x:DataType="vm:HistoryViewModel">
+
+    <Grid ColumnDefinitions="250,*">
+        <!-- ThreadSpaces List -->
+        <Border Grid.Column="0" BorderBrush="#3E3E42" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="ThreadSpaces" Margin="10" FontWeight="Bold" Foreground="#3297FD" />
+                <ListBox ItemsSource="{Binding ThreadSpaces}"
+                         SelectedItem="{Binding SelectedThreadSpace}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="rt:ThreadSpaceRecord">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Sessions List -->
+        <DockPanel Grid.Column="1" Margin="10">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+                <TextBlock Text="Sessions" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                <Button Command="{Binding RefreshCommand}" Content="Refresh" />
+                <Button Command="{Binding OpenSessionCommand}" Content="Open Selected" Background="#007ACC" Foreground="White" />
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Sessions}"
+                      SelectedItem="{Binding SelectedSession}"
+                      IsReadOnly="True"
+                      AutoGenerateColumns="False"
+                      GridLinesVisibility="All">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Agent" Binding="{Binding AgentId}" Width="100" />
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                    <DataGridTextColumn Header="Started" Binding="{Binding StartedAt}" Width="*" />
+                    <DataGridTextColumn Header="Workspace" Binding="{Binding WorkspaceRoot}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </Grid>
+</UserControl>

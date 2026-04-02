@@ -109,6 +109,25 @@ public class ChatViewModel : ViewModelBase
         }
     }
 
+    public async Task LoadSessionAsync(SessionId sessionId)
+    {
+        var runtimeSession = await _kernel.Sessions.GetAsync(sessionId);
+        _currentSessionId = sessionId;
+        
+        CurrentAgent = Agents.FirstOrDefault(a => a.Id == runtimeSession.Record.AgentId);
+        
+        Messages.Clear();
+        var history = await _runtime.GetHistoryAsync(sessionId);
+        foreach (var entry in history.Where(e => e.Message != null))
+        {
+            var msg = entry.Message!;
+            Messages.Add(new MessageViewModel(
+                msg.Content, 
+                msg.Role == PromptMessageRole.Assistant ? (CurrentAgent?.Name ?? "Agent") : "User", 
+                msg.Role == PromptMessageRole.Assistant));
+        }
+    }
+
     public async Task InitializeAsync(string agentId = "luckyfish")
     {
         // Load agents if not loaded

@@ -43,3 +43,5 @@ appsettings.json
 *.tmp
 *.swp
 *.log
+
+/.clawsharp

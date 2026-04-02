@@ -40,3 +40,20 @@ public class AiAlignmentConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+public class SecretConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isSecret && isSecret)
+        {
+            return '*';
+        }
+        return '\0';
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

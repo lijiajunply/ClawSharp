@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ClawSharp.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sukiUi="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ClawSharp.Desktop.Views.ConfigView"
+             x:DataType="vm:ConfigViewModel">
+
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,20">
+            <TextBlock Text="Configuration" FontSize="24" FontWeight="Bold" Foreground="#3297FD" />
+            <TextBlock Text="Edit appsettings.json manually." Foreground="#CCCCCC" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Command="{Binding RefreshCommand}" Content="Reload" />
+                <Button Command="{Binding SaveAllCommand}" Content="Save All" Background="#007ACC" Foreground="White" />
+            </StackPanel>
+        </StackPanel>
+
+        <sukiUi:GlassCard>
+            <DataGrid ItemsSource="{Binding ConfigItems}"
+                      IsReadOnly="False"
+                      AutoGenerateColumns="False"
+                      GridLinesVisibility="All">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" IsReadOnly="True" Width="250" />
+                    <DataGridTemplateColumn Header="Value" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="vm:ConfigItemViewModel">
+                                <TextBlock Text="{Binding Value}" VerticalAlignment="Center" Margin="5" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                        <DataGridTemplateColumn.CellEditingTemplate>
+                            <DataTemplate x:DataType="vm:ConfigItemViewModel">
+                                <TextBox Text="{Binding Value}" 
+                                         PasswordChar="{Binding IsSecret, Converter={StaticResource SecretConverter}}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellEditingTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </sukiUi:GlassCard>
+    </DockPanel>
+</UserControl>

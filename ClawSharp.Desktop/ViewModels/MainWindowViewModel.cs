@@ -5,6 +5,7 @@ using SukiUI;
 using Avalonia.Styling;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System;
 
 namespace ClawSharp.Desktop.ViewModels;
 
@@ -33,9 +34,17 @@ public class MainWindowViewModel : ViewModelBase
 
     public ReactiveCommand<Unit, Unit> ToggleThemeCommand { get; }
 
-    public MainWindowViewModel(ChatViewModel chatViewModel)
+    public MainWindowViewModel(
+        ChatViewModel chatViewModel, 
+        HistoryViewModel historyViewModel,
+        McpViewModel mcpViewModel,
+        ConfigViewModel configViewModel)
     {
         MenuItems.Add(new MenuItemViewModel("Chat", chatViewModel));
+        MenuItems.Add(new MenuItemViewModel("History", historyViewModel));
+        MenuItems.Add(new MenuItemViewModel("MCP", mcpViewModel));
+        MenuItems.Add(new MenuItemViewModel("Config", configViewModel));
+        
         SelectedMenuItem = MenuItems.First();
         
         ToggleThemeCommand = ReactiveCommand.Create(() =>
@@ -50,5 +59,15 @@ public class MainWindowViewModel : ViewModelBase
 
         // Initialize chat
         Task.Run(async () => await chatViewModel.InitializeAsync());
+        
+        // Listen for history selection to switch back to chat
+        historyViewModel.SessionSelected.Subscribe(async session =>
+        {
+            await chatViewModel.LoadSessionAsync(session.SessionId);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                SelectedMenuItem = MenuItems.First(m => m.Header == "Chat");
+            });
+        });
     }
 }

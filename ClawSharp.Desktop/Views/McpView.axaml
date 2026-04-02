@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ClawSharp.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:sukiUi="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ClawSharp.Desktop.Views.McpView"
+             x:DataType="vm:McpViewModel">
+
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,20">
+            <TextBlock Text="MCP Servers" FontSize="24" FontWeight="Bold" Foreground="#3297FD" />
+            <TextBlock Text="Manage your Model Context Protocol servers." Foreground="#CCCCCC" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Command="{Binding RefreshCommand}" Content="Refresh List" />
+            </StackPanel>
+        </StackPanel>
+
+        <sukiUi:GlassCard>
+            <DataGrid ItemsSource="{Binding InstalledServers}"
+                      IsReadOnly="True"
+                      AutoGenerateColumns="False"
+                      GridLinesVisibility="All">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
+                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" Width="150" />
+                    <DataGridTextColumn Header="Arguments" Binding="{Binding Arguments}" Width="*" />
+                    <DataGridTextColumn Header="Capabilities" Binding="{Binding Capabilities}" Width="150" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </sukiUi:GlassCard>
+    </DockPanel>
+</UserControl>

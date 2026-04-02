@@ -39,6 +39,9 @@ public static class ServiceConfigurator
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddTransient<ChatViewModel>();
                 services.AddTransient<AgentViewModel>();
+                services.AddSingleton<HistoryViewModel>();
+                services.AddSingleton<McpViewModel>();
+                services.AddSingleton<ConfigViewModel>();
             })
             .Build();
 

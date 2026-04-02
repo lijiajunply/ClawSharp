@@ -1,10 +1,17 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sukiUi="clr-namespace:SukiUI;assembly=SukiUI"
+             xmlns:conv="using:ClawSharp.Desktop.Infrastructure"
              x:Class="ClawSharp.Desktop.App"
              xmlns:local="using:ClawSharp.Desktop"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <conv:AiBackgroundConverter x:Key="AiBackgroundConverter" />
+        <conv:AiAlignmentConverter x:Key="AiAlignmentConverter" />
+        <conv:SecretConverter x:Key="SecretConverter" />
+    </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator/>
@@ -12,5 +19,6 @@
   
     <Application.Styles>
         <sukiUi:SukiTheme ThemeColor="Blue"  />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
     </Application.Styles>
 </Application>
