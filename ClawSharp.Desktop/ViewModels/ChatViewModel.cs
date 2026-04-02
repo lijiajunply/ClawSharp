@@ -17,7 +17,23 @@ public class ChatViewModel : ViewModelBase
     private readonly IClawKernel _kernel;
     private SessionId? _currentSessionId;
 
+    public ObservableCollection<ThreadSpaceRecord> ThreadSpaces { get; } = new();
+    public ObservableCollection<SessionRecord> RecentSessions { get; } = new();
     public ObservableCollection<AgentViewModel> Agents { get; } = new();
+
+    private ThreadSpaceRecord? _currentThreadSpace;
+    public ThreadSpaceRecord? CurrentThreadSpace
+    {
+        get => _currentThreadSpace;
+        set => this.RaiseAndSetIfChanged(ref _currentThreadSpace, value);
+    }
+
+    private SessionRecord? _selectedSession;
+    public SessionRecord? SelectedSession
+    {
+        get => _selectedSession;
+        set => this.RaiseAndSetIfChanged(ref _selectedSession, value);
+    }
 
     private AgentViewModel? _currentAgent;
     public AgentViewModel? CurrentAgent
@@ -43,6 +59,7 @@ public class ChatViewModel : ViewModelBase
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
 
     public ReactiveCommand<Unit, Unit> SendMessageCommand { get; }
+    public ReactiveCommand<Unit, Unit> NewChatCommand { get; }
 
     public ChatViewModel(IClawRuntime runtime, IClawKernel kernel)
     {
@@ -56,16 +73,40 @@ public class ChatViewModel : ViewModelBase
             (text, processing, agent) => !string.IsNullOrWhiteSpace(text) && !processing && agent != null);
 
         SendMessageCommand = ReactiveCommand.CreateFromTask(SendMessageAsync, canSend);
+        NewChatCommand = ReactiveCommand.CreateFromTask(NewChatAsync);
 
-        // React to agent selection
-        this.WhenAnyValue(x => x.CurrentAgent)
+        // 监听空间切换
+        this.WhenAnyValue(x => x.CurrentThreadSpace)
             .Where(x => x != null)
-            .Subscribe(async agent => await InitializeAsync(agent!.Id));
+            .Subscribe(async space => await LoadSessionsForSpaceAsync(space!.ThreadSpaceId));
+
+        // 监听历史会话选择
+        this.WhenAnyValue(x => x.SelectedSession)
+            .Where(x => x != null)
+            .Subscribe(async session => await LoadSessionAsync(session!.SessionId));
+    }
+
+    private async Task NewChatAsync()
+    {
+        Messages.Clear();
+        _currentSessionId = null;
+        SelectedSession = null;
+        // 默认保持当前 Agent，或者让用户重新选
+    }
+
+    private async Task LoadSessionsForSpaceAsync(ThreadSpaceId spaceId)
+    {
+        RecentSessions.Clear();
+        var sessions = await _kernel.ThreadSpaces.ListSessionsAsync(spaceId);
+        foreach (var s in sessions.OrderByDescending(x => x.StartedAt))
+        {
+            RecentSessions.Add(s);
+        }
     }
 
     private async Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputText) || CurrentAgent == null) return;
+        if (string.IsNullOrWhiteSpace(InputText) || CurrentAgent == null || CurrentThreadSpace == null) return;
 
         var userContent = InputText;
         InputText = string.Empty;
@@ -73,24 +114,23 @@ public class ChatViewModel : ViewModelBase
 
         try
         {
-            // Ensure session exists
             if (_currentSessionId == null)
             {
-                var session = await _runtime.StartSessionAsync(CurrentAgent.Id);
+                var session = await _runtime.StartSessionAsync(new StartSessionRequest(
+                    CurrentAgent.Id, 
+                    CurrentThreadSpace.ThreadSpaceId));
                 _currentSessionId = session.Record.SessionId;
+                
+                // 刷新历史列表以包含新会话
+                await LoadSessionsForSpaceAsync(CurrentThreadSpace.ThreadSpaceId);
             }
 
-            // Add user message to UI
             Messages.Add(new MessageViewModel(userContent, "User", false));
-
-            // Send to runtime
             await _runtime.AppendUserMessageAsync(_currentSessionId.Value, userContent);
 
-            // Create AI message placeholder
             var aiMessage = new MessageViewModel("", CurrentAgent.Name, true);
             Messages.Add(aiMessage);
 
-            // Process streaming response
             await foreach (var @event in _runtime.RunTurnStreamingAsync(_currentSessionId.Value))
             {
                 if (@event.Delta != null)
@@ -128,34 +168,22 @@ public class ChatViewModel : ViewModelBase
         }
     }
 
-    public async Task InitializeAsync(string agentId = "luckyfish")
+    public async Task InitializeAsync()
     {
-        // Load agents if not loaded
+        // 加载 Agents
         if (Agents.Count == 0)
         {
             var agents = _kernel.Agents.GetAll();
-            foreach (var a in agents)
-            {
-                Agents.Add(new AgentViewModel(a));
-            }
-            CurrentAgent = Agents.FirstOrDefault(a => a.Id == agentId) ?? Agents.FirstOrDefault();
+            foreach (var a in agents) Agents.Add(new AgentViewModel(a));
+            CurrentAgent = Agents.FirstOrDefault(a => a.Id == "luckyfish") ?? Agents.FirstOrDefault();
         }
 
-        if (CurrentAgent == null) return;
-
-        Messages.Clear();
-        var session = await _runtime.StartSessionAsync(CurrentAgent.Id);
-        _currentSessionId = session.Record.SessionId;
-        
-        // Load history if needed
-        var history = await _runtime.GetHistoryAsync(_currentSessionId.Value);
-        foreach (var entry in history.Where(e => e.Message != null))
+        // 加载 ThreadSpaces
+        if (ThreadSpaces.Count == 0)
         {
-            var msg = entry.Message!;
-            Messages.Add(new MessageViewModel(
-                msg.Content, 
-                msg.Role == PromptMessageRole.Assistant ? CurrentAgent.Name : "User", 
-                msg.Role == PromptMessageRole.Assistant));
+            var spaces = await _kernel.ThreadSpaces.ListAsync();
+            foreach (var s in spaces) ThreadSpaces.Add(s);
+            CurrentThreadSpace = ThreadSpaces.FirstOrDefault(x => x.IsGlobal) ?? ThreadSpaces.FirstOrDefault();
         }
     }
 }

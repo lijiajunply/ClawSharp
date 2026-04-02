@@ -614,11 +614,15 @@ public sealed class McpInstaller : IMcpInstaller
 {
     private readonly string _configPath;
 
+    /// <summary>
+    /// 初始化 <see cref="McpInstaller"/> 的新实例。
+    /// </summary>
     public McpInstaller()
     {
         _configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".clawsharp", "mcp.json");
     }
 
+    /// <inheritdoc />
     public async Task InstallAsync(string serverName, string command, string[] args, Dictionary<string, string>? env = null, CancellationToken cancellationToken = default)
     {
         McpConfiguration config;

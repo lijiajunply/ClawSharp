@@ -12,11 +12,13 @@ namespace ClawSharp.Desktop.ViewModels;
 public class MenuItemViewModel : ViewModelBase
 {
     public string Header { get; init; }
+    public object Icon { get; init; }
     public ViewModelBase Content { get; init; }
 
-    public MenuItemViewModel(string header, ViewModelBase content)
+    public MenuItemViewModel(string header, object icon, ViewModelBase content)
     {
         Header = header;
+        Icon = icon;
         Content = content;
     }
 }
@@ -40,10 +42,10 @@ public class MainWindowViewModel : ViewModelBase
         McpViewModel mcpViewModel,
         ConfigViewModel configViewModel)
     {
-        MenuItems.Add(new MenuItemViewModel("Chat", chatViewModel));
-        MenuItems.Add(new MenuItemViewModel("History", historyViewModel));
-        MenuItems.Add(new MenuItemViewModel("MCP", mcpViewModel));
-        MenuItems.Add(new MenuItemViewModel("Config", configViewModel));
+        MenuItems.Add(new MenuItemViewModel("Chat", "💬", chatViewModel));
+        MenuItems.Add(new MenuItemViewModel("History", "📜", historyViewModel));
+        MenuItems.Add(new MenuItemViewModel("MCP", "🛠️", mcpViewModel));
+        MenuItems.Add(new MenuItemViewModel("Config", "⚙️", configViewModel));
         
         SelectedMenuItem = MenuItems.First();
         
@@ -57,8 +59,11 @@ public class MainWindowViewModel : ViewModelBase
             theme.ChangeBaseTheme(newVariant);
         });
 
-        // Initialize chat
-        Task.Run(async () => await chatViewModel.InitializeAsync());
+        // Initialize components
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () => 
+        {
+            await chatViewModel.InitializeAsync();
+        });
         
         // Listen for history selection to switch back to chat
         historyViewModel.SessionSelected.Subscribe(async session =>

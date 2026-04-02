@@ -15,25 +15,29 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <sukiUi:SukiSideMenu IsMenuExpanded="True" 
+    <sukiUi:SukiSideMenu IsMenuExpanded="False" 
                          ItemsSource="{Binding MenuItems}" 
                          SelectedItem="{Binding SelectedMenuItem}">
         <sukiUi:SukiSideMenu.HeaderContent>
-            <TextBlock Text="ClawSharp" 
+            <TextBlock Text="CS" 
                        HorizontalAlignment="Center" 
-                       FontSize="20" FontWeight="Bold" 
-                       Margin="20" />
+                       FontSize="24" FontWeight="Bold" 
+                       Margin="10,20" />
         </sukiUi:SukiSideMenu.HeaderContent>
         
         <sukiUi:SukiSideMenu.ItemTemplate>
             <DataTemplate x:DataType="vm:MenuItemViewModel">
-                <TextBlock Text="{Binding Header}" />
+                <StackPanel Orientation="Horizontal" Spacing="15">
+                    <TextBlock Text="{Binding Icon}" FontSize="18" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
+                </StackPanel>
             </DataTemplate>
         </sukiUi:SukiSideMenu.ItemTemplate>
 
         <sukiUi:SukiSideMenu.FooterContent>
             <Button Command="{Binding ToggleThemeCommand}" 
-                    Content="Toggle Theme" 
+                    Content="🌓" 
+                    ToolTip.Tip="Toggle Theme"
                     Margin="10" />
         </sukiUi:SukiSideMenu.FooterContent>
 

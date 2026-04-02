@@ -89,6 +89,11 @@ public sealed class SmitheryClient : ISmitheryClient
     private readonly HttpClient _httpClient;
     private readonly SmitheryOptions _options;
 
+    /// <summary>
+    /// 初始化 <see cref="SmitheryClient"/> 的新实例。
+    /// </summary>
+    /// <param name="httpClient">用于 HTTP 请求的客户端。</param>
+    /// <param name="options">核心配置选项。</param>
     public SmitheryClient(HttpClient httpClient, ClawOptions options)
     {
         _httpClient = httpClient;
