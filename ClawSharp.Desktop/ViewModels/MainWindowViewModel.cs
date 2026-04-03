@@ -10,7 +10,7 @@ using Material.Icons;
 
 namespace ClawSharp.Desktop.ViewModels;
 
-public class MenuItemViewModel(string header, MaterialIconKind icon, ViewModelBase content) : ViewModelBase
+public class MenuItemViewModel(string header, MaterialIconKind icon, ViewModelBase content) : ReactiveObject
 {
     public string Header { get; init; } = header;
     public MaterialIconKind Icon { get; init; } = icon;
@@ -22,8 +22,14 @@ public class MainWindowViewModel : ViewModelBase
     public MenuItemViewModel SelectedMenuItem
     {
         get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(PageContent));
+        }
     }
+
+    public ViewModelBase? PageContent => SelectedMenuItem?.Content;
 
     public ObservableCollection<MenuItemViewModel> MenuItems { get; } = [];
 

@@ -4,8 +4,27 @@ using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Material.Icons;
+using Material.Icons.Avalonia;
 
 namespace ClawSharp.Desktop.Infrastructure;
+
+public class MaterialIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is MaterialIconKind kind)
+        {
+            return new MaterialIcon { Kind = kind };
+        }
+        return null;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
 
 public class AiBackgroundConverter : IValueConverter
 {

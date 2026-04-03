@@ -16,6 +16,7 @@
             <conv:AiBackgroundConverter x:Key="AiBackgroundConverter" />
             <conv:AiAlignmentConverter x:Key="AiAlignmentConverter" />
             <conv:SecretConverter x:Key="SecretConverter" />
+            <conv:MaterialIconConverter x:Key="MaterialIconConverter" />
         </ResourceDictionary>
     </Application.Resources>
 

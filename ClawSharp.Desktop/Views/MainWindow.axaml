@@ -11,31 +11,27 @@
             Icon="/Assets/avalonia-logo.ico"
             Title="ClawSharp">
 
-    <sukiUi:SukiSideMenu IsMenuExpanded="False" 
-                         ItemsSource="{Binding MenuItems}" 
+    <sukiUi:SukiSideMenu IsMenuExpanded="True"
+                         UseCustomContent="True"
+                         Content="{Binding PageContent}"
+                         ItemsSource="{Binding MenuItems}"
                          SelectedItem="{Binding SelectedMenuItem}">
+        <sukiUi:SukiSideMenu.Styles>
+            <Style Selector="sukiUi|SukiSideMenuItem" x:DataType="vm:MenuItemViewModel">
+                <Setter Property="Header" Value="{Binding Header}" />
+                <Setter Property="Icon" Value="{Binding Icon, Converter={StaticResource MaterialIconConverter}}" />
+            </Style>
+        </sukiUi:SukiSideMenu.Styles>
+        
         <sukiUi:SukiSideMenu.HeaderContent>
             <Border Height="40" Margin="0,20">
                 <TextBlock Text="ClawSharp" 
+                           IsVisible="{Binding $parent[sukiUi:SukiSideMenu].IsMenuExpanded}"
                            HorizontalAlignment="Center" 
                            VerticalAlignment="Center"
                            FontSize="18" FontWeight="ExtraBold" />
             </Border>
         </sukiUi:SukiSideMenu.HeaderContent>
-        
-        <sukiUi:SukiSideMenu.ItemTemplate>
-            <DataTemplate x:DataType="vm:MenuItemViewModel">
-                <Grid ColumnDefinitions="40,*" HorizontalAlignment="Left">
-                    <avalonia:MaterialIcon Grid.Column="0" Kind="{Binding Icon}"
-                                  FontSize="20" 
-                                  HorizontalAlignment="Center" 
-                                  VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding Header}" 
-                               VerticalAlignment="Center" 
-                               Margin="10,0,0,0" />
-                </Grid>
-            </DataTemplate>
-        </sukiUi:SukiSideMenu.ItemTemplate>
 
         <sukiUi:SukiSideMenu.FooterContent>
             <StackPanel HorizontalAlignment="Center" Margin="0,10">
@@ -43,13 +39,10 @@
                         Classes="Basic"
                         Padding="8"
                         ToolTip.Tip="Toggle Theme">
-                    <TextBlock Text="🌓" FontSize="18" />
+                    <avalonia:MaterialIcon Kind="ThemeLightDark" />
                 </Button>
             </StackPanel>
         </sukiUi:SukiSideMenu.FooterContent>
-
-        <!-- Main Content Area -->
-        <ContentControl Content="{Binding SelectedMenuItem.Content}" />
     </sukiUi:SukiSideMenu>
 
 </sukiUi:SukiWindow>
