@@ -19,34 +19,39 @@ public class ChatViewModel : ViewModelBase
     public ObservableCollection<SessionRecord> RecentSessions { get; } = [];
     public ObservableCollection<AgentViewModel> Agents { get; } = [];
 
+    private ThreadSpaceRecord? _currentThreadSpace;
     public ThreadSpaceRecord? CurrentThreadSpace
     {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        get => _currentThreadSpace;
+        set => this.RaiseAndSetIfChanged(ref _currentThreadSpace, value);
     }
 
+    private SessionRecord? _selectedSession;
     public SessionRecord? SelectedSession
     {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        get => _selectedSession;
+        set => this.RaiseAndSetIfChanged(ref _selectedSession, value);
     }
 
+    private AgentViewModel? _currentAgent;
     public AgentViewModel? CurrentAgent
     {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        get => _currentAgent;
+        set => this.RaiseAndSetIfChanged(ref _currentAgent, value);
     }
 
+    private string _inputText = string.Empty;
     public string InputText
     {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = string.Empty;
+        get => _inputText;
+        set => this.RaiseAndSetIfChanged(ref _inputText, value);
+    }
 
+    private bool _isProcessing;
     public bool IsProcessing
     {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
+        get => _isProcessing;
+        private set => this.RaiseAndSetIfChanged(ref _isProcessing, value);
     }
 
     public ObservableCollection<MessageViewModel> Messages { get; } = new();
@@ -63,7 +68,19 @@ public class ChatViewModel : ViewModelBase
             x => x.InputText,
             x => x.IsProcessing,
             x => x.CurrentAgent,
-            (text, processing, agent) => !string.IsNullOrWhiteSpace(text) && !processing && agent != null);
+            x => x.CurrentThreadSpace,
+            (text, processing, agent, space) => 
+            {
+                var hasText = !string.IsNullOrWhiteSpace(text);
+                var isNotProcessing = !processing;
+                var hasAgent = agent != null;
+                var hasSpace = space != null;
+                
+                // 开发者调试：如果在开发环境下，可以取消注释下面这行来观察原因
+                // System.Diagnostics.Debug.WriteLine($"CanSend check: Text={hasText}, !Proc={isNotProcessing}, Agent={hasAgent}, Space={hasSpace}");
+                
+                return hasText && isNotProcessing && hasAgent && hasSpace;
+            });
 
         SendMessageCommand = ReactiveCommand.CreateFromTask(SendMessageAsync, canSend);
         NewChatCommand = ReactiveCommand.CreateFromTask(NewChatAsync);
@@ -163,20 +180,31 @@ public class ChatViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
-        // 加载 Agents
-        if (Agents.Count == 0)
+        try
         {
-            var agents = _kernel.Agents.GetAll();
-            foreach (var a in agents) Agents.Add(new AgentViewModel(a));
-            CurrentAgent = Agents.FirstOrDefault(a => a.Id == "luckyfish") ?? Agents.FirstOrDefault();
-        }
+            // 加载 ThreadSpaces
+            if (ThreadSpaces.Count == 0)
+            {
+                var spaces = await _kernel.ThreadSpaces.ListAsync();
+                foreach (var s in spaces) ThreadSpaces.Add(s);
+                CurrentThreadSpace = ThreadSpaces.FirstOrDefault(x => x.IsGlobal) ?? ThreadSpaces.FirstOrDefault();
+            }
 
-        // 加载 ThreadSpaces
-        if (ThreadSpaces.Count == 0)
+            // 加载 Agents
+            if (Agents.Count == 0)
+            {
+                // 确保 Registry 已加载 (如果是单例且尚未加载，GetAll 会返回空)
+                await _kernel.Agents.ReloadAsync();
+                
+                var agents = _kernel.Agents.GetAll();
+                foreach (var a in agents) Agents.Add(new AgentViewModel(a));
+                CurrentAgent = Agents.FirstOrDefault(a => a.Id == "luckyfish") ?? Agents.FirstOrDefault();
+            }
+        }
+        catch (Exception ex)
         {
-            var spaces = await _kernel.ThreadSpaces.ListAsync();
-            foreach (var s in spaces) ThreadSpaces.Add(s);
-            CurrentThreadSpace = ThreadSpaces.FirstOrDefault(x => x.IsGlobal) ?? ThreadSpaces.FirstOrDefault();
+            // 如果初始化失败，至少尝试显示一个系统消息（如果会话已经存在）
+            Messages.Add(new MessageViewModel($"Failed to initialize chat: {ex.Message}", "System", false));
         }
     }
 }

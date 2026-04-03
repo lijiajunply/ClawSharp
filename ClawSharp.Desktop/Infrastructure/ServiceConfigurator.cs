@@ -29,7 +29,23 @@ public static class ServiceConfigurator
                 // ClawSharp Core
                 services.AddClawSharp(builder =>
                 {
-                    builder.BasePath = Directory.GetCurrentDirectory();
+                    // 在开发环境下，如果 bin 目录下没有 workspace，尝试寻找源码根目录
+                    var baseDir = Directory.GetCurrentDirectory();
+                    if (!Directory.Exists(Path.Combine(baseDir, "workspace")) && 
+                        !Directory.Exists(Path.Combine(baseDir, ".clawsharp")))
+                    {
+                        var parent = Directory.GetParent(baseDir);
+                        while (parent != null)
+                        {
+                            if (Directory.Exists(Path.Combine(parent.FullName, "workspace")))
+                            {
+                                baseDir = parent.FullName;
+                                break;
+                            }
+                            parent = parent.Parent;
+                        }
+                    }
+                    builder.BasePath = baseDir;
                 });
 
                 // Register DesktopPermissionUI
