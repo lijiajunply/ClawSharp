@@ -46,6 +46,10 @@ public sealed class SqliteSessionStore : ISessionStore
     /// <inheritdoc />
     public Task UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default) =>
         _repository.UpdateOutputLanguageAsync(sessionId, outputLanguage, cancellationToken);
+
+    /// <inheritdoc />
+    public Task UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default) =>
+        _repository.UpdateModeAsync(sessionId, mode, cancellationToken);
 }
 
 /// <summary>
@@ -146,6 +150,13 @@ public sealed class SessionManager(ISessionStore sessions) : ISessionManager
     public async Task<RuntimeSession> UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default)
     {
         await sessions.UpdateOutputLanguageAsync(sessionId, outputLanguage, cancellationToken).ConfigureAwait(false);
+        return await GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<RuntimeSession> UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default)
+    {
+        await sessions.UpdateModeAsync(sessionId, mode, cancellationToken).ConfigureAwait(false);
         return await GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
     }
 

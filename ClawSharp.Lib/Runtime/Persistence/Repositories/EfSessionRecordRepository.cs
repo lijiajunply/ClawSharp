@@ -64,4 +64,13 @@ internal sealed class EfSessionRecordRepository(IDbContextFactory<ClawDbContext>
         entity.OutputLanguageOverride = outputLanguage;
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default)
+    {
+        initializer.EnsureInitialized();
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var entity = await context.Sessions.SingleAsync(x => x.SessionId == sessionId.Value, cancellationToken).ConfigureAwait(false);
+        entity.Mode = mode;
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

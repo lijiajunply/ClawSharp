@@ -907,9 +907,39 @@ public static partial class ChatCommand
             "/help" or "/clear" or "/new" or "/resume" or "/sessions" or "/agents" or "/skills" or
             "/tools" or "/config" or "/history" or "/stats" or "/spaces" or "/hub" or "/lang" or
             "/tooltrace" or "/cd" or "/home" or "/init" or "/init-proj" or "/reload" or "/speckit" or
-            "/paste" or "/edit" or "/exit" or "/quit" => true,
+            "/plan" or "/paste" or "/edit" or "/exit" or "/quit" => true,
             _ => false
         };
+
+    private static async Task<CommandDispatchResult> HandlePlanCommandAsync(ReplState state, string arguments)
+    {
+        var parts = arguments.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var subCommand = parts.Length > 0 ? parts[0].ToLowerInvariant() : "status";
+
+        switch (subCommand)
+        {
+            case "start":
+            case "on":
+                state.Session = await state.Runtime.UpdateSessionModeAsync(state.SessionId, SessionMode.Plan).ConfigureAwait(false);
+                AnsiConsole.MarkupLine("[bold yellow]已手动切换到 Plan 模式。[/] [grey]模型现在将只能执行只读工具。[/]");
+                break;
+
+            case "stop":
+            case "off":
+                state.Session = await state.Runtime.UpdateSessionModeAsync(state.SessionId, SessionMode.Chat).ConfigureAwait(false);
+                AnsiConsole.MarkupLine("[bold green]已手动切换回 Chat 模式。[/]");
+                break;
+
+            case "status":
+            default:
+                var modeStr = state.Session.Record.Mode == SessionMode.Plan ? "[bold yellow]Plan[/]" : "[bold green]Chat[/]";
+                AnsiConsole.MarkupLine($"当前运行模式: {modeStr}");
+                AnsiConsole.MarkupLine("[grey]使用 /plan start 进入规划模式，/plan stop 退出。[/]");
+                break;
+        }
+
+        return CommandDispatchResult.Handled();
+    }
 
     private static string? NormalizeOutputLanguage(string? outputLanguage)
     {

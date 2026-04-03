@@ -228,8 +228,12 @@ public static partial class ChatCommand
         AnsiConsole.Write(panel);
     }
 
-    private static string GetPrompt(ThreadSpaceRecord space, string agentId)
+    private static string GetPrompt(ReplState state)
     {
+        var space = state.CurrentThreadSpace;
+        var agentId = state.AgentId;
+        var mode = state.Session.Record.Mode;
+
         var spaceName = space.Name;
         if (spaceName.Length > 20)
         {
@@ -243,7 +247,14 @@ public static partial class ChatCommand
         }
 
         var color = space.IsGlobal ? "bold blue" : "cyan";
-        return $"[{color}]{spaceName.EscapeMarkup()}[/][grey][[{displayAgentId.EscapeMarkup()}]][/] > ";
+        var prompt = $"[{color}]{spaceName.EscapeMarkup()}[/][grey][[{displayAgentId.EscapeMarkup()}]][/]";
+
+        if (mode == SessionMode.Plan)
+        {
+            prompt += " [bold yellow][PLAN][/]";
+        }
+
+        return prompt + " > ";
     }
 
     private static string ShortId(SessionId sessionId) =>

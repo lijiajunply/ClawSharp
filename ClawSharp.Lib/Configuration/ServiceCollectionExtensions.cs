@@ -203,6 +203,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolExecutor, PdfReadTool>();
         services.AddSingleton<IToolExecutor, WebSearchTool>();
         services.AddSingleton<IToolExecutor, EmailSendTool>();
+        services.AddSingleton<IToolExecutor, PlanModeTool>();
+        services.AddSingleton<IToolExecutor, ExitPlanModeTool>();
+        services.AddSingleton<IToolExecutor, TaskExecutionTool>();
 
         return services;
     }

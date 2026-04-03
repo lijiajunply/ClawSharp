@@ -29,6 +29,7 @@ public sealed class ReplPrompt
         "/init-proj",
         "/reload",
         "/speckit",
+        "/plan",
         "/quit",
         "/exit"
     ];

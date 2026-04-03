@@ -116,6 +116,22 @@ public enum SessionStatus
 }
 
 /// <summary>
+/// session 运行模式。
+/// </summary>
+public enum SessionMode
+{
+    /// <summary>
+    /// 普通对话模式：允许执行所有授权工具。
+    /// </summary>
+    Chat = 0,
+
+    /// <summary>
+    /// 规划模式：仅限只读工具，用于生成实施计划。
+    /// </summary>
+    Plan = 1
+}
+
+/// <summary>
 /// prompt 历史中的消息角色。
 /// </summary>
 public enum PromptMessageRole
@@ -152,6 +168,7 @@ public enum PromptMessageRole
 /// <param name="StartedAt">创建时间。</param>
 /// <param name="EndedAt">结束时间；未结束时为 <see langword="null"/>。</param>
 /// <param name="OutputLanguageOverride">当前 session 的输出语言覆盖。</param>
+/// <param name="Mode">当前运行模式。</param>
 public sealed record SessionRecord(
     SessionId SessionId,
     ThreadSpaceId ThreadSpaceId,
@@ -160,7 +177,8 @@ public sealed record SessionRecord(
     SessionStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset? EndedAt = null,
-    string? OutputLanguageOverride = null);
+    string? OutputLanguageOverride = null,
+    SessionMode Mode = SessionMode.Chat);
 
 /// <summary>
 /// 描述写入 prompt 历史的一条消息。
@@ -409,6 +427,14 @@ public interface ISessionStore
     /// <param name="outputLanguage">新的输出语言覆盖；为 <see langword="null"/> 时表示清除覆盖。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     Task UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 更新 session 的运行模式。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="mode">新的运行模式。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    Task UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -493,6 +519,15 @@ public interface ISessionEventStore
 /// </summary>
 public interface ISessionManager
 {
+    /// <summary>
+    /// 更新 session 的运行模式。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="mode">新的运行模式。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>更新后的 runtime session。</returns>
+    Task<RuntimeSession> UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 为指定 agent 启动一个新的 session。
     /// </summary>

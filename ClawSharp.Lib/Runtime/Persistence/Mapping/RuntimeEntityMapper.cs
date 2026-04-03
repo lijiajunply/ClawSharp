@@ -24,11 +24,12 @@ internal static class RuntimeEntityMapper
         Status = record.Status,
         StartedAt = record.StartedAt,
         EndedAt = record.EndedAt,
-        OutputLanguageOverride = record.OutputLanguageOverride
+        OutputLanguageOverride = record.OutputLanguageOverride,
+        Mode = record.Mode
     };
 
     public static SessionRecord ToRecord(SessionEntity entity) =>
-        new(new SessionId(entity.SessionId), new ThreadSpaceId(entity.ThreadSpaceId), entity.AgentId, entity.WorkspaceRoot, entity.Status, entity.StartedAt, entity.EndedAt, entity.OutputLanguageOverride);
+        new(new SessionId(entity.SessionId), new ThreadSpaceId(entity.ThreadSpaceId), entity.AgentId, entity.WorkspaceRoot, entity.Status, entity.StartedAt, entity.EndedAt, entity.OutputLanguageOverride, entity.Mode);
 
     public static MessageEntity ToEntity(PromptMessage message) => new()
     {

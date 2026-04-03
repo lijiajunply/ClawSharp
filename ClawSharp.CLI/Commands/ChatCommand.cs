@@ -80,7 +80,7 @@ public static partial class ChatCommand
 
             while (true)
             {
-                var input = await state.PromptHandler.AskAsync(GetPrompt(state.CurrentThreadSpace, state.AgentId));
+                var input = await state.PromptHandler.AskAsync(GetPrompt(state));
                 var trimmedInput = input.Trim();
                 if (string.IsNullOrWhiteSpace(trimmedInput))
                 {
@@ -178,8 +178,8 @@ public static partial class ChatCommand
             "/init-proj" => await HandleInitProjectAsync(state),
             "/reload" => await HandleReloadAsync(state),
             "/speckit" => await HandleSpecKitAsync(state, arguments),
-            "/paste" => await HandlePasteAsync(),
-            "/edit" => await HandleEditAsync(),
+            "/plan" => await HandlePlanCommandAsync(state, arguments),
+            "/paste" => await HandlePasteAsync(),            "/edit" => await HandleEditAsync(),
             _ => HandleUnknownCommand(command)
         };
     }

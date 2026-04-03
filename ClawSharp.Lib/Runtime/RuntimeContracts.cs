@@ -325,7 +325,16 @@ public interface IClawRuntime
     Task<RuntimeSession> UpdateSessionOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 执行 session 的下一次 turn。
+    /// 更新 session 的运行模式。
+    /// </summary>
+    /// <param name="sessionId">session 标识。</param>
+    /// <param name="mode">新的运行模式。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>更新后的 runtime session。</returns>
+    Task<RuntimeSession> UpdateSessionModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 追加一条用户消息。
     /// </summary>
     /// <param name="sessionId">session 标识。</param>
     /// <param name="delegation">委派上下文。</param>
@@ -575,7 +584,7 @@ public sealed class ClawRuntime(
             toolNames.Add(t);
         }
 
-        var tools = kernel.Tools.GetAuthorizedTools(permissions)
+        var tools = kernel.Tools.GetAuthorizedTools(permissions, record.Mode)
             .Where(x => toolNames.Count == 0 || toolNames.Contains(x.Name))
             .ToArray();
 
@@ -673,6 +682,13 @@ public sealed class ClawRuntime(
     }
 
     /// <inheritdoc />
+    public async Task<RuntimeSession> UpdateSessionModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default)
+    {
+        await sessionStore.UpdateModeAsync(sessionId, mode, cancellationToken).ConfigureAwait(false);
+        return await kernel.Sessions.GetAsync(sessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<RunTurnResult> RunTurnAsync(SessionId sessionId, DelegationContext? delegation = null, CancellationToken cancellationToken = default)
     {
         RunTurnResult? result = null;
@@ -728,6 +744,12 @@ public sealed class ClawRuntime(
         
         var threadSpace = await kernel.ThreadSpaces.GetAsync(session.Record.ThreadSpaceId, cancellationToken).ConfigureAwait(false);
         var promptAugmentations = new List<string>();
+
+        var planModePrompt = PlanModePromptAugmentor.Build(session.Record.Mode);
+        if (!string.IsNullOrWhiteSpace(planModePrompt))
+        {
+            promptAugmentations.Add(planModePrompt);
+        }
 
         var outputLanguagePrompt = LanguagePromptAugmentor.Build(
             session.Record.OutputLanguageOverride,
@@ -1090,7 +1112,8 @@ public sealed class ClawRuntime(
             currentPermissions,
             Guid.NewGuid().ToString("N"),
             cancellationToken,
-            delegation);
+            delegation,
+            plan.Session.Record.Mode);
 
         var result = await kernel.Tools.ExecuteAsync(toolRequest.ToolName, context, arguments).ConfigureAwait(false);
 

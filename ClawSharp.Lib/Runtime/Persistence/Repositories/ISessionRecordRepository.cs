@@ -13,4 +13,6 @@ internal interface ISessionRecordRepository
     Task UpdateStatusAsync(SessionId sessionId, SessionStatus status, DateTimeOffset? endedAt, CancellationToken cancellationToken = default);
 
     Task UpdateOutputLanguageAsync(SessionId sessionId, string? outputLanguage, CancellationToken cancellationToken = default);
+
+    Task UpdateModeAsync(SessionId sessionId, SessionMode mode, CancellationToken cancellationToken = default);
 }

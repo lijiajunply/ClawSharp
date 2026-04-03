@@ -232,6 +232,7 @@ public sealed record ToolDefinition(
 /// <param name="TraceId">用于追踪调用链的 trace 标识。</param>
 /// <param name="CancellationToken">调用取消令牌。</param>
 /// <param name="Delegation">委派上下文。</param>
+/// <param name="Mode">当前运行模式。</param>
 public sealed record ToolExecutionContext(
     string WorkspaceRoot,
     string AgentId,
@@ -241,7 +242,8 @@ public sealed record ToolExecutionContext(
     ToolPermissionSet Permissions,
     string TraceId,
     CancellationToken CancellationToken,
-    DelegationContext? Delegation = null);
+    DelegationContext? Delegation = null,
+    ClawSharp.Lib.Runtime.SessionMode Mode = ClawSharp.Lib.Runtime.SessionMode.Chat);
 
 /// <summary>
 /// 表示工具调用的最终状态。
@@ -310,6 +312,15 @@ public sealed record ToolInvocationResult(
         new(toolName, ToolInvocationStatus.Success, payload);
 
     /// <summary>
+    /// 创建一个成功结果。
+    /// </summary>
+    /// <param name="toolName">工具名。</param>
+    /// <param name="message">工具输出消息。</param>
+    /// <returns>状态为 <see cref="ToolInvocationStatus.Success"/> 的结果。</returns>
+    public static ToolInvocationResult Success(string toolName, string message) =>
+        new(toolName, ToolInvocationStatus.Success, JsonSerializer.SerializeToElement(new { message }));
+
+    /// <summary>
     /// 创建一个失败结果。
     /// </summary>
     /// <param name="toolName">工具名。</param>
@@ -356,11 +367,12 @@ public interface IToolRegistry
     IReadOnlyCollection<ToolDefinition> GetAll();
 
     /// <summary>
-    /// 获取在指定权限集下可暴露给模型的工具定义。
+    /// 获取在指定权限集和运行模式下可暴露给模型的工具定义。
     /// </summary>
     /// <param name="permissions">当前生效权限。</param>
+    /// <param name="mode">当前运行模式。</param>
     /// <returns>可授权的工具定义集合。</returns>
-    IReadOnlyCollection<ToolDefinition> GetAuthorizedTools(ToolPermissionSet permissions);
+    IReadOnlyCollection<ToolDefinition> GetAuthorizedTools(ToolPermissionSet permissions, ClawSharp.Lib.Runtime.SessionMode mode = ClawSharp.Lib.Runtime.SessionMode.Chat);
 
     /// <summary>
     /// 按名称执行某个工具。
@@ -395,12 +407,13 @@ public sealed class ToolRegistry(
         AllExecutors.Select(x => x.Definition).ToArray();
 
     /// <inheritdoc />
-    public IReadOnlyCollection<ToolDefinition> GetAuthorizedTools(ToolPermissionSet permissions)
+    public IReadOnlyCollection<ToolDefinition> GetAuthorizedTools(ToolPermissionSet permissions, ClawSharp.Lib.Runtime.SessionMode mode = ClawSharp.Lib.Runtime.SessionMode.Chat)
     {
         return AllExecutors
             .Select(x => x.Definition)
             .Where(x => (x.Capabilities == ToolCapability.None || permissions.Capabilities.HasFlag(x.Capabilities)) &&
                         permissionScopeManager.CanInvokeTool(x.Name))
+            .Where(x => mode == ClawSharp.Lib.Runtime.SessionMode.Chat || ToolSecurity.IsPlanModeAllowed(x))
             .ToArray();
     }
 
@@ -418,6 +431,11 @@ public sealed class ToolRegistry(
             return ToolInvocationResult.Denied(toolName, "Tool is not in the current permission scope.");
         }
 
+        if (context.Mode == ClawSharp.Lib.Runtime.SessionMode.Plan && !ToolSecurity.IsPlanModeAllowed(executor.Definition))
+        {
+            return ToolInvocationResult.Denied(toolName, "Writing tools are not allowed in Plan mode.");
+        }
+
         if (executor.Definition.Capabilities != ToolCapability.None &&
             !context.Permissions.Capabilities.HasFlag(executor.Definition.Capabilities))
         {
@@ -430,6 +448,23 @@ public sealed class ToolRegistry(
 
 internal static class ToolSecurity
 {
+    /// <summary>
+    /// 检查工具是否允许在 Plan 模式下执行（通常仅允许只读工具）。
+    /// </summary>
+    public static bool IsPlanModeAllowed(ToolDefinition tool)
+    {
+        // 显式允许进入/退出 Plan 模式的工具
+        if (tool.Name.Equals("enter_plan_mode", StringComparison.OrdinalIgnoreCase) ||
+            tool.Name.Equals("exit_plan_mode", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // 默认不允许任何有写权限或执行权限的工具，除非被标记为只读
+        var destructiveCapabilities = ToolCapability.FileWrite | ToolCapability.ShellExecute | ToolCapability.VersionControl | ToolCapability.EmailSend;
+        return (tool.Capabilities & destructiveCapabilities) == ToolCapability.None;
+    }
+
     private static readonly string[] SafeReadOnlyCommandPrefixes =
     [
         "ls",
