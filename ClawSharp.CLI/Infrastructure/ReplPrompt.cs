@@ -159,16 +159,19 @@ public sealed class ReplPrompt
 
             if (key.Key == ConsoleKey.Enter)
             {
-                string result;
                 if (showMenu && _currentMatches.Count > 0)
                 {
-                    result = _currentMatches[_menuSelectionIndex];
-                }
-                else
-                {
-                    result = input.ToString();
+                    // Select the current match but don't return yet
+                    var selected = _currentMatches[_menuSelectionIndex];
+                    input.Clear();
+                    input.Append(selected);
+                    cursor = input.Length;
+                    _menuSelectionIndex = 0;
+                    _menuStartIndex = 0;
+                    continue;
                 }
 
+                var result = input.ToString();
                 if (!string.IsNullOrWhiteSpace(result))
                 {
                     if (_history.Count == 0 || _history[0] != result)

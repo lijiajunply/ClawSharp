@@ -1,12 +1,13 @@
 using System.Text.Json;
 using ClawSharp.Lib.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ClawSharp.Lib.Tools;
 
 /// <summary>
 /// 用于切换 Session 运行模式（Chat/Plan）的工具。
 /// </summary>
-public sealed class PlanModeTool(IClawRuntime runtime) : IToolExecutor
+public sealed class PlanModeTool(IServiceProvider serviceProvider) : IToolExecutor
 {
     public ToolDefinition Definition { get; } = new(
         "enter_plan_mode",
@@ -17,7 +18,7 @@ public sealed class PlanModeTool(IClawRuntime runtime) : IToolExecutor
           "properties": {
             "reason": {
               "type": "string",
-              "description": "进入 Plan 模式的原因或目标。"
+              "description": "进入 Plan 模式的原因 or 目标。"
             }
           },
           "required": ["reason"]
@@ -30,6 +31,7 @@ public sealed class PlanModeTool(IClawRuntime runtime) : IToolExecutor
     {
         var reason = arguments.GetProperty("reason").GetString() ?? string.Empty;
         
+        var runtime = serviceProvider.GetRequiredService<IClawRuntime>();
         await runtime.UpdateSessionModeAsync(new SessionId(context.SessionId), SessionMode.Plan, context.CancellationToken).ConfigureAwait(false);
         
         return ToolInvocationResult.Success(Definition.Name, $"已进入 Plan 模式。原因: {reason}\n请开始调查并编写详细的实施计划（plan.md）。在 Plan 模式下，写操作将被拦截。");
@@ -39,7 +41,7 @@ public sealed class PlanModeTool(IClawRuntime runtime) : IToolExecutor
 /// <summary>
 /// 用于从 Plan 模式切回 Chat 模式并提交计划的工具。
 /// </summary>
-public sealed class ExitPlanModeTool(IClawRuntime runtime) : IToolExecutor
+public sealed class ExitPlanModeTool(IServiceProvider serviceProvider) : IToolExecutor
 {
     public ToolDefinition Definition { get; } = new(
         "exit_plan_mode",
@@ -63,6 +65,7 @@ public sealed class ExitPlanModeTool(IClawRuntime runtime) : IToolExecutor
     {
         var planPath = arguments.GetProperty("plan_path").GetString() ?? "plan.md";
         
+        var runtime = serviceProvider.GetRequiredService<IClawRuntime>();
         await runtime.UpdateSessionModeAsync(new SessionId(context.SessionId), SessionMode.Chat, context.CancellationToken).ConfigureAwait(false);
         
         return ToolInvocationResult.Success(Definition.Name, $"已退出 Plan 模式并切回 Chat 模式。计划路径: {planPath}\n请等待用户确认计划。");

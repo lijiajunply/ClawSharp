@@ -251,7 +251,7 @@ public static partial class ChatCommand
 
         if (mode == SessionMode.Plan)
         {
-            prompt += " [bold yellow][PLAN][/]";
+            prompt += " [bold yellow][[PLAN]][/]";
         }
 
         return prompt + " > ";
