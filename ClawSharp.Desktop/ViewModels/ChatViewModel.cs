@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -44,7 +45,125 @@ public class ChatViewModel : ViewModelBase
     public string InputText
     {
         get => _inputText;
-        set => this.RaiseAndSetIfChanged(ref _inputText, value);
+        set 
+        {
+            this.RaiseAndSetIfChanged(ref _inputText, value);
+            UpdateSuggestions();
+        }
+    }
+
+    private ObservableCollection<string> _suggestions = new();
+    public ObservableCollection<string> Suggestions => _suggestions;
+
+    private bool _isSuggestionsVisible;
+    public bool IsSuggestionsVisible
+    {
+        get => _isSuggestionsVisible;
+        set => this.RaiseAndSetIfChanged(ref _isSuggestionsVisible, value);
+    }
+
+    private int _selectedSuggestionIndex;
+    public int SelectedSuggestionIndex
+    {
+        get => _selectedSuggestionIndex;
+        set => this.RaiseAndSetIfChanged(ref _selectedSuggestionIndex, value);
+    }
+
+    private void UpdateSuggestions()
+    {
+        if (string.IsNullOrEmpty(InputText))
+        {
+            IsSuggestionsVisible = false;
+            return;
+        }
+
+        var text = InputText;
+        _suggestions.Clear();
+
+        if (text.StartsWith("/"))
+        {
+            var cmdPart = text[1..].ToLower();
+            var commands = new[] { "help", "new", "clear", "agents", "spaces", "config", "history", "stats", "hub", "mcp", "speckit", "plan", "quit" };
+            foreach (var cmd in commands.Where(c => c.StartsWith(cmdPart)))
+            {
+                _suggestions.Add("/" + cmd);
+            }
+        }
+        else
+        {
+            var lastAtIndex = text.LastIndexOf('@');
+            if (lastAtIndex >= 0 && (lastAtIndex == 0 || char.IsWhiteSpace(text[lastAtIndex - 1])))
+            {
+                var partialPath = text[(lastAtIndex + 1)..].Replace('/', Path.DirectorySeparatorChar);
+                var baseDir = CurrentThreadSpace?.BoundFolderPath;
+
+                if (!string.IsNullOrEmpty(baseDir) && Directory.Exists(baseDir))
+                {
+                    try
+                    {
+                        var searchDir = baseDir;
+                        var searchPattern = "*";
+                        
+                        if (partialPath.Contains(Path.DirectorySeparatorChar))
+                        {
+                            var lastSeparatorPos = partialPath.LastIndexOf(Path.DirectorySeparatorChar);
+                            var subPath = partialPath[..lastSeparatorPos];
+                            searchDir = Path.Combine(baseDir, subPath);
+                            searchPattern = partialPath[(lastSeparatorPos + 1)..] + "*";
+                        }
+                        else
+                        {
+                            searchPattern = partialPath + "*";
+                        }
+
+                        if (Directory.Exists(searchDir))
+                        {
+                            var entries = Directory.GetFileSystemEntries(searchDir, searchPattern)
+                                .Select(e => Path.GetRelativePath(baseDir, e))
+                                .Select(e => e.Replace(Path.DirectorySeparatorChar, '/'))
+                                .Take(20);
+
+                            foreach (var entry in entries)
+                            {
+                                _suggestions.Add("@" + entry);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore file system errors
+                    }
+                }
+            }
+        }
+
+        IsSuggestionsVisible = _suggestions.Any();
+        if (IsSuggestionsVisible) SelectedSuggestionIndex = 0;
+    }
+
+    public void ApplySelectedSuggestion()
+    {
+        if (SelectedSuggestionIndex >= 0 && SelectedSuggestionIndex < Suggestions.Count)
+        {
+            ApplySuggestion(Suggestions[SelectedSuggestionIndex]);
+        }
+    }
+
+    public void ApplySuggestion(string suggestion)
+    {
+        if (suggestion.StartsWith("/"))
+        {
+            InputText = suggestion + " ";
+        }
+        else if (suggestion.StartsWith("@"))
+        {
+            var lastAtIndex = InputText.LastIndexOf('@');
+            if (lastAtIndex >= 0)
+            {
+                InputText = InputText[..lastAtIndex] + suggestion + " ";
+            }
+        }
+        IsSuggestionsVisible = false;
     }
 
     private bool _isProcessing;

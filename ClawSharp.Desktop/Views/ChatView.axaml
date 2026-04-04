@@ -112,20 +112,45 @@
             <!-- Input Area -->
             <suki:GlassCard Grid.Row="1" Margin="20,10,20,20">
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBox Text="{Binding InputText}" 
-                             Watermark="Type a message... (Ctrl+Enter to send)"
-                             AcceptsReturn="True"
-                             IsEnabled="{Binding !IsProcessing}"
-                             Classes="Flat"
-                             BorderThickness="0"
-                             Margin="0,0,10,0"
-                             MaxHeight="200"
-                             TextWrapping="Wrap">
-                        <TextBox.KeyBindings>
-                            <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendMessageCommand}" />
-                            <KeyBinding Gesture="Cmd+Enter" Command="{Binding SendMessageCommand}" />
-                        </TextBox.KeyBindings>
-                    </TextBox>
+                    <Panel Grid.Column="0">
+                        <TextBox Name="InputTextBox"
+                                 Text="{Binding InputText}" 
+                                 Watermark="Type a message... (Ctrl+Enter to send)"
+                                 AcceptsReturn="True"
+                                 IsEnabled="{Binding !IsProcessing}"
+                                 Classes="Flat"
+                                 BorderThickness="0"
+                                 Margin="0,0,10,0"
+                                 MaxHeight="200"
+                                 TextWrapping="Wrap">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Ctrl+Enter" Command="{Binding SendMessageCommand}" />
+                                <KeyBinding Gesture="Cmd+Enter" Command="{Binding SendMessageCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+
+                        <!-- Autocomplete Suggestions -->
+                        <Popup IsOpen="{Binding IsSuggestionsVisible}"
+                               PlacementTarget="{Binding #InputTextBox}"
+                               Placement="Top"
+                               VerticalOffset="-5"
+                               MinWidth="250">
+                            <suki:GlassCard Padding="0" CornerRadius="8">
+                                <ListBox ItemsSource="{Binding Suggestions}"
+                                         SelectedIndex="{Binding SelectedSuggestionIndex}"
+                                         Tapped="OnSuggestionsTapped"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         MaxHeight="300">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Padding="12,8" />
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </suki:GlassCard>
+                        </Popup>
+                    </Panel>
                     <Button Grid.Column="1" 
                             Command="{Binding SendMessageCommand}"
                             Content="Send"
